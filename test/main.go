@@ -45,11 +45,8 @@ func main() {
 	}
 	defer conn.Close()
 
-	lInstance := qemu.LibvirtInstance{
-		Conn:      conn,
-		Log:       log,
-		ImagePath: imageLocation,
-	}
+	lInstance := qemu.NewQemu(conn, log, imageLocation)
+
 	if err := lInstance.InitializeBaseImagesAndNetwork(); err != nil {
 		log.With(zap.Error(err)).DPanic("Failed to initialize Libvirt")
 	}

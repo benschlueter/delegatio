@@ -236,9 +236,6 @@ var (
 							Name: "isa-serial",
 						},
 					},
-					Log: &libvirtxml.DomainChardevLog{
-						File: "/tmp/libvirt.log",
-					},
 				},
 			},
 			Consoles: []libvirtxml.DomainConsole{
