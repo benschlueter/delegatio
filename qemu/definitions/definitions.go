@@ -1,19 +1,18 @@
-package main
+package definitions
 
 import (
 	"libvirt.org/go/libvirtxml"
 )
 
 var (
-	libvirtImagePath = "/var/lib/libvirt/images/"
-	baseDiskName     = "delegatio"
-	bootDiskName     = "delegatio-boot"
-	diskPoolName     = "delegatio-pool"
-	domainName       = "delegatio-vm"
-	networkName      = "delegatio-net"
+	LibvirtStoragePoolPath = "/var/lib/libvirt/images/"
+	BaseDiskName           = "delegatio"
+	BootDiskName           = "delegatio-boot"
+	DiskPoolName           = "delegatio-pool"
+	NetworkName            = "delegatio-net"
 
-	networkXMLConfig = libvirtxml.Network{
-		Name: networkName,
+	NetworkXMLConfig = libvirtxml.Network{
+		Name: NetworkName,
 		Forward: &libvirtxml.NetworkForward{
 			Mode: "nat",
 			NAT: &libvirtxml.NetworkForwardNAT{
@@ -49,30 +48,30 @@ var (
 			},
 		},
 	}
-	poolXMLConfig = libvirtxml.StoragePool{
-		Name:   diskPoolName,
+	PoolXMLConfig = libvirtxml.StoragePool{
+		Name:   DiskPoolName,
 		Type:   "dir",
 		Source: &libvirtxml.StoragePoolSource{},
 		Target: &libvirtxml.StoragePoolTarget{
-			Path: libvirtImagePath,
+			Path: LibvirtStoragePoolPath,
 			Permissions: &libvirtxml.StoragePoolTargetPermissions{
 				Owner: "0",
 				Group: "0",
-				Mode:  "0717",
+				Mode:  "0777",
 			},
 		},
 	}
-	volumeBootXMLConfig = libvirtxml.StorageVolume{
-		Name: bootDiskName,
+	VolumeBootXMLConfig = libvirtxml.StorageVolume{
+		Name: BootDiskName,
 		Type: "file",
 		Target: &libvirtxml.StorageVolumeTarget{
-			Path: libvirtImagePath + bootDiskName,
+			Path: LibvirtStoragePoolPath + BootDiskName,
 			Format: &libvirtxml.StorageVolumeTargetFormat{
 				Type: "qcow2",
 			},
 		},
 		BackingStore: &libvirtxml.StorageVolumeBackingStore{
-			Path: libvirtImagePath + baseDiskName,
+			Path: LibvirtStoragePoolPath + BaseDiskName,
 			Format: &libvirtxml.StorageVolumeTargetFormat{
 				// must be overwritten based on the used image (i.e. raw or qcow2)
 				Type: "qcow2",
@@ -84,11 +83,11 @@ var (
 		},
 	}
 
-	volumeBaseXMLConfig = libvirtxml.StorageVolume{
+	VolumeBaseXMLConfig = libvirtxml.StorageVolume{
 		Type: "file",
-		Name: baseDiskName,
+		Name: BaseDiskName,
 		Target: &libvirtxml.StorageVolumeTarget{
-			Path: libvirtImagePath + baseDiskName,
+			Path: LibvirtStoragePoolPath + BaseDiskName,
 			Format: &libvirtxml.StorageVolumeTargetFormat{
 				Type: "qcow2",
 			},
@@ -100,10 +99,9 @@ var (
 	}
 
 	port            = uint(0)
-	domainXMLConfig = libvirtxml.Domain{
-		Title: "measurement-VM",
-		Name:  domainName,
-		Type:  "kvm",
+	DomainXMLConfig = libvirtxml.Domain{
+		Name: "MUST-BE-FILLED-WITH-STH-VM",
+		Type: "kvm",
 		Memory: &libvirtxml.DomainMemory{
 			Value: 2,
 			Unit:  "GiB",
@@ -180,8 +178,8 @@ var (
 					Source: &libvirtxml.DomainDiskSource{
 						Index: 1,
 						Volume: &libvirtxml.DomainDiskSourceVolume{
-							Pool:   diskPoolName,
-							Volume: bootDiskName,
+							Pool:   DiskPoolName,
+							Volume: BootDiskName,
 						},
 					},
 				},
@@ -215,7 +213,7 @@ var (
 					},
 					Source: &libvirtxml.DomainInterfaceSource{
 						Network: &libvirtxml.DomainInterfaceSourceNetwork{
-							Network: networkName,
+							Network: NetworkName,
 							Bridge:  "virbr1",
 						},
 					},
