@@ -1,21 +1,18 @@
 package qemu
 
 import (
-	"errors"
+	"context"
 	"fmt"
-	"os"
-	"os/signal"
 	"strconv"
 	"sync"
-	"syscall"
 	"time"
 
-	"go.uber.org/multierr"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"libvirt.org/go/libvirt"
 )
 
-const numNodes = 20
+const numNodes = 3
 
 type LibvirtInstance struct {
 	connMux            sync.Mutex
@@ -67,7 +64,7 @@ func (l *LibvirtInstance) registerQemuGuestAgentHandler() {
 
 func (l *LibvirtInstance) InitializeBaseImagesAndNetwork() (err error) {
 	// sanity check
-	if err := l.deleteLibvirtInstance(); err != nil {
+	if err := l.DeleteLibvirtInstance(); err != nil {
 		return err
 	}
 	if err := l.CreateStoragePool(); err != nil {
@@ -92,7 +89,7 @@ func (l *LibvirtInstance) CreateInstance(id string) (err error) {
 	return nil
 }
 
-func (l *LibvirtInstance) blockUntilUp(stop <-chan struct{}) error {
+func (l *LibvirtInstance) blockUntilUp(ctx context.Context) error {
 	ticker := time.NewTicker(500 * time.Millisecond)
 	defer ticker.Stop()
 	for {
@@ -106,17 +103,13 @@ func (l *LibvirtInstance) blockUntilUp(stop <-chan struct{}) error {
 				}
 			}
 			l.connMux.Unlock()
-		case <-stop:
-			return errors.New("WaitForCompletion received stop signal")
+		case <-ctx.Done():
+			return ctx.Err()
 		}
 	}
 }
 
-func (l *LibvirtInstance) ExecuteCommands() (err error) {
-	defer func() {
-		err = multierr.Append(err, l.deleteLibvirtInstance())
-	}()
-
+func (l *LibvirtInstance) BootstrapKubernetes(ctx context.Context) (err error) {
 	for i := 0; i < numNodes; i++ {
 		go func(i int) {
 			if err := l.CreateInstance(strconv.Itoa(i)); err != nil {
@@ -125,17 +118,15 @@ func (l *LibvirtInstance) ExecuteCommands() (err error) {
 		}(i)
 	}
 
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
 	l.registerQemuGuestAgentHandler()
 
-	// TODO: make interruptable
-	if err := l.blockUntilUp(); err != nil {
+	// * Cancellation point
+	if err := l.blockUntilUp(ctx); err != nil {
 		return err
 	}
 
-	output, err := l.ExecuteCommand()
+	// * Cancellation point
+	output, err := l.InitializeKubernetes(ctx)
 	if err != nil {
 		return err
 	}
@@ -149,28 +140,17 @@ func (l *LibvirtInstance) ExecuteCommands() (err error) {
 	}
 	fmt.Println(kubeadmJoinToken)
 
+	g, ctxGo := errgroup.WithContext(ctx)
 	for i := 1; i < numNodes; i++ {
-		go func(i int, l *LibvirtInstance) {
-			if err := l.JoinCluster("delegatio-"+strconv.Itoa(i), kubeadmJoinToken); err != nil {
-				l.log.Error("error joining cluser", zap.Error(err), zap.Int("id", i))
-			}
-		}(i, l)
+		func(id int) {
+			g.Go(func() error {
+				return l.JoinCluster(ctxGo, "delegatio-"+strconv.Itoa(id), kubeadmJoinToken)
+			})
+		}(i)
+	}
+	if err := g.Wait(); err != nil {
+		return err
 	}
 
-	select {
-	case <-sigs:
-		break
-	}
-	l.log.Info("termination signal received")
-	for i := 0; i < numNodes; i++ {
-		if domainState, ok := l.registeredDomains["delegatio-"+strconv.Itoa(i)]; ok {
-			l.log.Info("domain state", zap.Bool("ready", domainState.guestAgentReady), zap.Int("number", i))
-		} else {
-			fmt.Println(l.registeredDomains)
-		}
-	}
-
-	signal.Stop(sigs)
-	close(sigs)
 	return err
 }

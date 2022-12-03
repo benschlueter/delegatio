@@ -34,6 +34,7 @@ require (
 	github.com/google/shlex v0.0.0-20191202100458-e7afc7fbc510
 	go.uber.org/multierr v1.8.0
 	go.uber.org/zap v1.23.0
+	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	k8s.io/kubernetes v1.25.4
 	libvirt.org/go/libvirt v1.8009.0
 	libvirt.org/go/libvirtxml v1.8009.0

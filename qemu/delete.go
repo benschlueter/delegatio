@@ -6,7 +6,7 @@ import (
 	"libvirt.org/go/libvirt"
 )
 
-func (l *LibvirtInstance) deleteLibvirtInstance() error {
+func (l *LibvirtInstance) DeleteLibvirtInstance() error {
 	var err error
 	err = multierr.Append(err, l.deleteNetwork())
 	err = multierr.Append(err, l.deleteDomain())
