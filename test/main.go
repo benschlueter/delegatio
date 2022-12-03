@@ -78,7 +78,7 @@ func main() {
 		log.Info("instaces terminated successfully")
 	}(log, &lInstance)
 
-	if err := lInstance.InitializeBaseImagesAndNetwork(); err != nil {
+	if err := lInstance.InitializeBaseImagesAndNetwork(ctx); err != nil {
 		log.With(zap.Error(err)).DPanic("Failed to initialize Libvirt")
 	}
 

@@ -1,0 +1,24 @@
+name: Golangci-lint
+
+on:
+  pull_request:
+
+permissions:
+  contents: read
+  # Allow read access to pull request. Use with `only-new-issues` option.
+  pull-requests: read
+
+jobs:
+  golangci:
+    name: lint
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Configure git for private modules
+        run: git config --global url."https://api:${{ secrets.CI_GITHUB_REPOSITORY }}@github.com".insteadOf "https://github.com"
+
+      - name: golangci-lint
+        uses: golangci/golangci-lint-action@v2
+        with:
+          only-new-issues: true

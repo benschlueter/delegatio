@@ -62,7 +62,7 @@ func (l *LibvirtInstance) registerQemuGuestAgentHandler() {
 	l.log.Info("registered Callback", zap.Int("fd", fd))
 }
 
-func (l *LibvirtInstance) InitializeBaseImagesAndNetwork() (err error) {
+func (l *LibvirtInstance) InitializeBaseImagesAndNetwork(ctx context.Context) (err error) {
 	// sanity check
 	if err := l.DeleteLibvirtInstance(); err != nil {
 		return err
