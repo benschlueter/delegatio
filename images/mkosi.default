@@ -6,7 +6,7 @@ Format=gpt_ext4
 Bootable=yes
 QCow2=yes
 Output=image.qcow2
-KernelCommandLine="console=/dev/ttyS0"
+KernelCommandLine=console=tty1 console=ttyS0,115200n8
 
 [Packages]
 Packages=
@@ -19,7 +19,7 @@ Packages=
          socat
          kubelet
          ethtool
-         cri-o
+         containerd
 
 [Validation]
 Password=password

@@ -3,5 +3,5 @@
 systemctl enable systemd-networkd.service
 systemctl enable systemd-resolved.service
 systemctl enable kubelet.service
-systemctl enable crio.service
+systemctl enable containerd.service
 systemctl enable randomhost.service
