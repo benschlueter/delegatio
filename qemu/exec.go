@@ -32,7 +32,7 @@ type qemuStatusResponse struct {
 	} `json:"return,omitempty"`
 }
 
-func (l *LibvirtInstance) WaitForCompletion(ctx context.Context, pid int, domain *libvirt.Domain) (response *qemuStatusResponse, err error) {
+func (l *LibvirtInstance) waitForCompletion(ctx context.Context, pid int, domain *libvirt.Domain) (response *qemuStatusResponse, err error) {
 	response = &qemuStatusResponse{}
 
 	ticker := time.NewTicker(500 * time.Millisecond)
@@ -64,8 +64,6 @@ func (l *LibvirtInstance) WaitForCompletion(ctx context.Context, pid int, domain
 	}
 }
 
-//	kubeadm join 127.0.0.1:16443 --token vlhjr4.9l6lhek0b9v65m67 \
-//	 --discovery-token-ca-cert-hash sha256:2b5343a162e31b70602e3cab3d87189dc10431e869633c4db63c3bfcd038dee6"
 func (l *LibvirtInstance) JoinCluster(ctx context.Context, id string, joinToken *kubeadm.BootstrapTokenDiscovery) (err error) {
 	domain, err := l.conn.LookupDomainByName(id)
 	if err != nil {
@@ -92,7 +90,7 @@ func (l *LibvirtInstance) JoinCluster(ctx context.Context, id string, joinToken 
 
 	l.log.Info("wait for completion")
 
-	stateResponse, err := l.WaitForCompletion(ctx, response.Return.Pid, domain)
+	stateResponse, err := l.waitForCompletion(ctx, response.Return.Pid, domain)
 	if err != nil {
 		return err
 	}
@@ -130,7 +128,7 @@ func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context) (output stri
 	var response qemuExecResponse
 	json.Unmarshal([]byte(result), &response)
 
-	stateResponse, err := l.WaitForCompletion(ctx, response.Return.Pid, domain)
+	stateResponse, err := l.waitForCompletion(ctx, response.Return.Pid, domain)
 	if err != nil {
 		return
 	}

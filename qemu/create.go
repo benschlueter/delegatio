@@ -1,6 +1,7 @@
 package qemu
 
 import (
+	"context"
 	"fmt"
 	"path"
 
@@ -32,7 +33,7 @@ func (l *LibvirtInstance) CreateStoragePool() error {
 	return nil
 }
 
-func (l *LibvirtInstance) CreateBaseImage() error {
+func (l *LibvirtInstance) CreateBaseImage(ctx context.Context) error {
 	volumeBaseXMLString, err := definitions.VolumeBaseXMLConfig.Marshal()
 	if err != nil {
 		return err
@@ -51,7 +52,7 @@ func (l *LibvirtInstance) CreateBaseImage() error {
 	l.registeredDisks = append(l.registeredDisks, definitions.VolumeBaseXMLConfig.Name)
 
 	l.log.Info("uploading image to libvirt")
-	return l.uploadBaseImage(volumeBaseObject)
+	return l.uploadBaseImage(ctx, volumeBaseObject)
 }
 
 func (l *LibvirtInstance) CreateBootImage(id string) error {

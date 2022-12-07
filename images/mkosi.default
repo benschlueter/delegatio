@@ -1,0 +1,19 @@
+[Distribution]
+Distribution=arch
+
+[Output]
+Format=gpt_ext4
+Bootable=yes
+QCow2=yes
+Output=image.qcow2
+
+[Packages]
+Packages=
+         openssh
+         crictl
+         critest
+         kubeadm  
+         kubectl
+
+[Validation]
+Password=password

@@ -70,7 +70,7 @@ func (l *LibvirtInstance) InitializeBaseImagesAndNetwork(ctx context.Context) (e
 	if err := l.CreateStoragePool(); err != nil {
 		return err
 	}
-	if err := l.CreateBaseImage(); err != nil {
+	if err := l.CreateBaseImage(ctx); err != nil {
 		return err
 	}
 	if err := l.CreateNetwork(); err != nil {

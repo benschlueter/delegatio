@@ -5,4 +5,8 @@
 # Unignore all dirs
 !*/
 
-*.qcow2
+!/images/Scripts/usr/bin/randomhost
+
+
+/images/*qcow2*
+/images/*.cmdline
