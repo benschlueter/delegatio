@@ -108,7 +108,7 @@ func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context) (output stri
 	}
 	// needed because something in the network stack is not ready
 	// can probably be fixed by another image without NetworkManager
-	// time.Sleep(30 * time.Second)
+	time.Sleep(10 * time.Second)
 	l.log.Info("executing kubeadm")
 	result, err := domain.QemuAgentCommand(
 		`
