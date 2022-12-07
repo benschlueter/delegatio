@@ -6,6 +6,7 @@ Format=gpt_ext4
 Bootable=yes
 QCow2=yes
 Output=image.qcow2
+KernelCommandLine="console=/dev/ttyS0"
 
 [Packages]
 Packages=
@@ -14,6 +15,11 @@ Packages=
          critest
          kubeadm  
          kubectl
+         qemu-guest-agent
+         socat
+         kubelet
+         ethtool
+         cri-o
 
 [Validation]
 Password=password

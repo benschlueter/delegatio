@@ -5,7 +5,7 @@
 # Unignore all dirs
 !*/
 
-!/images/Scripts/usr/bin/randomhost
+!/images/mkosi.skeleton/**
 
 
 /images/*qcow2*
