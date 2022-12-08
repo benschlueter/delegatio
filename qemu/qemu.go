@@ -124,8 +124,12 @@ func (l *LibvirtInstance) BootstrapKubernetes(ctx context.Context) (err error) {
 	if err := l.blockUntilUp(ctx); err != nil {
 		return err
 	}
+	return nil
 
-	// * Cancellation point
+	// needed because something in the network stack is not ready
+	// assume this has to do with qemu dhcp or slow network init on host
+	// can probably be fixed by waiting explicitly for the network
+	time.Sleep(10 * time.Second)
 	output, err := l.InitializeKubernetes(ctx)
 	if err != nil {
 		return err

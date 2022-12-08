@@ -11,9 +11,10 @@ KernelCommandLine=console=tty1 console=ttyS0,115200n8
 [Packages]
 Packages=
          openssh
+         vim
          crictl
          critest
-         kubeadm  
+         kubeadm
          kubectl
          qemu-guest-agent
          socat
