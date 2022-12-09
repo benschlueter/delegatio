@@ -6,7 +6,6 @@ Format=gpt_ext4
 Bootable=yes
 QCow2=yes
 Output=image.qcow2
-KernelCommandLine=console=tty1 console=ttyS0,115200n8
 
 [Packages]
 Packages=
@@ -27,3 +26,7 @@ Password=password
 
 [Content]
 Cache=.cache
+Autologin=yes
+
+[Host]
+QemuHeadless=yes

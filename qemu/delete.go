@@ -1,7 +1,7 @@
 package qemu
 
 import (
-	"github.com/benschlueter/delegatio/test/qemu/definitions"
+	"github.com/benschlueter/delegatio/qemu/definitions"
 	"go.uber.org/multierr"
 	"libvirt.org/go/libvirt"
 )

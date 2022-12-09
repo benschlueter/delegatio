@@ -1,0 +1,14 @@
+[Unit]
+Description=Delegatio Agent
+Wants=network-online.target
+After=network-online.target configure-constel-csp.service
+
+[Service]
+Type=simple
+RemainAfterExit=yes
+Restart=on-failure
+Environment=PATH=/run/state/bin:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin
+ExecStart=/usr/bin/delegatio-agent
+
+[Install]
+WantedBy=multi-user.target

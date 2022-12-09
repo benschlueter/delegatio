@@ -1,4 +1,4 @@
-module github.com/benschlueter/delegatio/test
+module github.com/benschlueter/delegatio
 
 go 1.19
 

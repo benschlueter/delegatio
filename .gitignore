@@ -6,8 +6,10 @@
 !*/
 
 !/images/mkosi.skeleton/**
+/images/mkosi.skeleton/usr/bin/delegatio-agent
 
 
 /images/*qcow2*
 /images/*.cmdline
 /images/.cache/**
+/build
