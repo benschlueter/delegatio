@@ -124,7 +124,6 @@ func (l *LibvirtInstance) BootstrapKubernetes(ctx context.Context) (err error) {
 	if err := l.blockUntilUp(ctx); err != nil {
 		return err
 	}
-	return nil
 
 	// needed because something in the network stack is not ready
 	// assume this has to do with qemu dhcp or slow network init on host

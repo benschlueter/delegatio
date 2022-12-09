@@ -10,3 +10,4 @@
 
 /images/*qcow2*
 /images/*.cmdline
+/images/.cache/**
