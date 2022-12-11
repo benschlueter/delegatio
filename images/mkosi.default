@@ -30,3 +30,6 @@ Autologin=yes
 
 [Host]
 QemuHeadless=yes
+
+[Partitions]
+#RootSize=10G

@@ -103,7 +103,7 @@ var (
 		Name: "MUST-BE-FILLED-WITH-STH-VM",
 		Type: "kvm",
 		Memory: &libvirtxml.DomainMemory{
-			Value: 2,
+			Value: 4,
 			Unit:  "GiB",
 		},
 		Resource: &libvirtxml.DomainResource{
@@ -111,8 +111,8 @@ var (
 		},
 		VCPU: &libvirtxml.DomainVCPU{
 			Placement: "static",
-			Current:   2,
-			Value:     2,
+			Current:   4,
+			Value:     4,
 		},
 		CPU: &libvirtxml.DomainCPU{
 			Mode: "custom",
@@ -145,22 +145,24 @@ var (
 			SMM: &libvirtxml.DomainFeatureSMM{
 				State: "on",
 			},
-			APIC: &libvirtxml.DomainFeatureAPIC{},
 		},
 
 		OS: &libvirtxml.DomainOS{
 			// If Firmware is set, Loader and NVRam will be chosen automatically
 			Firmware: "efi",
+			FirmwareInfo: &libvirtxml.DomainOSFirmwareInfo{
+				Features: []libvirtxml.DomainOSFirmwareFeature{
+					{
+						Name:    "secure-boot",
+						Enabled: "no",
+					},
+				},
+			},
 			Type: &libvirtxml.DomainOSType{
 				Arch:    "x86_64",
 				Machine: "q35",
 				Type:    "hvm",
 			},
-			/* 			BootDevices: []libvirtxml.DomainBootDevice{
-				{
-					Dev: "hd",
-				},
-			}, */
 		},
 		Devices: &libvirtxml.DomainDeviceList{
 			Emulator: "/usr/bin/qemu-system-x86_64",
