@@ -174,8 +174,8 @@ var (
 						Type: "qcow2",
 					},
 					Target: &libvirtxml.DomainDiskTarget{
-						Dev: "sda",
-						Bus: "scsi",
+						Dev: "vda",
+						Bus: "virtio",
 					},
 					Source: &libvirtxml.DomainDiskSource{
 						Index: 1,
@@ -184,12 +184,6 @@ var (
 							Volume: BootDiskName,
 						},
 					},
-				},
-			},
-			Controllers: []libvirtxml.DomainController{
-				{
-					Type:  "scsi",
-					Model: "virtio-scsi",
 				},
 			},
 			/* 			TPMs: []libvirtxml.DomainTPM{
