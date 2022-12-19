@@ -1,6 +1,8 @@
 package qemu
 
 import (
+	"fmt"
+
 	"github.com/benschlueter/delegatio/qemu/definitions"
 	"go.uber.org/multierr"
 	"libvirt.org/go/libvirt"
@@ -64,7 +66,7 @@ func (l *LibvirtInstance) deleteDomain() error {
 	return nil
 }
 
-func (l *LibvirtInstance) deleteVolume(pool *libvirt.StoragePool) error {
+func (l *LibvirtInstance) deleteVolumesFromPool(pool *libvirt.StoragePool) error {
 	volumes, err := pool.ListAllStorageVolumes(0)
 	if err != nil {
 		return err
@@ -83,7 +85,7 @@ func (l *LibvirtInstance) deleteVolume(pool *libvirt.StoragePool) error {
 		   			continue
 		   		} */
 		if err := volume.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL); err != nil {
-			return err
+			return fmt.Errorf("test %w", err)
 		}
 	}
 	return nil
@@ -112,7 +114,7 @@ func (l *LibvirtInstance) deletePool() error {
 			return err
 		}
 		if active {
-			if err := l.deleteVolume(&pool); err != nil {
+			if err := l.deleteVolumesFromPool(&pool); err != nil {
 				return err
 			}
 			if err := pool.Destroy(); err != nil {

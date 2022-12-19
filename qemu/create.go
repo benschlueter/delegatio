@@ -22,13 +22,13 @@ func (l *LibvirtInstance) CreateStoragePool() error {
 	if err != nil {
 		return fmt.Errorf("error defining libvirt storage pool: %s", err)
 	}
+	defer func() { _ = poolObject.Free() }()
 	if err := poolObject.Build(libvirt.STORAGE_POOL_BUILD_NEW); err != nil {
 		return fmt.Errorf("error building libvirt storage pool: %s", err)
 	}
 	if err := poolObject.Create(libvirt.STORAGE_POOL_CREATE_NORMAL); err != nil {
 		return fmt.Errorf("error creating libvirt storage pool: %s", err)
 	}
-	defer func() { _ = poolObject.Free() }()
 	l.registeredPools = append(l.registeredPools, poolXMLCopy.Name)
 	return nil
 }
@@ -51,7 +51,7 @@ func (l *LibvirtInstance) CreateBaseImage(ctx context.Context) error {
 	defer func() { _ = volumeBaseObject.Free() }()
 	l.registeredDisks = append(l.registeredDisks, definitions.VolumeBaseXMLConfig.Name)
 
-	l.log.Info("uploading image to libvirt")
+	l.log.Info("uploading baseimage to libvirt storage pool")
 	return l.uploadBaseImage(ctx, volumeBaseObject)
 }
 

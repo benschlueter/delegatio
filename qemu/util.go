@@ -47,6 +47,8 @@ loop:
 	for {
 		select {
 		case <-ctx.Done():
+			err := stream.Abort()
+			l.log.Info("context cancel during image upload", zap.Error(err))
 			return ctx.Err()
 		default:
 			_, err := file.Read(buffer)
@@ -62,6 +64,9 @@ loop:
 			}
 			transferredBytes += num
 		}
+	}
+	if err := stream.Finish(); err != nil {
+		return err
 	}
 	if transferredBytes < int(fi.Size()) {
 		return fmt.Errorf("only send %d out of %d bytes", transferredBytes, fi.Size())

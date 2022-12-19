@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"errors"
 	"flag"
 	"os"
 	"os/signal"
@@ -15,7 +16,7 @@ import (
 
 var version = "0.0.0"
 
-func registerSignalHandler(cancel context.CancelFunc, log *zap.Logger) {
+func registerSignalHandler(cancelContext context.CancelFunc, done chan<- struct{}, log *zap.Logger) {
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
@@ -24,9 +25,10 @@ func registerSignalHandler(cancel context.CancelFunc, log *zap.Logger) {
 		break
 	}
 	log.Info("cancellation signal received")
-	cancel()
+	cancelContext()
 	signal.Stop(sigs)
 	close(sigs)
+	done <- struct{}{}
 }
 
 func main() {
@@ -64,7 +66,8 @@ func main() {
 		}
 	}()
 
-	go registerSignalHandler(cancel, log)
+	done := make(chan struct{})
+	go registerSignalHandler(cancel, done, log)
 
 	conn, err := libvirt.NewConnect("qemu:///system")
 	if err != nil {
@@ -82,14 +85,23 @@ func main() {
 	}(log, &lInstance)
 
 	if err := lInstance.InitializeBaseImagesAndNetwork(ctx); err != nil {
-		log.With(zap.Error(err)).DPanic("Failed to initialize Libvirt")
+		if errors.Is(err, ctx.Err()) {
+			log.With(zap.Error(err)).Error("Failed to start VMs")
+		} else {
+			log.With(zap.Error(err)).DPanic("Failed to start VMs")
+		}
 	}
 
 	if err := lInstance.BootstrapKubernetes(ctx); err != nil {
-		log.With(zap.Error(err)).DPanic("Failed to run VMs")
+		if errors.Is(err, ctx.Err()) {
+			log.With(zap.Error(err)).Error("Failed to run Kubernetes")
+		} else {
+			log.With(zap.Error(err)).DPanic("Failed to run Kubernetes")
+		}
 	}
 
 	select {
 	case <-ctx.Done():
 	}
+	<-done
 }
