@@ -5,9 +5,14 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"net"
 	"time"
 
+	"github.com/benschlueter/delegatio/core/config"
+	"github.com/benschlueter/delegatio/core/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/qemu/definitions"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
 	"libvirt.org/go/libvirt"
 
 	kubeadm "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
@@ -97,7 +102,7 @@ func (l *LibvirtInstance) JoinCluster(ctx context.Context, id string, joinToken 
 	return
 }
 
-func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context) (output string, err error) {
+func (l *LibvirtInstance) InitializeKubernetesQemuGuestAgent(ctx context.Context) (output string, err error) {
 	domain, err := l.conn.LookupDomainByName("delegatio-0")
 	if err != nil {
 		return
@@ -141,4 +146,33 @@ func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context) (output stri
 	}
 	err = fmt.Errorf("error during 'kubeadm init': %s", stateResponse.Return.ErrData)
 	return
+}
+
+func (l *LibvirtInstance) InitializeKubernetesgRPC(ctx context.Context) (output string, err error) {
+	qemuNetwork, err := l.conn.LookupNetworkByName(definitions.NetworkName)
+	if err != nil {
+		return
+	}
+	leases, err := qemuNetwork.GetDHCPLeases()
+	if err != nil {
+		return
+	}
+	if len(leases) == 0 {
+		return "", fmt.Errorf("no vms in network")
+	}
+	ip := leases[0].IPaddr
+
+	conn, err := grpc.DialContext(ctx, net.JoinHostPort(ip, config.PublicAPIport))
+	if err != nil {
+		return "", err
+	}
+	defer conn.Close()
+	client := vmproto.NewAPIClient(conn)
+	resp, err := client.ExecCommand(ctx, &vmproto.ExecCommandRequest{
+		Command: "/usr/bin/kubeadm init",
+	})
+	if err != nil {
+		return
+	}
+	return resp.Output, err
 }

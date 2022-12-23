@@ -1,0 +1,18 @@
+syntax = "proto3";
+
+package vmapi;
+
+option go_package = "github.com/benschlueter/delegatio/core/vmapi/vmproto";
+
+
+service API {
+  rpc ExecCommand(ExecCommandRequest) returns (ExecCommandResponse);
+}
+
+message ExecCommandRequest {
+  string command = 1;
+}
+
+message ExecCommandResponse {
+  string output = 1;
+}

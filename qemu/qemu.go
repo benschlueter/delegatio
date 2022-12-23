@@ -129,7 +129,7 @@ func (l *LibvirtInstance) BootstrapKubernetes(ctx context.Context) (err error) {
 	// assume this has to do with qemu dhcp or slow network init on host
 	// can probably be fixed by waiting explicitly for the network
 	time.Sleep(10 * time.Second)
-	output, err := l.InitializeKubernetes(ctx)
+	output, err := l.InitializeKubernetesQemuGuestAgent(ctx)
 	if err != nil {
 		return err
 	}
