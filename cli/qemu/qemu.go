@@ -2,7 +2,6 @@ package qemu
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"sync"
 	"time"
@@ -132,6 +131,9 @@ func (l *LibvirtInstance) BootstrapKubernetes(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
+	if err := l.WriteKubeconfigToDisk(ctx); err != nil {
+		return err
+	}
 	joinToken, err := l.ParseKubeadmOutput(output)
 	if err != nil {
 		return err
@@ -140,7 +142,6 @@ func (l *LibvirtInstance) BootstrapKubernetes(ctx context.Context) (err error) {
 	if err != nil {
 		return err
 	}
-	fmt.Println(kubeadmJoinToken)
 
 	g, ctxGo = errgroup.WithContext(ctx)
 	for i := 1; i < numNodes; i++ {

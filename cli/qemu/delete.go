@@ -3,7 +3,7 @@ package qemu
 import (
 	"fmt"
 
-	"github.com/benschlueter/delegatio/qemu/definitions"
+	"github.com/benschlueter/delegatio/cli/qemu/definitions"
 	"go.uber.org/multierr"
 	"libvirt.org/go/libvirt"
 )

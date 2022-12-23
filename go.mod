@@ -39,6 +39,7 @@ require (
 	golang.org/x/sync v0.0.0-20220722155255-886fb9371eb4
 	google.golang.org/grpc v1.47.0
 	google.golang.org/protobuf v1.28.0
+	k8s.io/api v0.25.3
 	k8s.io/kubernetes v1.25.4
 	libvirt.org/go/libvirt v1.8009.0
 	libvirt.org/go/libvirtxml v1.8009.0
@@ -63,7 +64,6 @@ require (
 	gopkg.in/check.v1 v1.0.0-20201130134442-10cb98267c6c // indirect
 	gopkg.in/inf.v0 v0.9.1 // indirect
 	gopkg.in/yaml.v2 v2.4.0 // indirect
-	k8s.io/api v0.25.3 // indirect
 	k8s.io/apimachinery v0.25.3 // indirect
 	k8s.io/cluster-bootstrap v0.0.0 // indirect
 	k8s.io/component-base v0.25.3 // indirect

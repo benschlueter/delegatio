@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/benschlueter/delegatio/qemu/definitions"
+	"github.com/benschlueter/delegatio/cli/qemu/definitions"
 	"libvirt.org/go/libvirt"
 )
 

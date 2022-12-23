@@ -8,8 +8,8 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/benschlueter/delegatio/qemu"
-	"github.com/benschlueter/delegatio/qemu/definitions"
+	"github.com/benschlueter/delegatio/cli/qemu"
+	"github.com/benschlueter/delegatio/cli/qemu/definitions"
 	"go.uber.org/zap"
 	"libvirt.org/go/libvirt"
 )

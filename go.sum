@@ -5,6 +5,7 @@ cloud.google.com/go/compute v1.5.0 h1:b1zWmYuuHz7gO9kDcM/EpHGr06UgsYNRpNJzI2kFiL
 cloud.google.com/go/iam v0.3.0 h1:exkAomrVUuzx9kWFI1wm3KI0uoDeUFPB4kKGzx6x+Gc=
 cloud.google.com/go/kms v1.4.0 h1:iElbfoE61VeLhnZcGOltqL8HIly8Nhbe5t6JlH9GXjo=
 cloud.google.com/go/storage v1.21.0 h1:HwnT2u2D309SFDHQII6m18HlrCi3jAXhUMTLOWXYH14=
+github.com/Azure/azure-sdk-for-go v62.2.0+incompatible h1:o596qtwrgDH44VC3J0JOCwkT1xKekn8kPvCGpAceYs0=
 github.com/Azure/azure-sdk-for-go/sdk/azcore v0.22.0 h1:zBJcBJwte0x6PcPK7XaWDMvK2o2ZM2f1sMaqNNavQ5g=
 github.com/Azure/azure-sdk-for-go/sdk/azidentity v0.13.2 h1:mM/yraAumqMMIYev6zX0oxHqX6hreUs5wXf76W47r38=
 github.com/Azure/azure-sdk-for-go/sdk/internal v0.9.1 h1:sLZ/Y+P/5RRtsXWylBjB5lkgixYfm0MQPiwrSX//JSo=
