@@ -49,13 +49,14 @@ func (l *LibvirtInstance) JoinClustergRPC(ctx context.Context, id string, joinTo
 	defer conn.Close()
 	client := vmproto.NewAPIClient(conn)
 	_, err = client.ExecCommand(ctx, &vmproto.ExecCommandRequest{
-		Command: "/usr/bin/kubeadm",
+		Command: "/usr/local/bin/kubeadm",
 		Args:    []string{"join", joinToken.APIServerEndpoint, "--token", joinToken.Token, "--discovery-token-ca-cert-hash", joinToken.CACertHashes[0]},
 	})
+	l.log.Info("kubeadm join succeed", zap.String("id", id))
 	return err
 }
 
-func (l *LibvirtInstance) InitializeKubernetesgRPC(ctx context.Context) (output string, err error) {
+func (l *LibvirtInstance) InitializeKubernetesgRPC(ctx context.Context) (output []byte, err error) {
 	domain, err := l.conn.LookupDomainByName("delegatio-0")
 	if err != nil {
 		return
@@ -78,16 +79,16 @@ func (l *LibvirtInstance) InitializeKubernetesgRPC(ctx context.Context) (output 
 		}
 	}
 	if len(ip) == 0 {
-		return "", fmt.Errorf("could not find ip addr to domain")
+		return nil, fmt.Errorf("could not find ip addr of domain")
 	}
 	conn, err := grpc.DialContext(ctx, net.JoinHostPort(ip, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
-		return "", err
+		return nil, err
 	}
 	defer conn.Close()
 	client := vmproto.NewAPIClient(conn)
 	resp, err := client.ExecCommand(ctx, &vmproto.ExecCommandRequest{
-		Command: "/usr/bin/kubeadm",
+		Command: "/usr/local/bin/kubeadm",
 		Args:    []string{"init"},
 	})
 	if err != nil {
@@ -95,7 +96,7 @@ func (l *LibvirtInstance) InitializeKubernetesgRPC(ctx context.Context) (output 
 	}
 
 	l.log.Info("kubeadm init response", zap.String("response", string(resp.Output)))
-	return string(resp.Output), err
+	return resp.Output, err
 }
 
 func (l *LibvirtInstance) getKubeconfgRPC(ctx context.Context) (output []byte, err error) {
@@ -121,7 +122,7 @@ func (l *LibvirtInstance) getKubeconfgRPC(ctx context.Context) (output []byte, e
 		}
 	}
 	if len(ip) == 0 {
-		return nil, fmt.Errorf("could not find ip addr to domain")
+		return nil, fmt.Errorf("could not find ip addr of domain")
 	}
 	conn, err := grpc.DialContext(ctx, net.JoinHostPort(ip, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -136,8 +137,6 @@ func (l *LibvirtInstance) getKubeconfgRPC(ctx context.Context) (output []byte, e
 	if err != nil {
 		return
 	}
-
-	l.log.Info("kubeadm init response", zap.String("response", string(resp.Output)))
 	return resp.Output, err
 }
 

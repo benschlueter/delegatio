@@ -164,7 +164,7 @@ func (l *LibvirtInstance) blockUntilDelegatioAgentIsReady(ctx context.Context) e
 	}
 }
 
-func (l *LibvirtInstance) ParseKubeadmOutput(data string) (string, error) {
+func (l *LibvirtInstance) ParseKubeadmOutput(data []byte) (string, error) {
 	stdoutStr := string(data)
 	indexKubeadmJoin := strings.Index(stdoutStr, "kubeadm join")
 	if indexKubeadmJoin < 0 {

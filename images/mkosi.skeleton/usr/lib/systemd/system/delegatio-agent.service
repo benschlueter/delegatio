@@ -1,7 +1,7 @@
 [Unit]
 Description=Delegatio Agent
 Wants=network-online.target
-After=network-online.target configure-constel-csp.service
+After=network-online.target
 
 [Service]
 Type=simple

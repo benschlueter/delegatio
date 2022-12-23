@@ -6,4 +6,5 @@ systemctl enable kubelet.service
 systemctl enable containerd.service
 systemctl enable randomhost.service
 systemctl enable delegatio-agent.service
+systemctl enable systemd-sysctl.service
 ln -rsf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf

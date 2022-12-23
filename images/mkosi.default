@@ -14,11 +14,10 @@ Packages=
          openssh
          vim
          crictl
-         critest
-         kubeadm
-         kubectl
+         cni-plugins
+         iptables-nft
+         curl
          socat
-         kubelet
          ethtool
          containerd
 
