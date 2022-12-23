@@ -4,7 +4,6 @@ import (
 	"context"
 	"strconv"
 	"sync"
-	"time"
 
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -39,28 +38,6 @@ func NewQemu(conn *libvirt.Connect, log *zap.Logger, imagePath string) LibvirtIn
 	}
 }
 
-func (l *LibvirtInstance) registerQemuGuestAgentHandler() {
-	cb := func(c *libvirt.Connect, d *libvirt.Domain, event *libvirt.DomainEventAgentLifecycle) {
-		name, err := d.GetName()
-		if err != nil {
-			l.log.Error("error in callback function cannot obtain name", zap.Error(err))
-			return
-		}
-		if event.State == 1 {
-			l.connMux.Lock()
-			domainState := l.registeredDomains[name]
-			domainState.guestAgentReady = true
-			l.connMux.Unlock()
-		}
-		l.log.Info("qemu guest agent changed state", zap.Any("state", event.State), zap.String("name", name))
-	}
-	fd, err := l.conn.DomainEventAgentLifecycleRegister(nil, cb)
-	if err != nil {
-		l.log.DPanic("error registering callback", zap.Error(err))
-	}
-	l.log.Info("registered Callback", zap.Int("fd", fd))
-}
-
 func (l *LibvirtInstance) InitializeBaseImagesAndNetwork(ctx context.Context) (err error) {
 	// sanity check
 	if err := l.DeleteLibvirtInstance(); err != nil {
@@ -88,26 +65,6 @@ func (l *LibvirtInstance) CreateInstance(id string) (err error) {
 	return nil
 }
 
-func (l *LibvirtInstance) blockUntilUp(ctx context.Context) error {
-	ticker := time.NewTicker(500 * time.Millisecond)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ticker.C:
-			l.connMux.Lock()
-			if val, ok := l.registeredDomains["delegatio-"+"0"]; ok {
-				if val.guestAgentReady {
-					l.connMux.Unlock()
-					return nil
-				}
-			}
-			l.connMux.Unlock()
-		case <-ctx.Done():
-			return ctx.Err()
-		}
-	}
-}
-
 func (l *LibvirtInstance) BootstrapKubernetes(ctx context.Context) (err error) {
 	g, ctxGo := errgroup.WithContext(ctx)
 	for i := 0; i < numNodes; i++ {
@@ -124,16 +81,20 @@ func (l *LibvirtInstance) BootstrapKubernetes(ctx context.Context) (err error) {
 	if err := l.blockUntilNetworkIsReady(ctx); err != nil {
 		return err
 	}
+	l.log.Info("network is ready")
 	if err := l.blockUntilDelegatioAgentIsReady(ctx); err != nil {
 		return err
 	}
+	l.log.Info("delegatio-agent is ready")
 	output, err := l.InitializeKubernetesgRPC(ctx)
 	if err != nil {
 		return err
 	}
+	l.log.Info("kubernetes init successfull")
 	if err := l.WriteKubeconfigToDisk(ctx); err != nil {
 		return err
 	}
+	l.log.Info("admin.conf written to disk")
 	joinToken, err := l.ParseKubeadmOutput(output)
 	if err != nil {
 		return err

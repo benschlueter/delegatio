@@ -123,7 +123,7 @@ func (l *LibvirtInstance) blockUntilDelegatioAgentIsReady(ctx context.Context) e
 		return err
 	}
 	defer func() { _ = domain.Free() }()
-	iface, err := domain.ListAllInterfaceAddresses(libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_AGENT)
+	iface, err := domain.ListAllInterfaceAddresses(libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
 	if err != nil {
 		return err
 	}
