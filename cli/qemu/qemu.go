@@ -86,6 +86,7 @@ func (l *LibvirtInstance) BootstrapKubernetes(ctx context.Context) (err error) {
 		return err
 	}
 	l.log.Info("delegatio-agent is ready")
+	<-ctx.Done()
 	output, err := l.InitializeKubernetesgRPC(ctx)
 	if err != nil {
 		return err

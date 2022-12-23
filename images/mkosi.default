@@ -13,12 +13,15 @@ Output=image.qcow2
 Packages=
          openssh
          vim
-         crictl
-         cni-plugins
-         iptables-nft
          curl
          socat
          ethtool
+         iptables-nft
+         kubeadm
+         kubelet
+         kubectl
+         cni-plugins
+         crictl
          containerd
 
 [Validation]
