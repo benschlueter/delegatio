@@ -18,7 +18,7 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type APIClient interface {
-	ExecCommand(ctx context.Context, in *ExecCommandRequest, opts ...grpc.CallOption) (*ExecCommandResponse, error)
+	ExecCommand(ctx context.Context, in *ExecCommandRequest, opts ...grpc.CallOption) (API_ExecCommandClient, error)
 }
 
 type aPIClient struct {
@@ -29,20 +29,43 @@ func NewAPIClient(cc grpc.ClientConnInterface) APIClient {
 	return &aPIClient{cc}
 }
 
-func (c *aPIClient) ExecCommand(ctx context.Context, in *ExecCommandRequest, opts ...grpc.CallOption) (*ExecCommandResponse, error) {
-	out := new(ExecCommandResponse)
-	err := c.cc.Invoke(ctx, "/vmapi.API/ExecCommand", in, out, opts...)
+func (c *aPIClient) ExecCommand(ctx context.Context, in *ExecCommandRequest, opts ...grpc.CallOption) (API_ExecCommandClient, error) {
+	stream, err := c.cc.NewStream(ctx, &API_ServiceDesc.Streams[0], "/vmapi.API/ExecCommand", opts...)
 	if err != nil {
 		return nil, err
 	}
-	return out, nil
+	x := &aPIExecCommandClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type API_ExecCommandClient interface {
+	Recv() (*ExecCommandResponse, error)
+	grpc.ClientStream
+}
+
+type aPIExecCommandClient struct {
+	grpc.ClientStream
+}
+
+func (x *aPIExecCommandClient) Recv() (*ExecCommandResponse, error) {
+	m := new(ExecCommandResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
 }
 
 // APIServer is the server API for API service.
 // All implementations must embed UnimplementedAPIServer
 // for forward compatibility
 type APIServer interface {
-	ExecCommand(context.Context, *ExecCommandRequest) (*ExecCommandResponse, error)
+	ExecCommand(*ExecCommandRequest, API_ExecCommandServer) error
 	mustEmbedUnimplementedAPIServer()
 }
 
@@ -50,8 +73,8 @@ type APIServer interface {
 type UnimplementedAPIServer struct {
 }
 
-func (UnimplementedAPIServer) ExecCommand(context.Context, *ExecCommandRequest) (*ExecCommandResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method ExecCommand not implemented")
+func (UnimplementedAPIServer) ExecCommand(*ExecCommandRequest, API_ExecCommandServer) error {
+	return status.Errorf(codes.Unimplemented, "method ExecCommand not implemented")
 }
 func (UnimplementedAPIServer) mustEmbedUnimplementedAPIServer() {}
 
@@ -66,22 +89,25 @@ func RegisterAPIServer(s grpc.ServiceRegistrar, srv APIServer) {
 	s.RegisterService(&API_ServiceDesc, srv)
 }
 
-func _API_ExecCommand_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(ExecCommandRequest)
-	if err := dec(in); err != nil {
-		return nil, err
+func _API_ExecCommand_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ExecCommandRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
 	}
-	if interceptor == nil {
-		return srv.(APIServer).ExecCommand(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: "/vmapi.API/ExecCommand",
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(APIServer).ExecCommand(ctx, req.(*ExecCommandRequest))
-	}
-	return interceptor(ctx, in, info, handler)
+	return srv.(APIServer).ExecCommand(m, &aPIExecCommandServer{stream})
+}
+
+type API_ExecCommandServer interface {
+	Send(*ExecCommandResponse) error
+	grpc.ServerStream
+}
+
+type aPIExecCommandServer struct {
+	grpc.ServerStream
+}
+
+func (x *aPIExecCommandServer) Send(m *ExecCommandResponse) error {
+	return x.ServerStream.SendMsg(m)
 }
 
 // API_ServiceDesc is the grpc.ServiceDesc for API service.
@@ -90,12 +116,13 @@ func _API_ExecCommand_Handler(srv interface{}, ctx context.Context, dec func(int
 var API_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "vmapi.API",
 	HandlerType: (*APIServer)(nil),
-	Methods: []grpc.MethodDesc{
+	Methods:     []grpc.MethodDesc{},
+	Streams: []grpc.StreamDesc{
 		{
-			MethodName: "ExecCommand",
-			Handler:    _API_ExecCommand_Handler,
+			StreamName:    "ExecCommand",
+			Handler:       _API_ExecCommand_Handler,
+			ServerStreams: true,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
 	Metadata: "vmapi.proto",
 }

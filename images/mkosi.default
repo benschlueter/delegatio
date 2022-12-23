@@ -17,10 +17,8 @@ Packages=
          socat
          ethtool
          iptables-nft
+         kubernetes-control-plane
          kubeadm
-         kubelet
-         kubectl
-         cni-plugins
          crictl
          containerd
 

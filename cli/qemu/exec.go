@@ -48,12 +48,28 @@ func (l *LibvirtInstance) JoinClustergRPC(ctx context.Context, id string, joinTo
 	}
 	defer conn.Close()
 	client := vmproto.NewAPIClient(conn)
-	_, err = client.ExecCommand(ctx, &vmproto.ExecCommandRequest{
-		Command: "/usr/local/bin/kubeadm",
+	resp, err := client.ExecCommand(ctx, &vmproto.ExecCommandRequest{
+		Command: "/usr/bin/kubeadm",
 		Args:    []string{"join", joinToken.APIServerEndpoint, "--token", joinToken.Token, "--discovery-token-ca-cert-hash", joinToken.CACertHashes[0]},
 	})
-	l.log.Info("kubeadm join succeed", zap.String("id", id))
-	return err
+	for {
+		select {
+		case <-ctx.Done():
+			return ctx.Err()
+		default:
+			data, err := resp.Recv()
+			if err != nil {
+				return err
+			}
+			if len(data.GetOutput()) > 0 {
+				l.log.Info("kubeadm join succeed", zap.String("id", id))
+				return nil
+			}
+			if len(data.GetLog().GetMessage()) > 0 {
+				fmt.Println(data.GetLog().GetMessage())
+			}
+		}
+	}
 }
 
 func (l *LibvirtInstance) InitializeKubernetesgRPC(ctx context.Context) (output []byte, err error) {
@@ -88,15 +104,32 @@ func (l *LibvirtInstance) InitializeKubernetesgRPC(ctx context.Context) (output 
 	defer conn.Close()
 	client := vmproto.NewAPIClient(conn)
 	resp, err := client.ExecCommand(ctx, &vmproto.ExecCommandRequest{
-		Command: "/usr/local/bin/kubeadm",
+		Command: "/usr/bin/kubeadm",
 		Args:    []string{"init"},
 	})
 	if err != nil {
 		return
 	}
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			data, err := resp.Recv()
+			if err != nil {
+				return nil, err
+			}
+			if len(data.GetOutput()) > 0 {
+				return data.GetOutput(), nil
+			}
+			if len(data.GetLog().GetMessage()) > 0 {
+				fmt.Println(data.GetLog().GetMessage())
+			}
+		}
+	}
 
-	l.log.Info("kubeadm init response", zap.String("response", string(resp.Output)))
-	return resp.Output, err
+	// l.log.Info("kubeadm init response", zap.String("response", string(resp.Output)))
+	return nil, err
 }
 
 func (l *LibvirtInstance) getKubeconfgRPC(ctx context.Context) (output []byte, err error) {
@@ -137,7 +170,23 @@ func (l *LibvirtInstance) getKubeconfgRPC(ctx context.Context) (output []byte, e
 	if err != nil {
 		return
 	}
-	return resp.Output, err
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			data, err := resp.Recv()
+			if err != nil {
+				return nil, err
+			}
+			if len(data.GetOutput()) > 0 {
+				return data.GetOutput(), nil
+			}
+			if len(data.GetLog().GetMessage()) > 0 {
+				fmt.Println(data.GetLog().GetMessage())
+			}
+		}
+	}
 }
 
 func (l *LibvirtInstance) WriteKubeconfigToDisk(ctx context.Context) error {
