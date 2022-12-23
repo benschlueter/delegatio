@@ -6,12 +6,18 @@ import (
 	"flag"
 	"fmt"
 	"io"
+	"net"
 	"os"
 	"strings"
+	"time"
 
+	"github.com/benschlueter/delegatio/core/config"
+	"github.com/benschlueter/delegatio/core/vmapi/vmproto"
 	"github.com/google/shlex"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	kubeadm "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 	"libvirt.org/go/libvirt"
 )
@@ -73,6 +79,89 @@ loop:
 	}
 	l.log.Info("image upload successful", zap.Int64("image size", fi.Size()), zap.Int("transferred bytes", transferredBytes))
 	return nil
+}
+
+func (l *LibvirtInstance) blockUntilNetworkIsReady(ctx context.Context) error {
+	domain, err := l.conn.LookupDomainByName("delegatio-0")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = domain.Free() }()
+	for {
+		select {
+		case <-ctx.Done():
+			l.log.Info("context cancel during waiting for vm init")
+			return ctx.Err()
+		default:
+			iface, err := domain.ListAllInterfaceAddresses(libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
+			if err != nil {
+				return err
+			}
+			var ip string
+			for _, netInterface := range iface {
+				if netInterface.Name == "lo" {
+					continue
+				}
+				for _, addr := range netInterface.Addrs {
+					if addr.Type == libvirt.IP_ADDR_TYPE_IPV4 {
+						ip = addr.Addr
+					}
+				}
+			}
+			if len(ip) > 0 {
+				return nil
+			}
+		}
+	}
+}
+
+func (l *LibvirtInstance) blockUntilDelegatioAgentIsReady(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	domain, err := l.conn.LookupDomainByName("delegatio-0")
+	if err != nil {
+		return err
+	}
+	defer func() { _ = domain.Free() }()
+	iface, err := domain.ListAllInterfaceAddresses(libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_AGENT)
+	if err != nil {
+		return err
+	}
+	var ip string
+	for _, netInterface := range iface {
+		if netInterface.Name == "lo" {
+			continue
+		}
+		for _, addr := range netInterface.Addrs {
+			if addr.Type == libvirt.IP_ADDR_TYPE_IPV4 {
+				ip = addr.Addr
+			}
+		}
+	}
+	if len(ip) == 0 {
+		return fmt.Errorf("could not get ip addr of VM %s", "delegatio-0")
+	}
+	conn, err := grpc.DialContext(ctx, net.JoinHostPort(ip, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	client := vmproto.NewAPIClient(conn)
+	for {
+		select {
+		case <-ctx.Done():
+			l.log.Info("context cancel during waiting for vm init")
+			return ctx.Err()
+		default:
+			_, err := client.ExecCommand(ctx, &vmproto.ExecCommandRequest{
+				Command: "whoami",
+			})
+			if err == nil {
+				return nil
+			}
+
+		}
+	}
 }
 
 func (l *LibvirtInstance) ParseKubeadmOutput(data string) (string, error) {

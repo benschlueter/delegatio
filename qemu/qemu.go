@@ -110,26 +110,25 @@ func (l *LibvirtInstance) blockUntilUp(ctx context.Context) error {
 }
 
 func (l *LibvirtInstance) BootstrapKubernetes(ctx context.Context) (err error) {
+	g, ctxGo := errgroup.WithContext(ctx)
 	for i := 0; i < numNodes; i++ {
-		go func(i int) {
-			if err := l.CreateInstance(strconv.Itoa(i)); err != nil {
-				l.log.Panic("error spawning qemu instances", zap.Error(err))
-			}
+		func(id int) {
+			g.Go(func() error {
+				return l.CreateInstance(strconv.Itoa(id))
+			})
 		}(i)
 	}
-
-	l.registerQemuGuestAgentHandler()
-
-	// * Cancellation point
-	if err := l.blockUntilUp(ctx); err != nil {
+	if err := g.Wait(); err != nil {
 		return err
 	}
 
-	// needed because something in the network stack is not ready
-	// assume this has to do with qemu dhcp or slow network init on host
-	// can probably be fixed by waiting explicitly for the network
-	time.Sleep(10 * time.Second)
-	output, err := l.InitializeKubernetesQemuGuestAgent(ctx)
+	if err := l.blockUntilNetworkIsReady(ctx); err != nil {
+		return err
+	}
+	if err := l.blockUntilDelegatioAgentIsReady(ctx); err != nil {
+		return err
+	}
+	output, err := l.InitializeKubernetesgRPC(ctx)
 	if err != nil {
 		return err
 	}
@@ -143,11 +142,11 @@ func (l *LibvirtInstance) BootstrapKubernetes(ctx context.Context) (err error) {
 	}
 	fmt.Println(kubeadmJoinToken)
 
-	g, ctxGo := errgroup.WithContext(ctx)
+	g, ctxGo = errgroup.WithContext(ctx)
 	for i := 1; i < numNodes; i++ {
 		func(id int) {
 			g.Go(func() error {
-				return l.JoinCluster(ctxGo, "delegatio-"+strconv.Itoa(id), kubeadmJoinToken)
+				return l.JoinClustergRPC(ctxGo, "delegatio-"+strconv.Itoa(id), kubeadmJoinToken)
 			})
 		}(i)
 	}

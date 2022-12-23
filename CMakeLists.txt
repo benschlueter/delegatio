@@ -32,5 +32,5 @@ add_custom_target(images ALL
 #
 add_custom_target(delegatio-agent ALL
   go build -o ${CMAKE_BINARY_DIR}/delegatio-agent
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/core
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/cmd
 )

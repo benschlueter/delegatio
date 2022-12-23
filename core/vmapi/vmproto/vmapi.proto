@@ -11,8 +11,9 @@ service API {
 
 message ExecCommandRequest {
   string command = 1;
+  repeated string args = 2;
 }
 
 message ExecCommandResponse {
-  string output = 1;
+  bytes output = 1;
 }
