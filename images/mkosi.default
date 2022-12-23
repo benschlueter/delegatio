@@ -6,7 +6,7 @@ Format=gpt_ext4
 Bootable=yes
 QCow2=yes
 Output=image.qcow2
-#KernelCommandLine=root=/dev/vda2 rw
+#ExtraSearchPaths=/home/bschlueter/University/Github/systemd/build
 
 [Packages]
 Packages=
@@ -31,7 +31,3 @@ Autologin=yes
 
 [Host]
 QemuHeadless=yes
-
-[Partitions]
-#RootSize=10G
-#HomeSize=10G

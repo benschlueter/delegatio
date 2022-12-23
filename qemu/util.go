@@ -65,9 +65,9 @@ loop:
 			transferredBytes += num
 		}
 	}
-	if err := stream.Finish(); err != nil {
+	/* 	if err := stream.Finish(); err != nil {
 		return err
-	}
+	} */
 	if transferredBytes < int(fi.Size()) {
 		return fmt.Errorf("only send %d out of %d bytes", transferredBytes, fi.Size())
 	}
