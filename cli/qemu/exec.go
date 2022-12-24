@@ -119,17 +119,15 @@ func (l *LibvirtInstance) InitializeKubernetesgRPC(ctx context.Context) (output 
 			if err != nil {
 				return nil, err
 			}
-			if len(data.GetOutput()) > 0 {
-				return data.GetOutput(), nil
+			if output := data.GetOutput(); len(output) > 0 {
+				l.log.Info("kubeadm init response", zap.String("response", string(output)))
+				return output, nil
 			}
-			if len(data.GetLog().GetMessage()) > 0 {
-				fmt.Println(data.GetLog().GetMessage())
+			if log := data.GetLog().GetMessage(); len(log) > 0 {
+				fmt.Println(log)
 			}
 		}
 	}
-
-	// l.log.Info("kubeadm init response", zap.String("response", string(resp.Output)))
-	return nil, err
 }
 
 func (l *LibvirtInstance) getKubeconfgRPC(ctx context.Context) (output []byte, err error) {

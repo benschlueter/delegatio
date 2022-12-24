@@ -42,9 +42,11 @@ func (a *API) ExecCommand(in *vmproto.ExecCommandRequest, srv vmproto.API_ExecCo
 
 	err := command.Start()
 	if err != nil {
-		return status.Errorf(codes.Internal, "command exited with error code: %v and output %s", err, "output")
+		return status.Errorf(codes.Internal, "command exited with error code: %v and output: %s", err, stdoutBuf.Bytes())
 	}
 
-	command.Wait()
+	if err := command.Wait(); err != nil {
+		return status.Errorf(codes.Internal, "command exited with error code: %v and output: %s", err, stdoutBuf.Bytes())
+	}
 	return srv.Send(&vmproto.ExecCommandResponse{Content: &vmproto.ExecCommandResponse_Output{Output: stdoutBuf.Bytes()}})
 }
