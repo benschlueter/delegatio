@@ -2,12 +2,12 @@
 Distribution=arch
 
 [Output]
-Format=gpt_ext4
+Format=disk
 Bootable=yes
 QCow2=yes
 Output=image.qcow2
-#WorkspaceDirectory=/tmp
-#ExtraSearchPaths=/home/bschlueter/University/Github/systemd/build
+WorkspaceDirectory=/tmp
+ExtraSearchPaths=/home/bschlueter/University/Github/systemd/build
 
 [Packages]
 Packages=
