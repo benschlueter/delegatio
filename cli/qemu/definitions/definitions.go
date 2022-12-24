@@ -79,7 +79,7 @@ var (
 		},
 		Capacity: &libvirtxml.StorageVolumeSize{
 			Unit:  "GiB",
-			Value: uint64(10),
+			Value: uint64(100),
 		},
 	}
 
@@ -94,7 +94,7 @@ var (
 		},
 		Capacity: &libvirtxml.StorageVolumeSize{
 			Unit:  "GiB",
-			Value: uint64(10),
+			Value: uint64(100),
 		},
 	}
 
