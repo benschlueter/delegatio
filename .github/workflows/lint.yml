@@ -17,12 +17,12 @@ jobs:
     name: lint
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v3
 
       - name: Configure git for private modules
         run: git config --global url."https://api:${{ secrets.CI_GITHUB_REPOSITORY }}@github.com".insteadOf "https://github.com"
 
       - name: golangci-lint
-        uses: golangci/golangci-lint-action@v2
+        uses: golangci/golangci-lint-action@v3
         with:
           only-new-issues: true
