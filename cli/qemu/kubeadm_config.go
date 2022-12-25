@@ -27,10 +27,9 @@ func InitConfiguration() KubeadmInitYAML {
 				Kind:       "InitConfiguration",
 			},
 			NodeRegistration: kubeadm.NodeRegistrationOptions{
-				CRISocket: "/var/run/crio/crio.sock",
+				CRISocket: "unix:///var/run/crio/crio.sock",
 				KubeletExtraArgs: map[string]string{
 					"cloud-provider": "external",
-					"network-plugin": "cni",
 				},
 			},
 			// AdvertiseAddress will be overwritten later
@@ -61,6 +60,7 @@ func InitConfiguration() KubeadmInitYAML {
 				APIVersion: kubeletconf.SchemeGroupVersion.String(),
 				Kind:       "KubeletConfiguration",
 			},
+			CgroupDriver: "systemd",
 		},
 	}
 }
