@@ -1,4 +1,1 @@
 #!/bin/bash
-
-mkdir /sys/fs/cgroup/cpu,cpuacct
-mount -t cgroup -o cpu,cpuacct none /sys/fs/cgroup/cpu,cpuacct
