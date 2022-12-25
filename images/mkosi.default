@@ -14,13 +14,12 @@ Packages=
          openssh
          vim
          curl
+         
          socat
          ethtool
+         conntrack-tools
          iptables-nft
-         kubernetes-control-plane
-         kubeadm
-         crictl
-         containerd
+         cri-o
 
 [Validation]
 Password=password

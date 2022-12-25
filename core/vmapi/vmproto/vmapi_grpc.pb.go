@@ -18,7 +18,9 @@ const _ = grpc.SupportPackageIsVersion7
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type APIClient interface {
-	ExecCommand(ctx context.Context, in *ExecCommandRequest, opts ...grpc.CallOption) (API_ExecCommandClient, error)
+	ExecCommandStream(ctx context.Context, in *ExecCommandStreamRequest, opts ...grpc.CallOption) (API_ExecCommandStreamClient, error)
+	ExecCommand(ctx context.Context, in *ExecCommandRequest, opts ...grpc.CallOption) (*ExecCommandResponse, error)
+	WriteFile(ctx context.Context, in *WriteFileRequest, opts ...grpc.CallOption) (*WriteFileResponse, error)
 }
 
 type aPIClient struct {
@@ -29,12 +31,12 @@ func NewAPIClient(cc grpc.ClientConnInterface) APIClient {
 	return &aPIClient{cc}
 }
 
-func (c *aPIClient) ExecCommand(ctx context.Context, in *ExecCommandRequest, opts ...grpc.CallOption) (API_ExecCommandClient, error) {
-	stream, err := c.cc.NewStream(ctx, &API_ServiceDesc.Streams[0], "/vmapi.API/ExecCommand", opts...)
+func (c *aPIClient) ExecCommandStream(ctx context.Context, in *ExecCommandStreamRequest, opts ...grpc.CallOption) (API_ExecCommandStreamClient, error) {
+	stream, err := c.cc.NewStream(ctx, &API_ServiceDesc.Streams[0], "/vmapi.API/ExecCommandStream", opts...)
 	if err != nil {
 		return nil, err
 	}
-	x := &aPIExecCommandClient{stream}
+	x := &aPIExecCommandStreamClient{stream}
 	if err := x.ClientStream.SendMsg(in); err != nil {
 		return nil, err
 	}
@@ -44,28 +46,48 @@ func (c *aPIClient) ExecCommand(ctx context.Context, in *ExecCommandRequest, opt
 	return x, nil
 }
 
-type API_ExecCommandClient interface {
-	Recv() (*ExecCommandResponse, error)
+type API_ExecCommandStreamClient interface {
+	Recv() (*ExecCommandStreamResponse, error)
 	grpc.ClientStream
 }
 
-type aPIExecCommandClient struct {
+type aPIExecCommandStreamClient struct {
 	grpc.ClientStream
 }
 
-func (x *aPIExecCommandClient) Recv() (*ExecCommandResponse, error) {
-	m := new(ExecCommandResponse)
+func (x *aPIExecCommandStreamClient) Recv() (*ExecCommandStreamResponse, error) {
+	m := new(ExecCommandStreamResponse)
 	if err := x.ClientStream.RecvMsg(m); err != nil {
 		return nil, err
 	}
 	return m, nil
 }
 
+func (c *aPIClient) ExecCommand(ctx context.Context, in *ExecCommandRequest, opts ...grpc.CallOption) (*ExecCommandResponse, error) {
+	out := new(ExecCommandResponse)
+	err := c.cc.Invoke(ctx, "/vmapi.API/ExecCommand", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aPIClient) WriteFile(ctx context.Context, in *WriteFileRequest, opts ...grpc.CallOption) (*WriteFileResponse, error) {
+	out := new(WriteFileResponse)
+	err := c.cc.Invoke(ctx, "/vmapi.API/WriteFile", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // APIServer is the server API for API service.
 // All implementations must embed UnimplementedAPIServer
 // for forward compatibility
 type APIServer interface {
-	ExecCommand(*ExecCommandRequest, API_ExecCommandServer) error
+	ExecCommandStream(*ExecCommandStreamRequest, API_ExecCommandStreamServer) error
+	ExecCommand(context.Context, *ExecCommandRequest) (*ExecCommandResponse, error)
+	WriteFile(context.Context, *WriteFileRequest) (*WriteFileResponse, error)
 	mustEmbedUnimplementedAPIServer()
 }
 
@@ -73,8 +95,14 @@ type APIServer interface {
 type UnimplementedAPIServer struct {
 }
 
-func (UnimplementedAPIServer) ExecCommand(*ExecCommandRequest, API_ExecCommandServer) error {
-	return status.Errorf(codes.Unimplemented, "method ExecCommand not implemented")
+func (UnimplementedAPIServer) ExecCommandStream(*ExecCommandStreamRequest, API_ExecCommandStreamServer) error {
+	return status.Errorf(codes.Unimplemented, "method ExecCommandStream not implemented")
+}
+func (UnimplementedAPIServer) ExecCommand(context.Context, *ExecCommandRequest) (*ExecCommandResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ExecCommand not implemented")
+}
+func (UnimplementedAPIServer) WriteFile(context.Context, *WriteFileRequest) (*WriteFileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method WriteFile not implemented")
 }
 func (UnimplementedAPIServer) mustEmbedUnimplementedAPIServer() {}
 
@@ -89,25 +117,61 @@ func RegisterAPIServer(s grpc.ServiceRegistrar, srv APIServer) {
 	s.RegisterService(&API_ServiceDesc, srv)
 }
 
-func _API_ExecCommand_Handler(srv interface{}, stream grpc.ServerStream) error {
-	m := new(ExecCommandRequest)
+func _API_ExecCommandStream_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(ExecCommandStreamRequest)
 	if err := stream.RecvMsg(m); err != nil {
 		return err
 	}
-	return srv.(APIServer).ExecCommand(m, &aPIExecCommandServer{stream})
+	return srv.(APIServer).ExecCommandStream(m, &aPIExecCommandStreamServer{stream})
 }
 
-type API_ExecCommandServer interface {
-	Send(*ExecCommandResponse) error
+type API_ExecCommandStreamServer interface {
+	Send(*ExecCommandStreamResponse) error
 	grpc.ServerStream
 }
 
-type aPIExecCommandServer struct {
+type aPIExecCommandStreamServer struct {
 	grpc.ServerStream
 }
 
-func (x *aPIExecCommandServer) Send(m *ExecCommandResponse) error {
+func (x *aPIExecCommandStreamServer) Send(m *ExecCommandStreamResponse) error {
 	return x.ServerStream.SendMsg(m)
+}
+
+func _API_ExecCommand_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ExecCommandRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).ExecCommand(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vmapi.API/ExecCommand",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).ExecCommand(ctx, req.(*ExecCommandRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _API_WriteFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(WriteFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).WriteFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vmapi.API/WriteFile",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).WriteFile(ctx, req.(*WriteFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
 }
 
 // API_ServiceDesc is the grpc.ServiceDesc for API service.
@@ -116,11 +180,20 @@ func (x *aPIExecCommandServer) Send(m *ExecCommandResponse) error {
 var API_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "vmapi.API",
 	HandlerType: (*APIServer)(nil),
-	Methods:     []grpc.MethodDesc{},
+	Methods: []grpc.MethodDesc{
+		{
+			MethodName: "ExecCommand",
+			Handler:    _API_ExecCommand_Handler,
+		},
+		{
+			MethodName: "WriteFile",
+			Handler:    _API_WriteFile_Handler,
+		},
+	},
 	Streams: []grpc.StreamDesc{
 		{
-			StreamName:    "ExecCommand",
-			Handler:       _API_ExecCommand_Handler,
+			StreamName:    "ExecCommandStream",
+			Handler:       _API_ExecCommandStream_Handler,
 			ServerStreams: true,
 		},
 	},

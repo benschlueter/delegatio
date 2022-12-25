@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 
+	"github.com/benschlueter/delegatio/cli/qemu/utils"
 	"github.com/benschlueter/delegatio/core/config"
 	"github.com/benschlueter/delegatio/core/vmapi/vmproto"
 	"go.uber.org/zap"
@@ -48,9 +49,13 @@ func (l *LibvirtInstance) JoinClustergRPC(ctx context.Context, id string, joinTo
 	}
 	defer conn.Close()
 	client := vmproto.NewAPIClient(conn)
-	resp, err := client.ExecCommand(ctx, &vmproto.ExecCommandRequest{
+	resp, err := client.ExecCommandStream(ctx, &vmproto.ExecCommandStreamRequest{
 		Command: "/usr/bin/kubeadm",
-		Args:    []string{"join", joinToken.APIServerEndpoint, "--token", joinToken.Token, "--discovery-token-ca-cert-hash", joinToken.CACertHashes[0]},
+		Args: []string{
+			"join", joinToken.APIServerEndpoint,
+			"--token", joinToken.Token,
+			"--discovery-token-ca-cert-hash", joinToken.CACertHashes[0],
+		},
 	})
 	for {
 		select {
@@ -70,6 +75,55 @@ func (l *LibvirtInstance) JoinClustergRPC(ctx context.Context, id string, joinTo
 			}
 		}
 	}
+}
+
+func (l *LibvirtInstance) executeKubeadm(ctx context.Context, client vmproto.APIClient) (output []byte, err error) {
+	l.log.Info("execute executeKubeadm")
+	resp, err := client.ExecCommandStream(ctx, &vmproto.ExecCommandStreamRequest{
+		Command: "/usr/bin/kubeadm",
+		Args: []string{
+			"init",
+			"--config", "/tmp/kubeadmconf.yaml",
+			"--v=9",
+		},
+	})
+	if err != nil {
+		return
+	}
+	for {
+		select {
+		case <-ctx.Done():
+			return nil, ctx.Err()
+		default:
+			data, err := resp.Recv()
+			if err != nil {
+				return nil, err
+			}
+			if output := data.GetOutput(); len(output) > 0 {
+				l.log.Info("kubeadm init response", zap.String("response", string(output)))
+				return output, nil
+			}
+			if log := data.GetLog().GetMessage(); len(log) > 0 {
+				fmt.Println(log)
+			}
+		}
+	}
+}
+
+func (l *LibvirtInstance) executeWriteInitConfiguration(ctx context.Context, client vmproto.APIClient) (err error) {
+	l.log.Info("execute executeWriteInitConfiguration")
+	kconfig := InitConfiguration()
+	kconfigYaml, err := utils.MarshalK8SResources(&kconfig)
+	if err != nil {
+		return err
+	}
+	fmt.Println(string(kconfigYaml))
+	_, err = client.WriteFile(ctx, &vmproto.WriteFileRequest{
+		Filepath: "/tmp",
+		Filename: "kubeadmconf.yaml",
+		Content:  kconfigYaml,
+	})
+	return err
 }
 
 func (l *LibvirtInstance) InitializeKubernetesgRPC(ctx context.Context) (output []byte, err error) {
@@ -103,31 +157,10 @@ func (l *LibvirtInstance) InitializeKubernetesgRPC(ctx context.Context) (output 
 	}
 	defer conn.Close()
 	client := vmproto.NewAPIClient(conn)
-	resp, err := client.ExecCommand(ctx, &vmproto.ExecCommandRequest{
-		Command: "/usr/bin/kubeadm",
-		Args:    []string{"init"},
-	})
-	if err != nil {
-		return
+	if err := l.executeWriteInitConfiguration(ctx, client); err != nil {
+		return nil, err
 	}
-	for {
-		select {
-		case <-ctx.Done():
-			return nil, ctx.Err()
-		default:
-			data, err := resp.Recv()
-			if err != nil {
-				return nil, err
-			}
-			if output := data.GetOutput(); len(output) > 0 {
-				l.log.Info("kubeadm init response", zap.String("response", string(output)))
-				return output, nil
-			}
-			if log := data.GetLog().GetMessage(); len(log) > 0 {
-				fmt.Println(log)
-			}
-		}
-	}
+	return l.executeKubeadm(ctx, client)
 }
 
 func (l *LibvirtInstance) getKubeconfgRPC(ctx context.Context) (output []byte, err error) {
@@ -161,7 +194,7 @@ func (l *LibvirtInstance) getKubeconfgRPC(ctx context.Context) (output []byte, e
 	}
 	defer conn.Close()
 	client := vmproto.NewAPIClient(conn)
-	resp, err := client.ExecCommand(ctx, &vmproto.ExecCommandRequest{
+	resp, err := client.ExecCommandStream(ctx, &vmproto.ExecCommandStreamRequest{
 		Command: "cat",
 		Args:    []string{"/etc/kubernetes/admin.conf"},
 	})

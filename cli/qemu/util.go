@@ -159,7 +159,6 @@ func (l *LibvirtInstance) blockUntilDelegatioAgentIsReady(ctx context.Context) e
 			if err == nil {
 				return nil
 			}
-
 		}
 	}
 }

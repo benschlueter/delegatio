@@ -1,0 +1,11 @@
+[Unit]
+Description=Execute startup-scripts
+Wants=network-pre.target
+Before=network-pre.target
+
+[Service]
+ExecStart=/usr/bin/startup-script
+Type=oneshot
+
+[Install]
+WantedBy=multi-user.target
