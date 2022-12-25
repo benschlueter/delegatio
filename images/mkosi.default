@@ -19,6 +19,7 @@ Packages=
          ethtool
          conntrack-tools
          iptables-nft
+         runc
          cri-o
 
 [Validation]
