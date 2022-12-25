@@ -111,32 +111,15 @@ var (
 		},
 		VCPU: &libvirtxml.DomainVCPU{
 			Placement: "static",
-			Current:   4,
-			Value:     4,
+			Value:     16,
 		},
 		CPU: &libvirtxml.DomainCPU{
-			Mode: "custom",
-			Model: &libvirtxml.DomainCPUModel{
-				Fallback: "forbid",
-				Value:    "qemu64",
-			},
-			Features: []libvirtxml.DomainCPUFeature{
-				{
-					Policy: "require",
-					Name:   "x2apic",
-				},
-				{
-					Policy: "require",
-					Name:   "hypervisor",
-				},
-				{
-					Policy: "require",
-					Name:   "lahf_lm",
-				},
-				{
-					Policy: "disable",
-					Name:   "svm",
-				},
+			Mode: "host-passthrough",
+			Topology: &libvirtxml.DomainCPUTopology{
+				Sockets: 1,
+				Threads: 1,
+				Cores:   16,
+				Dies:    1,
 			},
 		},
 		Features: &libvirtxml.DomainFeatureList{
@@ -145,6 +128,8 @@ var (
 			SMM: &libvirtxml.DomainFeatureSMM{
 				State: "on",
 			},
+			APIC: &libvirtxml.DomainFeatureAPIC{},
+			KVM:  &libvirtxml.DomainFeatureKVM{},
 		},
 
 		OS: &libvirtxml.DomainOS{
