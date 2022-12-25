@@ -66,7 +66,7 @@ func (a *API) ExecCommand(ctx context.Context, in *vmproto.ExecCommandRequest) (
 
 // ActivateAdditionalNodes is the RPC call to activate additional nodes.
 func (a *API) WriteFile(ctx context.Context, in *vmproto.WriteFileRequest) (*vmproto.WriteFileResponse, error) {
-	a.logger.Info("request to execute command", zap.String("path", in.Filepath), zap.String("name", in.Filename))
+	a.logger.Info("request to write file", zap.String("path", in.Filepath), zap.String("name", in.Filename))
 	if err := os.WriteFile(filepath.Join(in.Filepath, in.Filename), in.Content, os.ModeAppend); err != nil {
 		a.logger.Error("failed to write file", zap.String("path", in.Filepath), zap.String("name", in.Filename), zap.Error(err))
 		return nil, status.Errorf(codes.Internal, "file write failed exited with error code: %v", err)

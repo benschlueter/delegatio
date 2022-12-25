@@ -11,23 +11,19 @@ import (
 
 // API is the API.
 type API struct {
-	mut             sync.Mutex
-	logger          *zap.Logger
-	core            Core
-	dialer          Dialer
-	stopUpdate      chan struct{}
-	wgClose         sync.WaitGroup
-	resourceVersion int
+	mut    sync.Mutex
+	logger *zap.Logger
+	core   Core
+	dialer Dialer
 	vmproto.UnimplementedAPIServer
 }
 
 // New creates a new API.
 func New(logger *zap.Logger, core Core, dialer Dialer) *API {
 	return &API{
-		logger:     logger,
-		core:       core,
-		dialer:     dialer,
-		stopUpdate: make(chan struct{}, 1),
+		logger: logger,
+		core:   core,
+		dialer: dialer,
 	}
 }
 
