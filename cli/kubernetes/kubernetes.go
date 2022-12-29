@@ -56,8 +56,8 @@ func (k *kubernetesClient) CreateChallengePod(ctx context.Context, challengeName
 		Spec: coreAPI.PodSpec{
 			Containers: []coreAPI.Container{
 				{
-					Name:  "archlinux-container",
-					Image: "archlinux:latest",
+					Name:  "archlinux-container-ssh",
+					Image: "ghcr.io/benschlueter/delegatio/archimage:0.1",
 					TTY:   true,
 					LivenessProbe: &coreAPI.Probe{
 						ProbeHandler: coreAPI.ProbeHandler{
