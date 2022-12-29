@@ -14,6 +14,24 @@ type kubernetesClient struct {
 	client kubernetes.Interface
 }
 
+func (k *kubernetesClient) CreateSSHConfigMap(ctx context.Context, namespace string) error {
+	cm := coreAPI.ConfigMap{
+		TypeMeta: metaAPI.TypeMeta{
+			Kind:       "ConfigMap",
+			APIVersion: "v1",
+		},
+		ObjectMeta: metaAPI.ObjectMeta{
+			Name:      "ssh-pub-key-configmap",
+			Namespace: namespace,
+		},
+		Data: map[string]string{
+			"dummyuser": "testfiledata",
+		},
+	}
+	_, err := k.client.CoreV1().ConfigMaps(namespace).Create(ctx, &cm, metaAPI.CreateOptions{})
+	return err
+}
+
 func (k *kubernetesClient) ListPods(ctx context.Context, namespace string) error {
 	podList, err := k.client.CoreV1().Pods("kube-system").List(ctx, metaAPI.ListOptions{})
 	if err != nil {
@@ -62,10 +80,32 @@ func (k *kubernetesClient) CreatePod(ctx context.Context, challengeNamespace, us
 							},
 						},
 					},
+					VolumeMounts: []coreAPI.VolumeMount{
+						{
+							Name:      "ssh-pub-key-configmap-volume",
+							MountPath: "/root/.ssh/authorized_keys",
+							SubPath:   "dummyuser",
+						},
+					},
+				},
+			},
+			Volumes: []coreAPI.Volume{
+				{
+					Name: "ssh-pub-key-configmap-volume",
+					VolumeSource: coreAPI.VolumeSource{
+						ConfigMap: &coreAPI.ConfigMapVolumeSource{
+							LocalObjectReference: coreAPI.LocalObjectReference{
+								Name: "ssh-pub-key-configmap",
+							},
+						},
+					},
 				},
 			},
 			// NodeSelector: ,
 		},
+	}
+	if err := k.CreateSSHConfigMap(ctx, challengeNamespace); err != nil {
+		return err
 	}
 	_, err := k.client.CoreV1().Pods(challengeNamespace).Create(ctx, &pod, metaAPI.CreateOptions{})
 	return err
