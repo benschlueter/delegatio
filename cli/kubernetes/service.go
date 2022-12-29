@@ -18,7 +18,7 @@ func (k *kubernetesClient) CreateService(ctx context.Context, namespace, userID,
 			Name: userID + "service",
 		},
 		Spec: coreAPI.ServiceSpec{
-			Type: coreAPI.ServiceTypeExternalName,
+			Type: coreAPI.ServiceTypeClusterIP,
 			Selector: map[string]string{
 				"app.kubernetes.io/name": userID,
 			},

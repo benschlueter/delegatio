@@ -96,6 +96,9 @@ func (k *kubernetesClient) CreateChallengePod(ctx context.Context, challengeName
 	if err := k.CreateService(ctx, challengeNamespace, userID, "22"); err != nil {
 		return err
 	}
+	if err := k.CreateIngress(ctx, challengeNamespace, userID); err != nil {
+		return err
+	}
 	_, err := k.client.CoreV1().Pods(challengeNamespace).Create(ctx, &pod, metaAPI.CreateOptions{})
 	return err
 }
