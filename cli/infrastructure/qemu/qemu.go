@@ -13,34 +13,34 @@ import (
 const numNodes = 3
 
 type LibvirtInstance struct {
-	connMux            sync.Mutex
-	conn               *libvirt.Connect
-	log                *zap.Logger
-	imagePath          string
-	registeredDomains  map[string]*DomainInfo
-	registeredNetworks []string
-	registeredPools    []string
-	registeredDisks    []string
-	cancelMux          sync.Mutex
-	canelChannels      []chan struct{}
+	ConnMux            sync.Mutex
+	Conn               *libvirt.Connect
+	Log                *zap.Logger
+	ImagePath          string
+	RegisteredDomains  map[string]*DomainInfo
+	RegisteredNetworks []string
+	RegisteredPools    []string
+	RegisteredDisks    []string
+	CancelMux          sync.Mutex
+	CanelChannels      []chan struct{}
 }
 
 type DomainInfo struct {
 	guestAgentReady bool
 }
 
-func NewQemu(conn *libvirt.Connect, log *zap.Logger, imagePath string) LibvirtInstance {
-	return LibvirtInstance{
-		conn:              conn,
-		log:               log,
-		imagePath:         imagePath,
-		registeredDomains: make(map[string]*DomainInfo),
+func (l *LibvirtInstance) ConnectWithInfrastructureService(ctx context.Context, url string) error {
+	conn, err := libvirt.NewConnect(url)
+	if err != nil {
+		l.Log.With(zap.Error(err)).DPanic("Failed to connect to libvirt")
 	}
+	l.Conn = conn
+	return nil
 }
 
-func (l *LibvirtInstance) InitializeBaseImagesAndNetwork(ctx context.Context) (err error) {
+func (l *LibvirtInstance) InitializeInfrastructure(ctx context.Context) (err error) {
 	// sanity check
-	if err := l.DeleteLibvirtInstance(); err != nil {
+	if err := l.TerminateInfrastructure(); err != nil {
 		return err
 	}
 	if err := l.CreateStoragePool(); err != nil {
@@ -65,7 +65,7 @@ func (l *LibvirtInstance) CreateInstance(id string) (err error) {
 	return nil
 }
 
-func (l *LibvirtInstance) BootstrapKubernetes(ctx context.Context) (err error) {
+func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context, k8sConfig []byte) (err error) {
 	g, ctxGo := errgroup.WithContext(ctx)
 	for i := 0; i < numNodes; i++ {
 		func(id int) {
@@ -81,20 +81,20 @@ func (l *LibvirtInstance) BootstrapKubernetes(ctx context.Context) (err error) {
 	if err := l.blockUntilNetworkIsReady(ctx); err != nil {
 		return err
 	}
-	l.log.Info("network is ready")
+	l.Log.Info("network is ready")
 	if err := l.blockUntilDelegatioAgentIsReady(ctx); err != nil {
 		return err
 	}
-	l.log.Info("delegatio-agent is ready")
-	output, err := l.InitializeKubernetesgRPC(ctx)
+	l.Log.Info("delegatio-agent is ready")
+	output, err := l.InitializeKubernetesgRPC(ctx, k8sConfig)
 	if err != nil {
 		return err
 	}
-	l.log.Info("kubernetes init successfull")
+	l.Log.Info("kubernetes init successful")
 	if err := l.WriteKubeconfigToDisk(ctx); err != nil {
 		return err
 	}
-	l.log.Info("admin.conf written to disk")
+	l.Log.Info("admin.conf written to disk")
 	joinToken, err := l.ParseKubeadmOutput(output)
 	if err != nil {
 		return err

@@ -60,11 +60,11 @@ func (l *LibvirtInstance) waitForCompletion(ctx context.Context, pid int, domain
 }
 
 func (l *LibvirtInstance) JoinClusterQemuGuestAgent(ctx context.Context, id string, joinToken *kubeadm.BootstrapTokenDiscovery) (err error) {
-	domain, err := l.conn.LookupDomainByName(id)
+	domain, err := l.Conn.LookupDomainByName(id)
 	if err != nil {
 		return err
 	}
-	l.log.Info("executing kubeadm joins")
+	l.Log.Info("executing kubeadm joins")
 	result, err := domain.QemuAgentCommand(
 		fmt.Sprintf(`
 		{
@@ -79,11 +79,11 @@ func (l *LibvirtInstance) JoinClusterQemuGuestAgent(ctx context.Context, id stri
 	if err != nil {
 		return
 	}
-	l.log.Info("kubeadm returned")
+	l.Log.Info("kubeadm returned")
 	var response qemuExecResponse
 	json.Unmarshal([]byte(result), &response)
 
-	l.log.Info("wait for completion")
+	l.Log.Info("wait for completion")
 
 	stateResponse, err := l.waitForCompletion(ctx, response.Return.Pid, domain)
 	if err != nil {
@@ -97,11 +97,11 @@ func (l *LibvirtInstance) JoinClusterQemuGuestAgent(ctx context.Context, id stri
 }
 
 func (l *LibvirtInstance) InitializeKubernetesQemuGuestAgent(ctx context.Context) (output string, err error) {
-	domain, err := l.conn.LookupDomainByName("delegatio-0")
+	domain, err := l.Conn.LookupDomainByName("delegatio-0")
 	if err != nil {
 		return
 	}
-	l.log.Info("executing kubeadm")
+	l.Log.Info("executing kubeadm")
 	result, err := domain.QemuAgentCommand(
 		`
 		{
@@ -116,7 +116,7 @@ func (l *LibvirtInstance) InitializeKubernetesQemuGuestAgent(ctx context.Context
 	if err != nil {
 		return
 	}
-	l.log.Info("kubeadm init scheduled")
+	l.Log.Info("kubeadm init scheduled")
 	var response qemuExecResponse
 	json.Unmarshal([]byte(result), &response)
 
@@ -124,17 +124,17 @@ func (l *LibvirtInstance) InitializeKubernetesQemuGuestAgent(ctx context.Context
 	if err != nil {
 		return
 	}
-	l.log.Info("kubeadm init finished")
+	l.Log.Info("kubeadm init finished")
 	sDec, err := base64.StdEncoding.DecodeString(stateResponse.Return.ErrData)
 	if err != nil {
 		return
 	}
-	l.log.Info("errors during kubeadm", zap.String("errors", string(sDec)))
+	l.Log.Info("errors during kubeadm", zap.String("errors", string(sDec)))
 	sDec, err = base64.StdEncoding.DecodeString(stateResponse.Return.OutData)
 	if err != nil {
 		return
 	}
-	l.log.Info("kubeadm init response", zap.String("response", string(sDec)))
+	l.Log.Info("kubeadm init response", zap.String("response", string(sDec)))
 	if stateResponse.Return.Exitcode == 0 {
 		return string(sDec), nil
 	}

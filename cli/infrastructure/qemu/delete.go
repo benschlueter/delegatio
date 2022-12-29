@@ -3,12 +3,12 @@ package qemu
 import (
 	"fmt"
 
-	"github.com/benschlueter/delegatio/cli/qemu/definitions"
+	"github.com/benschlueter/delegatio/cli/infrastructure/qemu/definitions"
 	"go.uber.org/multierr"
 	"libvirt.org/go/libvirt"
 )
 
-func (l *LibvirtInstance) DeleteLibvirtInstance() error {
+func (l *LibvirtInstance) TerminateInfrastructure() error {
 	var err error
 	err = multierr.Append(err, l.deleteNetwork())
 	err = multierr.Append(err, l.deleteDomain())
@@ -16,8 +16,13 @@ func (l *LibvirtInstance) DeleteLibvirtInstance() error {
 	return err
 }
 
+func (l *LibvirtInstance) TerminateConnection() error {
+	_, err := l.Conn.Close()
+	return err
+}
+
 func (l *LibvirtInstance) deleteNetwork() error {
-	nets, err := l.conn.ListAllNetworks(libvirt.CONNECT_LIST_NETWORKS_ACTIVE)
+	nets, err := l.Conn.ListAllNetworks(libvirt.CONNECT_LIST_NETWORKS_ACTIVE)
 	if err != nil {
 		return err
 	}
@@ -42,7 +47,7 @@ func (l *LibvirtInstance) deleteNetwork() error {
 }
 
 func (l *LibvirtInstance) deleteDomain() error {
-	doms, err := l.conn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE)
+	doms, err := l.Conn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE)
 	if err != nil {
 		return err
 	}
@@ -92,7 +97,7 @@ func (l *LibvirtInstance) deleteVolumesFromPool(pool *libvirt.StoragePool) error
 }
 
 func (l *LibvirtInstance) deletePool() error {
-	pools, err := l.conn.ListAllStoragePools(libvirt.CONNECT_LIST_STORAGE_POOLS_DIR)
+	pools, err := l.Conn.ListAllStoragePools(libvirt.CONNECT_LIST_STORAGE_POOLS_DIR)
 	if err != nil {
 		return err
 	}

@@ -23,14 +23,14 @@ import (
 )
 
 func (l *LibvirtInstance) uploadBaseImage(ctx context.Context, baseVolume *libvirt.StorageVol) (err error) {
-	stream, err := l.conn.NewStream(libvirt.STREAM_NONBLOCK)
+	stream, err := l.Conn.NewStream(libvirt.STREAM_NONBLOCK)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = stream.Free() }()
-	file, err := os.Open(l.imagePath)
+	file, err := os.Open(l.ImagePath)
 	if err != nil {
-		return fmt.Errorf("error while opening %s: %s", l.imagePath, err)
+		return fmt.Errorf("error while opening %s: %s", l.ImagePath, err)
 	}
 	defer func() {
 		err = multierr.Append(err, file.Close())
@@ -54,7 +54,7 @@ loop:
 		select {
 		case <-ctx.Done():
 			err := stream.Abort()
-			l.log.Info("context cancel during image upload", zap.Error(err))
+			l.Log.Info("context cancel during image upload", zap.Error(err))
 			return ctx.Err()
 		default:
 			_, err := file.Read(buffer)
@@ -77,12 +77,12 @@ loop:
 	if transferredBytes < int(fi.Size()) {
 		return fmt.Errorf("only send %d out of %d bytes", transferredBytes, fi.Size())
 	}
-	l.log.Info("image upload successful", zap.Int64("image size", fi.Size()), zap.Int("transferred bytes", transferredBytes))
+	l.Log.Info("image upload successful", zap.Int64("image size", fi.Size()), zap.Int("transferred bytes", transferredBytes))
 	return nil
 }
 
 func (l *LibvirtInstance) blockUntilNetworkIsReady(ctx context.Context) error {
-	domain, err := l.conn.LookupDomainByName("delegatio-0")
+	domain, err := l.Conn.LookupDomainByName("delegatio-0")
 	if err != nil {
 		return err
 	}
@@ -90,7 +90,7 @@ func (l *LibvirtInstance) blockUntilNetworkIsReady(ctx context.Context) error {
 	for {
 		select {
 		case <-ctx.Done():
-			l.log.Info("context cancel during waiting for vm init")
+			l.Log.Info("context cancel during waiting for vm init")
 			return ctx.Err()
 		default:
 			iface, err := domain.ListAllInterfaceAddresses(libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
@@ -118,7 +118,7 @@ func (l *LibvirtInstance) blockUntilNetworkIsReady(ctx context.Context) error {
 func (l *LibvirtInstance) blockUntilDelegatioAgentIsReady(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	domain, err := l.conn.LookupDomainByName("delegatio-0")
+	domain, err := l.Conn.LookupDomainByName("delegatio-0")
 	if err != nil {
 		return err
 	}
@@ -150,7 +150,7 @@ func (l *LibvirtInstance) blockUntilDelegatioAgentIsReady(ctx context.Context) e
 	for {
 		select {
 		case <-ctx.Done():
-			l.log.Info("context cancel during waiting for vm init")
+			l.Log.Info("context cancel during waiting for vm init")
 			return ctx.Err()
 		default:
 			_, err := client.ExecCommand(ctx, &vmproto.ExecCommandRequest{

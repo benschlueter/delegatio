@@ -8,11 +8,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/benschlueter/delegatio/cli/infrastructure"
 	"github.com/benschlueter/delegatio/cli/kubernetes"
-	"github.com/benschlueter/delegatio/cli/qemu"
-	"github.com/benschlueter/delegatio/cli/qemu/definitions"
+
 	"go.uber.org/zap"
-	"libvirt.org/go/libvirt"
 )
 
 var version = "0.0.0"
@@ -34,9 +33,7 @@ func registerSignalHandler(cancelContext context.CancelFunc, done chan<- struct{
 
 func main() {
 	var imageLocation string
-	var imageType string
 	flag.StringVar(&imageLocation, "path", "", "path to the image to measure (required)")
-	flag.StringVar(&imageType, "type", "", "type of the image. One of 'qcow2' or 'raw' (required)")
 	flag.Parse()
 	zapconf := zap.NewDevelopmentConfig()
 	log, err := zapconf.Build()
@@ -49,87 +46,85 @@ func main() {
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
-	if imageLocation == "" || imageType == "" {
+	if imageLocation == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
-	definitions.VolumeBootXMLConfig.BackingStore.Format.Type = imageType
-
-	if err := libvirt.EventRegisterDefaultImpl(); err != nil {
-		log.With(zap.Error(err)).DPanic("Failed to create event listener")
-	}
-	go func() {
-		for {
-			err := libvirt.EventRunDefaultImpl()
-			if err != nil {
-				log.With(zap.Error(err)).DPanic("go func failed")
-			}
-		}
-	}()
 
 	done := make(chan struct{})
 	go registerSignalHandler(cancel, done, log)
 
-	conn, err := libvirt.NewConnect("qemu:///system")
-	if err != nil {
-		log.With(zap.Error(err)).DPanic("Failed to connect to libvirt")
-	}
-	defer conn.Close()
+	lInstance := infrastructure.NewQemu(log.Named("infra"), imageLocation)
 
-	lInstance := qemu.NewQemu(conn, log, imageLocation)
-
-	defer func(logger *zap.Logger, l *qemu.LibvirtInstance) {
-		if err := l.DeleteLibvirtInstance(); err != nil {
+	defer func(logger *zap.Logger, l infrastructure.Infrastructure) {
+		if err := l.TerminateInfrastructure(); err != nil {
 			logger.Error("error while cleaning up", zap.Error(err))
 		}
 		log.Info("instaces terminated successfully")
-	}(log, &lInstance)
+		if err := l.TerminateConnection(); err != nil {
+			logger.Error("error while cleaning up", zap.Error(err))
+		}
+		log.Info("connection successfully closed")
+	}(log, lInstance)
 
-	if err := lInstance.InitializeBaseImagesAndNetwork(ctx); err != nil {
+	if err := lInstance.ConnectWithInfrastructureService(ctx, "qemu:///system"); err != nil {
 		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("Failed to start VMs")
+			log.With(zap.Error(err)).Error("failed to connect to infrastructure service")
 		} else {
-			log.With(zap.Error(err)).DPanic("Failed to start VMs")
+			log.With(zap.Error(err)).DPanic("failed to connect to infrastructure service")
 		}
 	}
 
-	if err := lInstance.BootstrapKubernetes(ctx); err != nil {
+	if err := lInstance.InitializeInfrastructure(ctx); err != nil {
 		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("Failed to run Kubernetes")
+			log.With(zap.Error(err)).Error("failed to start VMs")
 		} else {
-			log.With(zap.Error(err)).DPanic("Failed to run Kubernetes")
+			log.With(zap.Error(err)).DPanic("failed to start VMs")
 		}
 	}
-	kClient, err := kubernetes.NewK8sClient("./admin.conf")
+
+	kubeConf, err := infrastructure.GetKubeInitConfig()
 	if err != nil {
+		log.With(zap.Error(err)).DPanic("failed to get kubeConfig")
+	}
+
+	if err := lInstance.InitializeKubernetes(ctx, kubeConf); err != nil {
 		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("Failed to connect to Kubernetes")
+			log.With(zap.Error(err)).Error("failed to run Kubernetes")
 		} else {
-			log.With(zap.Error(err)).DPanic("Failed to connect to Kubernetes")
+			log.With(zap.Error(err)).DPanic("failed to run Kubernetes")
 		}
 	}
-	err = kClient.ListPods(ctx, "kube-system")
+	kubeClient, err := kubernetes.NewK8sClient("./admin.conf", log.Named("k8sAPI"))
 	if err != nil {
 		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("Failed to list pods")
+			log.With(zap.Error(err)).Error("failed to connect to Kubernetes")
 		} else {
-			log.With(zap.Error(err)).DPanic("Failed to list pods")
+			log.With(zap.Error(err)).DPanic("failed to connect to Kubernetes")
 		}
 	}
-	err = kClient.CreateNamespace(ctx, "testchallenge")
+	err = kubeClient.ListPods(ctx, "kube-system")
 	if err != nil {
 		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("Failed to create namespace")
+			log.With(zap.Error(err)).Error("failed to list pods")
 		} else {
-			log.With(zap.Error(err)).DPanic("Failed to create namespace")
+			log.With(zap.Error(err)).DPanic("failed to list pods")
 		}
 	}
-	err = kClient.CreatePod(ctx, "testchallenge", "dummyuser")
+	err = kubeClient.CreateNamespace(ctx, "testchallenge")
 	if err != nil {
 		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("Failed to create namespace")
+			log.With(zap.Error(err)).Error("failed to create namespace")
 		} else {
-			log.With(zap.Error(err)).DPanic("Failed to create namespace")
+			log.With(zap.Error(err)).DPanic("failed to create namespace")
+		}
+	}
+	err = kubeClient.CreatePod(ctx, "testchallenge", "dummyuser")
+	if err != nil {
+		if errors.Is(err, ctx.Err()) {
+			log.With(zap.Error(err)).Error("failed to create namespace")
+		} else {
+			log.With(zap.Error(err)).DPanic("failed to create namespace")
 		}
 	}
 

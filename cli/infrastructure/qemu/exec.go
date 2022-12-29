@@ -6,7 +6,6 @@ import (
 	"net"
 	"os"
 
-	"github.com/benschlueter/delegatio/cli/qemu/utils"
 	"github.com/benschlueter/delegatio/core/config"
 	"github.com/benschlueter/delegatio/core/vmapi/vmproto"
 	"go.uber.org/zap"
@@ -18,7 +17,7 @@ import (
 )
 
 func (l *LibvirtInstance) JoinClustergRPC(ctx context.Context, id string, joinToken *kubeadm.BootstrapTokenDiscovery) (err error) {
-	domain, err := l.conn.LookupDomainByName(id)
+	domain, err := l.Conn.LookupDomainByName(id)
 	if err != nil {
 		return err
 	}
@@ -41,7 +40,7 @@ func (l *LibvirtInstance) JoinClustergRPC(ctx context.Context, id string, joinTo
 	if len(ip) == 0 {
 		return fmt.Errorf("could not find ip addr")
 	}
-	l.log.Info("executing kubeadm join", zap.String("id", id))
+	l.Log.Info("executing kubeadm join", zap.String("id", id))
 
 	conn, err := grpc.DialContext(ctx, net.JoinHostPort(ip, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -67,7 +66,7 @@ func (l *LibvirtInstance) JoinClustergRPC(ctx context.Context, id string, joinTo
 				return err
 			}
 			if len(data.GetOutput()) > 0 {
-				l.log.Info("kubeadm join succeed", zap.String("id", id))
+				l.Log.Info("kubeadm join succeed", zap.String("id", id))
 				return nil
 			}
 			if len(data.GetLog().GetMessage()) > 0 {
@@ -78,7 +77,7 @@ func (l *LibvirtInstance) JoinClustergRPC(ctx context.Context, id string, joinTo
 }
 
 func (l *LibvirtInstance) executeKubeadm(ctx context.Context, client vmproto.APIClient) (output []byte, err error) {
-	l.log.Info("execute executeKubeadm")
+	l.Log.Info("execute executeKubeadm")
 	resp, err := client.ExecCommandStream(ctx, &vmproto.ExecCommandStreamRequest{
 		Command: "/usr/bin/kubeadm",
 		Args: []string{
@@ -100,7 +99,7 @@ func (l *LibvirtInstance) executeKubeadm(ctx context.Context, client vmproto.API
 				return nil, err
 			}
 			if output := data.GetOutput(); len(output) > 0 {
-				l.log.Info("kubeadm init response", zap.String("response", string(output)))
+				l.Log.Info("kubeadm init response", zap.String("response", string(output)))
 				return output, nil
 			}
 			if log := data.GetLog().GetMessage(); len(log) > 0 {
@@ -110,24 +109,18 @@ func (l *LibvirtInstance) executeKubeadm(ctx context.Context, client vmproto.API
 	}
 }
 
-func (l *LibvirtInstance) executeWriteInitConfiguration(ctx context.Context, client vmproto.APIClient) (err error) {
-	l.log.Info("execute executeWriteInitConfiguration")
-	kconfig := InitConfiguration()
-	kconfigYaml, err := utils.MarshalK8SResources(&kconfig)
-	if err != nil {
-		return err
-	}
-	fmt.Println(string(kconfigYaml))
+func (l *LibvirtInstance) executeWriteInitConfiguration(ctx context.Context, client vmproto.APIClient, initConfigKubernetes []byte) (err error) {
+	l.Log.Info("write initconfig", zap.String("config", string(initConfigKubernetes)))
 	_, err = client.WriteFile(ctx, &vmproto.WriteFileRequest{
 		Filepath: "/tmp",
 		Filename: "kubeadmconf.yaml",
-		Content:  kconfigYaml,
+		Content:  initConfigKubernetes,
 	})
 	return err
 }
 
-func (l *LibvirtInstance) InitializeKubernetesgRPC(ctx context.Context) (output []byte, err error) {
-	domain, err := l.conn.LookupDomainByName("delegatio-0")
+func (l *LibvirtInstance) InitializeKubernetesgRPC(ctx context.Context, initConfigK8s []byte) (output []byte, err error) {
+	domain, err := l.Conn.LookupDomainByName("delegatio-0")
 	if err != nil {
 		return
 	}
@@ -157,14 +150,14 @@ func (l *LibvirtInstance) InitializeKubernetesgRPC(ctx context.Context) (output 
 	}
 	defer conn.Close()
 	client := vmproto.NewAPIClient(conn)
-	if err := l.executeWriteInitConfiguration(ctx, client); err != nil {
+	if err := l.executeWriteInitConfiguration(ctx, client, initConfigK8s); err != nil {
 		return nil, err
 	}
 	return l.executeKubeadm(ctx, client)
 }
 
 func (l *LibvirtInstance) getKubeconfgRPC(ctx context.Context) (output []byte, err error) {
-	domain, err := l.conn.LookupDomainByName("delegatio-0")
+	domain, err := l.Conn.LookupDomainByName("delegatio-0")
 	if err != nil {
 		return
 	}

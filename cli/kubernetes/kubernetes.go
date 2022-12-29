@@ -2,8 +2,8 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 
+	"go.uber.org/zap"
 	coreAPI "k8s.io/api/core/v1"
 	metaAPI "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
@@ -12,24 +12,7 @@ import (
 
 type kubernetesClient struct {
 	client kubernetes.Interface
-}
-
-func (k *kubernetesClient) CreateSSHConfigMap(ctx context.Context, namespace string) error {
-	cm := coreAPI.ConfigMap{
-		TypeMeta: metaAPI.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: "v1",
-		},
-		ObjectMeta: metaAPI.ObjectMeta{
-			Name:      "ssh-pub-key-configmap",
-			Namespace: namespace,
-		},
-		Data: map[string]string{
-			"dummyuser": "testfiledata",
-		},
-	}
-	_, err := k.client.CoreV1().ConfigMaps(namespace).Create(ctx, &cm, metaAPI.CreateOptions{})
-	return err
+	logger *zap.Logger
 }
 
 func (k *kubernetesClient) ListPods(ctx context.Context, namespace string) error {
@@ -38,7 +21,7 @@ func (k *kubernetesClient) ListPods(ctx context.Context, namespace string) error
 		return err
 	}
 	for _, v := range podList.Items {
-		fmt.Println(v.Name, v.Status.PodIPs)
+		k.logger.Info(v.Name)
 	}
 	return nil
 }
@@ -104,7 +87,7 @@ func (k *kubernetesClient) CreatePod(ctx context.Context, challengeNamespace, us
 			// NodeSelector: ,
 		},
 	}
-	if err := k.CreateSSHConfigMap(ctx, challengeNamespace); err != nil {
+	if err := k.CreateConfigMap(ctx, "ssh-pub-key-configmap", challengeNamespace); err != nil {
 		return err
 	}
 	_, err := k.client.CoreV1().Pods(challengeNamespace).Create(ctx, &pod, metaAPI.CreateOptions{})
@@ -112,7 +95,7 @@ func (k *kubernetesClient) CreatePod(ctx context.Context, challengeNamespace, us
 }
 
 // NewK8sClient returns a new kuberenetes client-go wrapper.
-func NewK8sClient(kubeconfigPath string) (*kubernetesClient, error) {
+func NewK8sClient(kubeconfigPath string, logger *zap.Logger) (*kubernetesClient, error) {
 	// use the current context in kubeconfig
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
@@ -123,5 +106,8 @@ func NewK8sClient(kubeconfigPath string) (*kubernetesClient, error) {
 	if err != nil {
 		return nil, err
 	}
-	return &kubernetesClient{client: client}, nil
+	return &kubernetesClient{
+		client: client,
+		logger: logger,
+	}, nil
 }

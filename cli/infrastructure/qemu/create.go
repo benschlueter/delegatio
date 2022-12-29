@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"path"
 
-	"github.com/benschlueter/delegatio/cli/qemu/definitions"
+	"github.com/benschlueter/delegatio/cli/infrastructure/qemu/definitions"
 	"libvirt.org/go/libvirt"
 )
 
@@ -17,8 +17,8 @@ func (l *LibvirtInstance) CreateStoragePool() error {
 		return err
 	}
 
-	l.log.Info("creating storage pool")
-	poolObject, err := l.conn.StoragePoolDefineXML(poolXMLString, libvirt.STORAGE_POOL_DEFINE_VALIDATE)
+	l.Log.Info("creating storage pool")
+	poolObject, err := l.Conn.StoragePoolDefineXML(poolXMLString, libvirt.STORAGE_POOL_DEFINE_VALIDATE)
 	if err != nil {
 		return fmt.Errorf("error defining libvirt storage pool: %s", err)
 	}
@@ -29,7 +29,7 @@ func (l *LibvirtInstance) CreateStoragePool() error {
 	if err := poolObject.Create(libvirt.STORAGE_POOL_CREATE_NORMAL); err != nil {
 		return fmt.Errorf("error creating libvirt storage pool: %s", err)
 	}
-	l.registeredPools = append(l.registeredPools, poolXMLCopy.Name)
+	l.RegisteredPools = append(l.RegisteredPools, poolXMLCopy.Name)
 	return nil
 }
 
@@ -38,20 +38,20 @@ func (l *LibvirtInstance) CreateBaseImage(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	storagePool, err := l.conn.LookupStoragePoolByTargetPath(definitions.LibvirtStoragePoolPath)
+	storagePool, err := l.Conn.LookupStoragePoolByTargetPath(definitions.LibvirtStoragePoolPath)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = storagePool.Free() }()
-	l.log.Info("creating base storage image")
+	l.Log.Info("creating base storage image")
 	volumeBaseObject, err := storagePool.StorageVolCreateXML(volumeBaseXMLString, 0)
 	if err != nil {
 		return fmt.Errorf("error creating libvirt storage volume 'base': %s", err)
 	}
 	defer func() { _ = volumeBaseObject.Free() }()
-	l.registeredDisks = append(l.registeredDisks, definitions.VolumeBaseXMLConfig.Name)
+	l.RegisteredDisks = append(l.RegisteredDisks, definitions.VolumeBaseXMLConfig.Name)
 
-	l.log.Info("uploading baseimage to libvirt storage pool")
+	l.Log.Info("uploading baseimage to libvirt storage pool")
 	return l.uploadBaseImage(ctx, volumeBaseObject)
 }
 
@@ -64,18 +64,18 @@ func (l *LibvirtInstance) CreateBootImage(id string) error {
 	if err != nil {
 		return err
 	}
-	storagePool, err := l.conn.LookupStoragePoolByTargetPath(definitions.LibvirtStoragePoolPath)
+	storagePool, err := l.Conn.LookupStoragePoolByTargetPath(definitions.LibvirtStoragePoolPath)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = storagePool.Free() }()
-	l.log.Info("creating storage volume 'boot'")
+	l.Log.Info("creating storage volume 'boot'")
 	bootVol, err := storagePool.StorageVolCreateXML(volumeBootXMLString, 0)
 	if err != nil {
 		return fmt.Errorf("error creating libvirt storage volume 'boot': %s", err)
 	}
 	defer func() { _ = bootVol.Free() }()
-	l.registeredDisks = append(l.registeredDisks, volumeBootXMLCopy.Name)
+	l.RegisteredDisks = append(l.RegisteredDisks, volumeBootXMLCopy.Name)
 	return nil
 }
 
@@ -84,8 +84,8 @@ func (l *LibvirtInstance) CreateNetwork() error {
 	if err != nil {
 		return err
 	}
-	l.log.Info("creating network")
-	network, err := l.conn.NetworkCreateXML(networkXMLString)
+	l.Log.Info("creating network")
+	network, err := l.Conn.NetworkCreateXML(networkXMLString)
 	if err != nil {
 		return err
 	}
@@ -105,14 +105,14 @@ func (l *LibvirtInstance) CreateDomain(id string) error {
 	if err != nil {
 		return err
 	}
-	l.log.Info("creating domain")
-	domain, err := l.conn.DomainCreateXML(domainXMLString, libvirt.DOMAIN_NONE)
+	l.Log.Info("creating domain")
+	domain, err := l.Conn.DomainCreateXML(domainXMLString, libvirt.DOMAIN_NONE)
 	if err != nil {
 		return fmt.Errorf("error creating libvirt domain: %s", err)
 	}
 	defer func() { _ = domain.Free() }()
-	l.connMux.Lock()
-	l.registeredDomains[id] = &DomainInfo{guestAgentReady: false}
-	l.connMux.Unlock()
+	l.ConnMux.Lock()
+	l.RegisteredDomains[id] = &DomainInfo{guestAgentReady: false}
+	l.ConnMux.Unlock()
 	return nil
 }
