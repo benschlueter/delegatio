@@ -3,7 +3,6 @@ package vmapi
 import (
 	"context"
 	"net"
-	"sync"
 
 	"github.com/benschlueter/delegatio/core/vmapi/vmproto"
 	"go.uber.org/zap"
@@ -11,7 +10,6 @@ import (
 
 // API is the API.
 type API struct {
-	mut    sync.Mutex
 	logger *zap.Logger
 	core   Core
 	dialer Dialer

@@ -8,6 +8,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/benschlueter/delegatio/cli/kubernetes"
 	"github.com/benschlueter/delegatio/cli/qemu"
 	"github.com/benschlueter/delegatio/cli/qemu/definitions"
 	"go.uber.org/zap"
@@ -99,9 +100,39 @@ func main() {
 			log.With(zap.Error(err)).DPanic("Failed to run Kubernetes")
 		}
 	}
-
-	select {
-	case <-ctx.Done():
+	kClient, err := kubernetes.NewK8sClient("./admin.conf")
+	if err != nil {
+		if errors.Is(err, ctx.Err()) {
+			log.With(zap.Error(err)).Error("Failed to connect to Kubernetes")
+		} else {
+			log.With(zap.Error(err)).DPanic("Failed to connect to Kubernetes")
+		}
 	}
+	err = kClient.ListPods(ctx, "kube-system")
+	if err != nil {
+		if errors.Is(err, ctx.Err()) {
+			log.With(zap.Error(err)).Error("Failed to list pods")
+		} else {
+			log.With(zap.Error(err)).DPanic("Failed to list pods")
+		}
+	}
+	err = kClient.CreateNamespace(ctx, "testchallenge")
+	if err != nil {
+		if errors.Is(err, ctx.Err()) {
+			log.With(zap.Error(err)).Error("Failed to create namespace")
+		} else {
+			log.With(zap.Error(err)).DPanic("Failed to create namespace")
+		}
+	}
+	err = kClient.CreatePod(ctx, "testchallenge", "dummyuser")
+	if err != nil {
+		if errors.Is(err, ctx.Err()) {
+			log.With(zap.Error(err)).Error("Failed to create namespace")
+		} else {
+			log.With(zap.Error(err)).DPanic("Failed to create namespace")
+		}
+	}
+
+	<-ctx.Done()
 	<-done
 }
