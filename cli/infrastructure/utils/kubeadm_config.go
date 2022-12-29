@@ -13,12 +13,14 @@ const (
 	bindPort = 6443
 )
 
+// KubeadmInitYAML groups multiple kubernetes config files into one struct.
 type KubeadmInitYAML struct {
 	InitConfiguration    kubeadm.InitConfiguration
 	ClusterConfiguration kubeadm.ClusterConfiguration
 	KubeletConfiguration kubeletconf.KubeletConfiguration
 }
 
+// InitConfiguration sets the pre-defined values for kubernetes.
 func InitConfiguration() KubeadmInitYAML {
 	return KubeadmInitYAML{
 		InitConfiguration: kubeadm.InitConfiguration{

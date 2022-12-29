@@ -28,7 +28,13 @@ func (k *kubernetesClient) AddDataToConfigMap(ctx context.Context, mapName, name
 	if err != nil {
 		return err
 	}
-	cfgMap.Data[key] = value
+	if len(cfgMap.Data) == 0 {
+		cfgMap.Data = map[string]string{
+			key: value,
+		}
+	} else {
+		cfgMap.Data[key] = value
+	}
 	_, err = k.client.CoreV1().ConfigMaps(namespace).Update(ctx, cfgMap, metaAPI.UpdateOptions{})
 	if err != nil {
 		k.logger.Error("updating configMap",

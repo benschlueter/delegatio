@@ -40,7 +40,7 @@ func (k *kubernetesClient) CreateNamespace(ctx context.Context, namespace string
 	return err
 }
 
-func (k *kubernetesClient) CreatePod(ctx context.Context, challengeNamespace, userID string) error {
+func (k *kubernetesClient) CreateChallengePod(ctx context.Context, challengeNamespace, userID, pubKeyUser string) error {
 	pod := coreAPI.Pod{
 		TypeMeta: metaAPI.TypeMeta{
 			Kind:       "Pod",
@@ -67,7 +67,7 @@ func (k *kubernetesClient) CreatePod(ctx context.Context, challengeNamespace, us
 						{
 							Name:      "ssh-pub-key-configmap-volume",
 							MountPath: "/root/.ssh/authorized_keys",
-							SubPath:   "dummyuser",
+							SubPath:   userID,
 						},
 					},
 				},
@@ -88,6 +88,9 @@ func (k *kubernetesClient) CreatePod(ctx context.Context, challengeNamespace, us
 		},
 	}
 	if err := k.CreateConfigMap(ctx, "ssh-pub-key-configmap", challengeNamespace); err != nil {
+		return err
+	}
+	if err := k.AddDataToConfigMap(ctx, "ssh-pub-key-configmap", challengeNamespace, userID, pubKeyUser); err != nil {
 		return err
 	}
 	_, err := k.client.CoreV1().Pods(challengeNamespace).Create(ctx, &pod, metaAPI.CreateOptions{})

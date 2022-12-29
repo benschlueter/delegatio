@@ -119,7 +119,7 @@ func main() {
 			log.With(zap.Error(err)).DPanic("failed to create namespace")
 		}
 	}
-	err = kubeClient.CreatePod(ctx, "testchallenge", "dummyuser")
+	err = kubeClient.CreateChallengePod(ctx, "testchallenge", "dummyuser", "ssh-dummykey")
 	if err != nil {
 		if errors.Is(err, ctx.Err()) {
 			log.With(zap.Error(err)).Error("failed to create namespace")
