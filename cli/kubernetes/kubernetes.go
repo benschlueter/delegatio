@@ -49,6 +49,9 @@ func (k *kubernetesClient) CreateChallengePod(ctx context.Context, challengeName
 		ObjectMeta: metaAPI.ObjectMeta{
 			Name:      userID,
 			Namespace: challengeNamespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/name": userID,
+			},
 		},
 		Spec: coreAPI.PodSpec{
 			Containers: []coreAPI.Container{
@@ -68,6 +71,13 @@ func (k *kubernetesClient) CreateChallengePod(ctx context.Context, challengeName
 							Name:      "ssh-pub-key-configmap-volume",
 							MountPath: "/root/.ssh/authorized_keys",
 							SubPath:   userID,
+						},
+					},
+					Ports: []coreAPI.ContainerPort{
+						{
+							Name:          "ssh",
+							Protocol:      coreAPI.ProtocolTCP,
+							ContainerPort: 22,
 						},
 					},
 				},
