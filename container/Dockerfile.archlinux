@@ -1,0 +1,17 @@
+FROM	 archlinux:latest
+RUN	 pacman -Syy
+
+RUN	 pacman -S --noconfirm openssh
+
+# Generate host keys
+RUN  /usr/bin/ssh-keygen -A
+# Add password to root user
+RUN	 echo 'root:root' | chpasswd
+
+RUN  sed -i -e 's/^UsePAM yes/UsePAM no/g' /etc/ssh/sshd_config
+
+# Expose tcp port
+EXPOSE	 22
+
+# Run openssh daemon
+CMD	 ["/usr/sbin/sshd", "-D"]
