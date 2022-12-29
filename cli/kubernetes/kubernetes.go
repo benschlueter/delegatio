@@ -52,8 +52,16 @@ func (k *kubernetesClient) CreatePod(ctx context.Context, challengeNamespace, us
 		Spec: coreAPI.PodSpec{
 			Containers: []coreAPI.Container{
 				{
-					Name:  "arch-Container",
+					Name:  "archlinux-container",
 					Image: "archlinux:latest",
+					TTY:   true,
+					LivenessProbe: &coreAPI.Probe{
+						ProbeHandler: coreAPI.ProbeHandler{
+							Exec: &coreAPI.ExecAction{
+								Command: []string{"whoami"},
+							},
+						},
+					},
 				},
 			},
 			// NodeSelector: ,
