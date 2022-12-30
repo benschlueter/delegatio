@@ -7,7 +7,7 @@
 
 !/images/mkosi.skeleton/**
 /images/mkosi.skeleton/usr/bin/delegatio-agent
-
+!/container/sshd_config
 
 /images/*qcow2*
 /images/*.cmdline
