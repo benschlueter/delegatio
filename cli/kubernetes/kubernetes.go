@@ -96,6 +96,7 @@ func (k *kubernetesClient) CreateChallengeDeployment(ctx context.Context, challe
 									ContainerPort: 22,
 								},
 							},
+							ImagePullPolicy: coreAPI.PullAlways,
 						},
 					},
 					Volumes: []coreAPI.Volume{

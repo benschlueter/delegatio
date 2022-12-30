@@ -55,6 +55,9 @@ func InitConfiguration() KubeadmInitYAML {
 					"configure-cloud-routes": "false",
 				},
 			},
+			Networking: kubeadm.Networking{
+				PodSubnet: "10.244.0.0/16",
+			},
 		},
 		// warning: this config is applied to every node in the cluster!
 		KubeletConfiguration: kubeletconf.KubeletConfiguration{
