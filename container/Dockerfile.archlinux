@@ -8,7 +8,7 @@ RUN  /usr/bin/ssh-keygen -A
 # Add password to root user
 RUN	 echo 'root:root' | chpasswd
 
-RUN  sed -i -e 's/^UsePAM yes/UsePAM no/g' /etc/ssh/sshd_config
+COPY sshd_config /etc/ssh/sshd_config
 
 # Expose tcp port
 EXPOSE	 22

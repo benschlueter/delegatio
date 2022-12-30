@@ -5,6 +5,8 @@ import (
 
 	"go.uber.org/zap"
 	coreAPI "k8s.io/api/core/v1"
+
+	appsAPI "k8s.io/api/apps/v1"
 	metaAPI "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -40,61 +42,76 @@ func (k *kubernetesClient) CreateNamespace(ctx context.Context, namespace string
 	return err
 }
 
-func (k *kubernetesClient) CreateChallengePod(ctx context.Context, challengeNamespace, userID, pubKeyUser string) error {
-	pod := coreAPI.Pod{
+func (k *kubernetesClient) CreateChallengeDeployment(ctx context.Context, challengeNamespace, userID, pubKeyUser string) error {
+	depl := appsAPI.Deployment{
 		TypeMeta: metaAPI.TypeMeta{
-			Kind:       "Pod",
-			APIVersion: coreAPI.SchemeGroupVersion.Version,
+			Kind:       "Deployment",
+			APIVersion: appsAPI.SchemeGroupVersion.Version,
 		},
 		ObjectMeta: metaAPI.ObjectMeta{
-			Name:      userID,
+			Name:      userID + "-deployment",
 			Namespace: challengeNamespace,
 			Labels: map[string]string{
 				"app.kubernetes.io/name": userID,
 			},
 		},
-		Spec: coreAPI.PodSpec{
-			Containers: []coreAPI.Container{
-				{
-					Name:  "archlinux-container-ssh",
-					Image: "ghcr.io/benschlueter/delegatio/archimage:0.1",
-					TTY:   true,
-					LivenessProbe: &coreAPI.Probe{
-						ProbeHandler: coreAPI.ProbeHandler{
-							Exec: &coreAPI.ExecAction{
-								Command: []string{"whoami"},
+		Spec: appsAPI.DeploymentSpec{
+			Selector: &metaAPI.LabelSelector{
+				MatchLabels: map[string]string{
+					"app.kubernetes.io/name": userID,
+				},
+			},
+			Template: coreAPI.PodTemplateSpec{
+				ObjectMeta: metaAPI.ObjectMeta{
+					Name:      userID + "-pod",
+					Namespace: challengeNamespace,
+					Labels: map[string]string{
+						"app.kubernetes.io/name": userID,
+					},
+				},
+				Spec: coreAPI.PodSpec{
+					Containers: []coreAPI.Container{
+						{
+							Name:  "archlinux-container-ssh",
+							Image: "ghcr.io/benschlueter/delegatio/archimage:0.1",
+							TTY:   true,
+							LivenessProbe: &coreAPI.Probe{
+								ProbeHandler: coreAPI.ProbeHandler{
+									Exec: &coreAPI.ExecAction{
+										Command: []string{"whoami"},
+									},
+								},
+							},
+							VolumeMounts: []coreAPI.VolumeMount{
+								{
+									Name:      "ssh-pub-key-configmap-volume",
+									MountPath: "/root/.ssh/authorized_keys",
+									SubPath:   userID,
+								},
+							},
+							Ports: []coreAPI.ContainerPort{
+								{
+									Name:          "ssh",
+									Protocol:      coreAPI.ProtocolTCP,
+									ContainerPort: 22,
+								},
 							},
 						},
 					},
-					VolumeMounts: []coreAPI.VolumeMount{
+					Volumes: []coreAPI.Volume{
 						{
-							Name:      "ssh-pub-key-configmap-volume",
-							MountPath: "/root/.ssh/authorized_keys",
-							SubPath:   userID,
-						},
-					},
-					Ports: []coreAPI.ContainerPort{
-						{
-							Name:          "ssh",
-							Protocol:      coreAPI.ProtocolTCP,
-							ContainerPort: 22,
+							Name: "ssh-pub-key-configmap-volume",
+							VolumeSource: coreAPI.VolumeSource{
+								ConfigMap: &coreAPI.ConfigMapVolumeSource{
+									LocalObjectReference: coreAPI.LocalObjectReference{
+										Name: "ssh-pub-key-configmap",
+									},
+								},
+							},
 						},
 					},
 				},
 			},
-			Volumes: []coreAPI.Volume{
-				{
-					Name: "ssh-pub-key-configmap-volume",
-					VolumeSource: coreAPI.VolumeSource{
-						ConfigMap: &coreAPI.ConfigMapVolumeSource{
-							LocalObjectReference: coreAPI.LocalObjectReference{
-								Name: "ssh-pub-key-configmap",
-							},
-						},
-					},
-				},
-			},
-			// NodeSelector: ,
 		},
 	}
 	if err := k.CreateConfigMap(ctx, "ssh-pub-key-configmap", challengeNamespace); err != nil {
@@ -109,7 +126,7 @@ func (k *kubernetesClient) CreateChallengePod(ctx context.Context, challengeName
 	if err := k.CreateIngress(ctx, challengeNamespace, userID); err != nil {
 		return err
 	}
-	_, err := k.client.CoreV1().Pods(challengeNamespace).Create(ctx, &pod, metaAPI.CreateOptions{})
+	_, err := k.client.AppsV1().Deployments(challengeNamespace).Create(ctx, &depl, metaAPI.CreateOptions{})
 	return err
 }
 
