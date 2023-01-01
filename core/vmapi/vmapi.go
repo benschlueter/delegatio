@@ -25,6 +25,8 @@ func New(logger *zap.Logger, core Core, dialer Dialer) *API {
 	}
 }
 
+// Dialer is the dial interface. Necessary to stub network connections for local testing
+// with bufconns.
 type Dialer interface {
 	DialContext(ctx context.Context, network, address string) (net.Conn, error)
 }

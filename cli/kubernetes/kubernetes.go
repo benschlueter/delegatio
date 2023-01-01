@@ -100,7 +100,6 @@ func (k *kubernetesClient) CreateChallengeDeployment(ctx context.Context, challe
 							SecurityContext: &coreAPI.SecurityContext{
 								Capabilities: &coreAPI.Capabilities{
 									Add: []coreAPI.Capability{
-										"CAP_SYS_ADMIN",
 										"CAP_SYS_CHROOT",
 									},
 								},

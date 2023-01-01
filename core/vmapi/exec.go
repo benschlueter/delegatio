@@ -25,6 +25,8 @@ func (sw streamWriter) Write(p []byte) (int, error) {
 	return len(p), nil
 }
 
+// ExecCommandStream executes a command in the VM and streams the output to the caller.
+// This is useful if the command needs much time to run and we want to log the current state, i.e. kubeadm.
 func (a *API) ExecCommandStream(in *vmproto.ExecCommandStreamRequest, srv vmproto.API_ExecCommandStreamServer) error {
 	a.logger.Info("request to execute command", zap.String("command", in.Command), zap.Strings("args", in.Args))
 	command := exec.Command(in.Command, in.Args...)
@@ -53,7 +55,7 @@ func (a *API) ExecCommandStream(in *vmproto.ExecCommandStreamRequest, srv vmprot
 	return srv.Send(&vmproto.ExecCommandStreamResponse{Content: &vmproto.ExecCommandStreamResponse_Output{Output: stdoutBuf.Bytes()}})
 }
 
-// ActivateAdditionalNodes is the RPC call to activate additional nodes.
+// ExecCommand executes a command in the VM.
 func (a *API) ExecCommand(ctx context.Context, in *vmproto.ExecCommandRequest) (*vmproto.ExecCommandResponse, error) {
 	a.logger.Info("request to execute command", zap.String("command", in.Command), zap.Strings("args", in.Args))
 	command := exec.Command(in.Command, in.Args...)
@@ -64,7 +66,7 @@ func (a *API) ExecCommand(ctx context.Context, in *vmproto.ExecCommandRequest) (
 	return &vmproto.ExecCommandResponse{Output: output}, nil
 }
 
-// ActivateAdditionalNodes is the RPC call to activate additional nodes.
+// WriteFile creates a file and writes output to it.
 func (a *API) WriteFile(ctx context.Context, in *vmproto.WriteFileRequest) (*vmproto.WriteFileResponse, error) {
 	a.logger.Info("request to write file", zap.String("path", in.Filepath), zap.String("name", in.Filename))
 	if err := os.WriteFile(filepath.Join(in.Filepath, in.Filename), in.Content, os.ModeAppend); err != nil {
