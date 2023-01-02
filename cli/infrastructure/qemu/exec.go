@@ -6,8 +6,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/benschlueter/delegatio/core/config"
-	"github.com/benschlueter/delegatio/core/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/client/config"
+	"github.com/benschlueter/delegatio/client/vmapi/vmproto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"

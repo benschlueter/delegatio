@@ -4,10 +4,10 @@ import (
 	"context"
 	"fmt"
 
+	"github.com/benschlueter/delegatio/cli/kubernetes/helm"
 	"go.uber.org/zap"
-	coreAPI "k8s.io/api/core/v1"
-
 	appsAPI "k8s.io/api/apps/v1"
+	coreAPI "k8s.io/api/core/v1"
 	metaAPI "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -16,6 +16,24 @@ import (
 type kubernetesClient struct {
 	client kubernetes.Interface
 	logger *zap.Logger
+}
+
+// NewK8sClient returns a new kuberenetes client-go wrapper.
+func NewK8sClient(kubeconfigPath string, logger *zap.Logger) (*kubernetesClient, error) {
+	// use the current context in kubeconfig
+	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+	if err != nil {
+		return nil, err
+	}
+	// create the clientset
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return nil, err
+	}
+	return &kubernetesClient{
+		client: client,
+		logger: logger,
+	}, nil
 }
 
 func (k *kubernetesClient) ListPods(ctx context.Context, namespace string) error {
@@ -141,20 +159,7 @@ func (k *kubernetesClient) CreateChallengeStatefulSet(ctx context.Context, chall
 	return err
 }
 
-// NewK8sClient returns a new kuberenetes client-go wrapper.
-func NewK8sClient(kubeconfigPath string, logger *zap.Logger) (*kubernetesClient, error) {
-	// use the current context in kubeconfig
-	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
-	if err != nil {
-		return nil, err
-	}
-	// create the clientset
-	client, err := kubernetes.NewForConfig(config)
-	if err != nil {
-		return nil, err
-	}
-	return &kubernetesClient{
-		client: client,
-		logger: logger,
-	}, nil
+// InstallHelmStuff returns a new kuberenetes client-go wrapper.
+func (k *kubernetesClient) InstallHelmStuff(ctx context.Context) error {
+	return helm.Install(ctx, k.logger.Named("helm"), "nginx", "nginx-ingess")
 }

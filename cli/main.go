@@ -103,6 +103,14 @@ func main() {
 			log.With(zap.Error(err)).DPanic("failed to connect to Kubernetes")
 		}
 	}
+	err = kubeClient.InstallHelmStuff(ctx)
+	if err != nil {
+		if errors.Is(err, ctx.Err()) {
+			log.With(zap.Error(err)).Error("failed to install helm charts")
+		} else {
+			log.With(zap.Error(err)).DPanic("failed to install helm charts")
+		}
+	}
 	err = kubeClient.ListPods(ctx, "kube-system")
 	if err != nil {
 		if errors.Is(err, ctx.Err()) {

@@ -10,6 +10,7 @@ import (
 	"helm.sh/helm/v3/pkg/cli"
 )
 
+// Install installs the given helm chart.
 func Install(ctx context.Context, logger *zap.Logger, name, namespace string) error {
 	chartPath := "/tmp/my-chart-0.1.0.tgz"
 	chart, err := loader.Load(chartPath)

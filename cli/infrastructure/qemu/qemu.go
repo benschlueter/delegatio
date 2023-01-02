@@ -95,11 +95,11 @@ func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context, k8sConfig []
 		return err
 	}
 	l.Log.Info("admin.conf written to disk")
-	joinToken, err := l.ParseKubeadmOutput(output)
+	joinToken, err := l.parseKubeadmOutput(output)
 	if err != nil {
 		return err
 	}
-	kubeadmJoinToken, err := l.ParseJoinCommand(joinToken)
+	kubeadmJoinToken, err := l.parseJoinCommand(joinToken)
 	if err != nil {
 		return err
 	}

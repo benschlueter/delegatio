@@ -11,8 +11,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/benschlueter/delegatio/core/config"
-	"github.com/benschlueter/delegatio/core/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/client/config"
+	"github.com/benschlueter/delegatio/client/vmapi/vmproto"
 	"github.com/google/shlex"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
@@ -163,7 +163,7 @@ func (l *LibvirtInstance) blockUntilDelegatioAgentIsReady(ctx context.Context) e
 	}
 }
 
-func (l *LibvirtInstance) ParseKubeadmOutput(data []byte) (string, error) {
+func (l *LibvirtInstance) parseKubeadmOutput(data []byte) (string, error) {
 	stdoutStr := string(data)
 	indexKubeadmJoin := strings.Index(stdoutStr, "kubeadm join")
 	if indexKubeadmJoin < 0 {
@@ -192,7 +192,7 @@ func (l *LibvirtInstance) ParseKubeadmOutput(data []byte) (string, error) {
 	return splittedJoinCommand[0], nil
 }
 
-func (l *LibvirtInstance) ParseJoinCommand(joinCommand string) (*kubeadm.BootstrapTokenDiscovery, error) {
+func (l *LibvirtInstance) parseJoinCommand(joinCommand string) (*kubeadm.BootstrapTokenDiscovery, error) {
 	// Format:
 	// kubeadm join [API_SERVER_ENDPOINT] --token [TOKEN] --discovery-token-ca-cert-hash [DISCOVERY_TOKEN_CA_CERT_HASH] --control-plane
 
