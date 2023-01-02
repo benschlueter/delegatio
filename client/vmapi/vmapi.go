@@ -4,7 +4,7 @@ import (
 	"context"
 	"net"
 
-	"github.com/benschlueter/delegatio/core/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/client/vmapi/vmproto"
 	"go.uber.org/zap"
 )
 

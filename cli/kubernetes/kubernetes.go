@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
 	"go.uber.org/zap"
 	coreAPI "k8s.io/api/core/v1"
@@ -42,25 +43,26 @@ func (k *kubernetesClient) CreateNamespace(ctx context.Context, namespace string
 	return err
 }
 
-func (k *kubernetesClient) CreateChallengeDeployment(ctx context.Context, challengeNamespace, userID, pubKeyUser string) error {
-	depl := appsAPI.Deployment{
+func (k *kubernetesClient) CreateChallengeStatefulSet(ctx context.Context, challengeNamespace, userID, pubKeyUser string) error {
+	sSet := appsAPI.StatefulSet{
 		TypeMeta: metaAPI.TypeMeta{
-			Kind:       "Deployment",
+			Kind:       "StatefulSet",
 			APIVersion: appsAPI.SchemeGroupVersion.Version,
 		},
 		ObjectMeta: metaAPI.ObjectMeta{
-			Name:      userID + "-deployment",
+			Name:      userID + "-statefulset",
 			Namespace: challengeNamespace,
 			Labels: map[string]string{
 				"app.kubernetes.io/name": userID,
 			},
 		},
-		Spec: appsAPI.DeploymentSpec{
+		Spec: appsAPI.StatefulSetSpec{
 			Selector: &metaAPI.LabelSelector{
 				MatchLabels: map[string]string{
 					"app.kubernetes.io/name": userID,
 				},
 			},
+			ServiceName: fmt.Sprintf("%s-service", userID),
 			Template: coreAPI.PodTemplateSpec{
 				ObjectMeta: metaAPI.ObjectMeta{
 					Name:      userID + "-pod",
@@ -122,6 +124,7 @@ func (k *kubernetesClient) CreateChallengeDeployment(ctx context.Context, challe
 			},
 		},
 	}
+
 	if err := k.CreateConfigMap(ctx, "ssh-pub-key-configmap", challengeNamespace); err != nil {
 		return err
 	}
@@ -134,7 +137,7 @@ func (k *kubernetesClient) CreateChallengeDeployment(ctx context.Context, challe
 	if err := k.CreateIngress(ctx, challengeNamespace, userID); err != nil {
 		return err
 	}
-	_, err := k.client.AppsV1().Deployments(challengeNamespace).Create(ctx, &depl, metaAPI.CreateOptions{})
+	_, err := k.client.AppsV1().StatefulSets(challengeNamespace).Create(ctx, &sSet, metaAPI.CreateOptions{})
 	return err
 }
 

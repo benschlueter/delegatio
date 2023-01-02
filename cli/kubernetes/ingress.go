@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
 	networkAPI "k8s.io/api/networking/v1"
 	metaAPI "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -43,7 +44,7 @@ func (k *kubernetesClient) CreateIngress(ctx context.Context, namespace, userID 
 									PathType: &pathType,
 									Backend: networkAPI.IngressBackend{
 										Service: &networkAPI.IngressServiceBackend{
-											Name: userID + "service",
+											Name: fmt.Sprintf("%s-service", userID),
 											Port: networkAPI.ServiceBackendPort{
 												Number: 22,
 											},
@@ -64,7 +65,7 @@ func (k *kubernetesClient) CreateIngress(ctx context.Context, namespace, userID 
 	if err := k.CreateConfigMap(ctx, "tcp-services", "ingress-nginx"); err != nil {
 		return err
 	}
-	if err := k.AddDataToConfigMap(ctx, "tcp-services", "ingress-nginx", "22", namespace+"/"+userID+"service"+":"+"22"); err != nil {
+	if err := k.AddDataToConfigMap(ctx, "tcp-services", "ingress-nginx", "22", namespace+"/"+userID+"-service"+":"+"22"); err != nil {
 		return err
 	}
 

@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 
 	coreAPI "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -15,7 +16,10 @@ func (k *kubernetesClient) CreateService(ctx context.Context, namespace, userID,
 			APIVersion: coreAPI.SchemeGroupVersion.Version,
 		},
 		ObjectMeta: v1.ObjectMeta{
-			Name: userID + "service",
+			Name: fmt.Sprintf("%s-service", userID),
+			Labels: map[string]string{
+				"app.kubernetes.io/name": userID,
+			},
 		},
 		Spec: coreAPI.ServiceSpec{
 			Type: coreAPI.ServiceTypeClusterIP,

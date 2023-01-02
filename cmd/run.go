@@ -4,9 +4,9 @@ import (
 	"net"
 	"sync"
 
-	"github.com/benschlueter/delegatio/core"
-	"github.com/benschlueter/delegatio/core/vmapi"
-	"github.com/benschlueter/delegatio/core/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/client/core"
+	"github.com/benschlueter/delegatio/client/vmapi"
+	"github.com/benschlueter/delegatio/client/vmapi/vmproto"
 	"github.com/edgelesssys/constellation/coordinator/pubapi"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
