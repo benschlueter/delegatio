@@ -7,6 +7,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/benschlueter/delegatio/cli/infrastructure"
 	"github.com/benschlueter/delegatio/cli/kubernetes"
@@ -128,6 +129,22 @@ func main() {
 		}
 	}
 	err = kubeClient.CreateChallengeStatefulSet(ctx, "testchallenge", "dummyuser", "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDLYDO+DPlwJTKYU+S9Q1YkgC7lUJgfsq+V6VxmzdP+omp2EmEIEUsB8WFtr3kAgtAQntaCejJ9ITgoLimkoPs7bV1rA7BZZgRTL2sF+F5zJ1uXKNZz1BVeGGDDXHW5X5V/ZIlH5Bl4kNaAWGx/S5PIszkhyNXEkE6GHsSU4dz69rlutjSbwQRFLx8vjgdAxP9+jUbJMh9u5Dg1SrXiMYpzplJWFt/jI13dDlNTrhWW7790xhHur4fiQbhrVzru29BKNQtSywC+3eH2XKTzobK6h7ECS5X75ghemRIDPw32SHbQP7or1xI+MjFCrZsGyZr1L0yBFNkNAsztpWAqE2FZ")
+	if err != nil {
+		if errors.Is(err, ctx.Err()) {
+			log.With(zap.Error(err)).Error("failed to create statefulset")
+		} else {
+			log.With(zap.Error(err)).DPanic("failed to create statefulset")
+		}
+	}
+	err = kubeClient.WaitForPodRunning(ctx, "testchallenge", "dummyuser-statefulset-0", 5*time.Minute)
+	if err != nil {
+		if errors.Is(err, ctx.Err()) {
+			log.With(zap.Error(err)).Error("failed to create namespace")
+		} else {
+			log.With(zap.Error(err)).DPanic("failed to create namespace")
+		}
+	}
+	err = kubeClient.CreatePodShell(ctx, "testchallenge", "dummyuser-statefulset-0", os.Stdin, os.Stdout, os.Stderr, nil)
 	if err != nil {
 		if errors.Is(err, ctx.Err()) {
 			log.With(zap.Error(err)).Error("failed to create namespace")

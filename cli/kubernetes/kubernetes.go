@@ -10,12 +10,14 @@ import (
 	coreAPI "k8s.io/api/core/v1"
 	metaAPI "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
 )
 
 type kubernetesClient struct {
-	client kubernetes.Interface
-	logger *zap.Logger
+	client     kubernetes.Interface
+	logger     *zap.Logger
+	restClient *rest.Config
 }
 
 // NewK8sClient returns a new kuberenetes client-go wrapper.
@@ -31,20 +33,10 @@ func NewK8sClient(kubeconfigPath string, logger *zap.Logger) (*kubernetesClient,
 		return nil, err
 	}
 	return &kubernetesClient{
-		client: client,
-		logger: logger,
+		client:     client,
+		logger:     logger,
+		restClient: config,
 	}, nil
-}
-
-func (k *kubernetesClient) ListPods(ctx context.Context, namespace string) error {
-	podList, err := k.client.CoreV1().Pods("kube-system").List(ctx, metaAPI.ListOptions{})
-	if err != nil {
-		return err
-	}
-	for _, v := range podList.Items {
-		k.logger.Info(v.Name)
-	}
-	return nil
 }
 
 func (k *kubernetesClient) CreateNamespace(ctx context.Context, namespace string) error {
@@ -88,6 +80,7 @@ func (k *kubernetesClient) CreateChallengeStatefulSet(ctx context.Context, chall
 					Labels: map[string]string{
 						"app.kubernetes.io/name": userID,
 					},
+					GenerateName: userID + "-pod",
 				},
 				Spec: coreAPI.PodSpec{
 					Containers: []coreAPI.Container{
@@ -156,6 +149,7 @@ func (k *kubernetesClient) CreateChallengeStatefulSet(ctx context.Context, chall
 		return err
 	}
 	_, err := k.client.AppsV1().StatefulSets(challengeNamespace).Create(ctx, &sSet, metaAPI.CreateOptions{})
+
 	return err
 }
 
