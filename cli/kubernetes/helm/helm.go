@@ -31,7 +31,9 @@ func Install(ctx context.Context, logger *zap.Logger, name string) error {
 	iCli := action.NewInstall(actionConfig)
 	iCli.Timeout = 2 * time.Minute
 	iCli.ReleaseName = "cilium"
-	rel, err := iCli.Run(chart, nil)
+	iCli.Namespace = "cilium"
+	iCli.CreateNamespace = true
+	rel, err := iCli.RunWithContext(ctx, chart, nil)
 	if err != nil {
 		return err
 	}
