@@ -43,23 +43,23 @@ func (l *LibvirtInstance) InitializeInfrastructure(ctx context.Context) (err err
 	if err := l.TerminateInfrastructure(); err != nil {
 		return err
 	}
-	if err := l.CreateStoragePool(); err != nil {
+	if err := l.createStoragePool(); err != nil {
 		return err
 	}
-	if err := l.CreateBaseImage(ctx); err != nil {
+	if err := l.createBaseImage(ctx); err != nil {
 		return err
 	}
-	if err := l.CreateNetwork(); err != nil {
+	if err := l.createNetwork(); err != nil {
 		return err
 	}
 	return err
 }
 
 func (l *LibvirtInstance) CreateInstance(id string) (err error) {
-	if err := l.CreateBootImage("delegatio-" + id); err != nil {
+	if err := l.createBootImage("delegatio-" + id); err != nil {
 		return err
 	}
-	if err := l.CreateDomain("delegatio-" + id); err != nil {
+	if err := l.createDomain("delegatio-" + id); err != nil {
 		return err
 	}
 	return nil

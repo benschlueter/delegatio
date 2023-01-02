@@ -9,7 +9,7 @@ import (
 	"libvirt.org/go/libvirt"
 )
 
-func (l *LibvirtInstance) CreateStoragePool() error {
+func (l *LibvirtInstance) createStoragePool() error {
 	// Might be needed for renaming in the future
 	poolXMLCopy := definitions.PoolXMLConfig
 	poolXMLString, err := poolXMLCopy.Marshal()
@@ -33,7 +33,7 @@ func (l *LibvirtInstance) CreateStoragePool() error {
 	return nil
 }
 
-func (l *LibvirtInstance) CreateBaseImage(ctx context.Context) error {
+func (l *LibvirtInstance) createBaseImage(ctx context.Context) error {
 	volumeBaseXMLString, err := definitions.VolumeBaseXMLConfig.Marshal()
 	if err != nil {
 		return err
@@ -55,7 +55,7 @@ func (l *LibvirtInstance) CreateBaseImage(ctx context.Context) error {
 	return l.uploadBaseImage(ctx, volumeBaseObject)
 }
 
-func (l *LibvirtInstance) CreateBootImage(id string) error {
+func (l *LibvirtInstance) createBootImage(id string) error {
 	volumeBootXMLCopy := definitions.VolumeBootXMLConfig
 	volumeBootXMLCopy.Name = id
 	volumeBootXMLCopy.Target.Path = path.Join(definitions.LibvirtStoragePoolPath, id)
@@ -79,7 +79,7 @@ func (l *LibvirtInstance) CreateBootImage(id string) error {
 	return nil
 }
 
-func (l *LibvirtInstance) CreateNetwork() error {
+func (l *LibvirtInstance) createNetwork() error {
 	networkXMLString, err := definitions.NetworkXMLConfig.Marshal()
 	if err != nil {
 		return err
@@ -93,7 +93,7 @@ func (l *LibvirtInstance) CreateNetwork() error {
 	return nil
 }
 
-func (l *LibvirtInstance) CreateDomain(id string) error {
+func (l *LibvirtInstance) createDomain(id string) error {
 	domainCpy := definitions.DomainXMLConfig
 	domainCpy.Name = id
 	domainCpy.Devices.Disks[0].Source.Volume.Volume = id
