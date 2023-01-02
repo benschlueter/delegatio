@@ -159,7 +159,7 @@ func (k *kubernetesClient) CreateChallengeStatefulSet(ctx context.Context, chall
 	return err
 }
 
-// InstallHelmStuff returns a new kuberenetes client-go wrapper.
+// InstallHelmStuff.
 func (k *kubernetesClient) InstallHelmStuff(ctx context.Context) error {
-	return helm.Install(ctx, k.logger.Named("helm"), "nginx", "nginx-ingess")
+	return helm.Install(ctx, k.logger.Named("helm"), "cilium")
 }
