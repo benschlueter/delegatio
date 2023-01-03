@@ -200,7 +200,7 @@ func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newCha
 		window)
 	if err != nil {
 		s.log.Error("createPodShell exited with errorcode", zap.Error(err))
-		_, _ = connection.Write([]byte(fmt.Sprintf("\n\n-------------------------\nclosing connection %v\n-------------------------\n\n", err)))
+		_, _ = connection.Write([]byte(fmt.Sprintf("closing connection, reason: %v", err)))
 		return
 	}
 	_, _ = connection.Write([]byte("graceful termination"))
