@@ -46,7 +46,11 @@ func NewSSHRelay(client *kubernetes.Client, log *zap.Logger) *sshRelay {
 		log:          log,
 		handleConnWG: &sync.WaitGroup{},
 		users: map[string]struct{}{
-			"testchallenge": {},
+			"testchallenge":  {},
+			"testchallenge1": {},
+			"testchallenge2": {},
+			"testchallenge3": {},
+			"testchallenge4": {},
 		},
 		publicKeys: map[string]struct{}{
 			"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDLYDO+DPlwJTKYU+S9Q1YkgC7lUJgfsq+V6VxmzdP+omp2EmEIEUsB8WFtr3kAgtAQntaCejJ9ITgoLimkoPs7bV1rA7BZZgRTL2sF+F5zJ1uXKNZz1BVeGGDDXHW5X5V/ZIlH5Bl4kNaAWGx/S5PIszkhyNXEkE6GHsSU4dz69rlutjSbwQRFLx8vjgdAxP9+jUbJMh9u5Dg1SrXiMYpzplJWFt/jI13dDlNTrhWW7790xhHur4fiQbhrVzru29BKNQtSywC+3eH2XKTzobK6h7ECS5X75ghemRIDPw32SHbQP7or1xI+MjFCrZsGyZr1L0yBFNkNAsztpWAqE2FZ": {},
@@ -134,48 +138,35 @@ func (s *sshRelay) handeConn(ctx context.Context, tcpConn net.Conn, config *ssh.
 		return
 	}
 	defer sshConn.Close()
+
+	// if the connection is dead terminate it.
+	ctx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
+	go s.keepAlive(cancel, sshConn, done)
+
 	s.log.Info("new ssh connection",
 		zap.String("addr", sshConn.RemoteAddr().String()),
 		zap.Binary("client version", sshConn.ClientVersion()),
 		zap.Binary("session", sshConn.SessionID()),
 		zap.String("keyFingerprint", sshConn.Permissions.Extensions["pubKey"]),
 	)
-	// Discard all global out-of-band Requests
-	// Dont care about graceful termination of this routine
+	// Discard all global out-of-band Requests.
+	// We dont care about graceful termination of this routine.
 	go ssh.DiscardRequests(reqs)
-	exists, err := s.client.StatefulSetExists(ctx, sshConn.User(), sshConn.Permissions.Extensions["pubKey"])
-	if err != nil {
-		s.log.Error("obtaining statefulset status",
+
+	// Check if the pods are ready and we can exec on them.
+	// Otherwise spawn the pods.
+	if err := s.makeKubernetesReady(ctx, sshConn); err != nil {
+		s.log.Error("creating/waiting for kubernetes ressources",
 			zap.Error(err),
 			zap.String("userID", sshConn.Permissions.Extensions["pubKey"]),
 			zap.String("namespace", sshConn.User()),
 		)
 		return
 	}
-	s.log.Info("statefulSet exists", zap.Bool("val", exists))
-	if !exists {
-		if err := s.client.CreateStatefulSetForUser(ctx, sshConn.User(), sshConn.Permissions.Extensions["pubKey"]); err != nil {
-			s.log.Error("create statefulset",
-				zap.Error(err),
-				zap.String("userID", sshConn.Permissions.Extensions["pubKey"]),
-				zap.String("namespace", sshConn.User()),
-			)
-			return
-		}
-		s.log.Info("created statefulSet",
-			zap.String("userID", sshConn.Permissions.Extensions["pubKey"]),
-			zap.String("namespace", sshConn.User()))
-	}
-	if err := s.client.WaitForPodRunning(ctx, sshConn.User(), sshConn.Permissions.Extensions["pubKey"], 1*time.Minute); err != nil {
-		s.log.Error("wait for pod",
-			zap.Error(err),
-			zap.String("userID", sshConn.Permissions.Extensions["pubKey"]),
-			zap.String("namespace", sshConn.User()),
-		)
-		return
-	}
-	// Accept all channels
+	// Accept all channels.
 	s.handleChannels(ctx, chans, sshConn.User(), sshConn.Permissions.Extensions["pubKey"])
+	done <- struct{}{}
 	s.log.Info("closing ssh session",
 		zap.String("addr", sshConn.RemoteAddr().String()),
 		zap.Binary("client version", sshConn.ClientVersion()),
@@ -230,9 +221,9 @@ func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newCha
 	defer func(log *zap.Logger) {
 		err := channel.Close()
 		if err != nil {
-			log.Error("error while closing connection", zap.Error(err))
+			log.Error("closing connection", zap.Error(err))
 		}
-		log.Info("closed channel connection")
+		log.Debug("closed channel connection")
 	}(s.log)
 
 	window := &Winsize{
@@ -300,6 +291,45 @@ type Winsize struct {
 // Next sets the size.
 func (w *Winsize) Next() *remotecommand.TerminalSize {
 	return <-w.Queue
+}
+
+func (s *sshRelay) makeKubernetesReady(ctx context.Context, sshConn *ssh.ServerConn) error {
+	exists, err := s.client.StatefulSetExists(ctx, sshConn.User(), sshConn.Permissions.Extensions["pubKey"])
+	if err != nil {
+		return err
+	}
+	if !exists {
+		if err := s.client.CreateStatefulSetForUser(ctx, sshConn.User(), sshConn.Permissions.Extensions["pubKey"]); err != nil {
+			return err
+		}
+	}
+	if err := s.client.WaitForPodRunning(ctx, sshConn.User(), sshConn.Permissions.Extensions["pubKey"], 1*time.Minute); err != nil {
+		return err
+	}
+	return nil
+}
+
+func (s *sshRelay) keepAlive(cancel context.CancelFunc, sshConn *ssh.ServerConn, done <-chan struct{}) {
+	t := time.NewTicker(10 * time.Second)
+	defer t.Stop()
+	s.log.Debug("starting keepAlive")
+	for {
+		select {
+		case <-t.C:
+			_, _, err := sshConn.SendRequest("keepalive@golang.org", true, nil)
+			if err != nil {
+				s.log.Info("keepAlive did not received a response",
+					zap.String("addr", sshConn.RemoteAddr().String()),
+					zap.Binary("client version", sshConn.ClientVersion()),
+					zap.Binary("session", sshConn.SessionID()),
+					zap.String("keyFingerprint", sshConn.Permissions.Extensions["pubKey"]))
+				cancel()
+			}
+		case <-done:
+			s.log.Debug("stopping keepAlive")
+			return
+		}
+	}
 }
 
 // corrected from https://gist.github.com/jpillora/b480fde82bff51a06238
