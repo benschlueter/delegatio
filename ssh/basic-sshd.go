@@ -9,7 +9,9 @@ import (
 	"log"
 	"net"
 	"os"
+	"strings"
 	"sync"
+	"time"
 
 	"github.com/benschlueter/delegatio/cli/kubernetes"
 	"go.uber.org/zap"
@@ -44,7 +46,7 @@ func NewSSHRelay(client *kubernetes.Client, log *zap.Logger) *sshRelay {
 		log:          log,
 		handleConnWG: &sync.WaitGroup{},
 		users: map[string]struct{}{
-			"root": {},
+			"testchallenge": {},
 		},
 		publicKeys: map[string]struct{}{
 			"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDLYDO+DPlwJTKYU+S9Q1YkgC7lUJgfsq+V6VxmzdP+omp2EmEIEUsB8WFtr3kAgtAQntaCejJ9ITgoLimkoPs7bV1rA7BZZgRTL2sF+F5zJ1uXKNZz1BVeGGDDXHW5X5V/ZIlH5Bl4kNaAWGx/S5PIszkhyNXEkE6GHsSU4dz69rlutjSbwQRFLx8vjgdAxP9+jUbJMh9u5Dg1SrXiMYpzplJWFt/jI13dDlNTrhWW7790xhHur4fiQbhrVzru29BKNQtSywC+3eH2XKTzobK6h7ECS5X75ghemRIDPw32SHbQP7or1xI+MjFCrZsGyZr1L0yBFNkNAsztpWAqE2FZ": {},
@@ -73,7 +75,7 @@ func (s *sshRelay) StartServer(ctx context.Context) {
 			return &ssh.Permissions{
 				Extensions: map[string]string{
 					"authType": "pk",
-					"pubKey":   ssh.FingerprintSHA256(key),
+					"pubKey":   strings.ToLower(ssh.FingerprintSHA256(key)[7:47]),
 				},
 			}, nil
 		},
@@ -141,8 +143,39 @@ func (s *sshRelay) handeConn(ctx context.Context, tcpConn net.Conn, config *ssh.
 	// Discard all global out-of-band Requests
 	// Dont care about graceful termination of this routine
 	go ssh.DiscardRequests(reqs)
+	exists, err := s.client.StatefulSetExists(ctx, sshConn.User(), sshConn.Permissions.Extensions["pubKey"])
+	if err != nil {
+		s.log.Error("obtaining statefulset status",
+			zap.Error(err),
+			zap.String("userID", sshConn.Permissions.Extensions["pubKey"]),
+			zap.String("namespace", sshConn.User()),
+		)
+		return
+	}
+	s.log.Info("statefulSet exists", zap.Bool("val", exists))
+	if !exists {
+		if err := s.client.CreateStatefulSetForUser(ctx, sshConn.User(), sshConn.Permissions.Extensions["pubKey"]); err != nil {
+			s.log.Error("create statefulset",
+				zap.Error(err),
+				zap.String("userID", sshConn.Permissions.Extensions["pubKey"]),
+				zap.String("namespace", sshConn.User()),
+			)
+			return
+		}
+		s.log.Info("created statefulSet",
+			zap.String("userID", sshConn.Permissions.Extensions["pubKey"]),
+			zap.String("namespace", sshConn.User()))
+	}
+	if err := s.client.WaitForPodRunning(ctx, sshConn.User(), sshConn.Permissions.Extensions["pubKey"], 1*time.Minute); err != nil {
+		s.log.Error("wait for pod",
+			zap.Error(err),
+			zap.String("userID", sshConn.Permissions.Extensions["pubKey"]),
+			zap.String("namespace", sshConn.User()),
+		)
+		return
+	}
 	// Accept all channels
-	s.handleChannels(ctx, chans)
+	s.handleChannels(ctx, chans, sshConn.User(), sshConn.Permissions.Extensions["pubKey"])
 	s.log.Info("closing ssh session",
 		zap.String("addr", sshConn.RemoteAddr().String()),
 		zap.Binary("client version", sshConn.ClientVersion()),
@@ -151,7 +184,7 @@ func (s *sshRelay) handeConn(ctx context.Context, tcpConn net.Conn, config *ssh.
 	)
 }
 
-func (s *sshRelay) handleChannels(ctx context.Context, chans <-chan ssh.NewChannel) {
+func (s *sshRelay) handleChannels(ctx context.Context, chans <-chan ssh.NewChannel, namespace, userID string) {
 	// Service the incoming Channel channel in go routine
 	handleChannelWg := &sync.WaitGroup{}
 	defer handleChannelWg.Wait()
@@ -162,17 +195,16 @@ func (s *sshRelay) handleChannels(ctx context.Context, chans <-chan ssh.NewChann
 		case newChannel := <-chans:
 			// when we close the "channel" from newChannel.Accept() in s.handleChannel the ssh.NewChannel
 			// is closed from the library side as well. Thus it will always send nil. Return in this case.
-			s.log.Info("newchan", zap.Any("result", newChannel))
 			if newChannel == nil {
 				return
 			}
 			handleChannelWg.Add(1)
-			go s.handleChannel(ctx, handleChannelWg, newChannel)
+			go s.handleChannel(ctx, handleChannelWg, newChannel, namespace, userID)
 		}
 	}
 }
 
-func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newChannel ssh.NewChannel) {
+func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newChannel ssh.NewChannel, namespace, userID string) {
 	defer wg.Done()
 
 	// Since we're handling a shell, we expect a
@@ -236,8 +268,8 @@ func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newCha
 	}(requests)
 	// Fire up "kubectl exec" for this session
 	err = s.client.CreatePodShell(ctx,
-		"testchallenge",
-		"dummyuser-statefulset-0",
+		namespace,
+		fmt.Sprintf("%s-statefulset-0", userID),
 		channel,
 		channel,
 		channel,

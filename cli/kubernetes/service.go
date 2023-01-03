@@ -6,11 +6,10 @@ import (
 
 	coreAPI "k8s.io/api/core/v1"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
-	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-// CreateService creates a service.
-func (k *Client) CreateService(ctx context.Context, namespace, userID, podSSHPort string) error {
+// CreateHeadlessService creates a service.
+func (k *Client) CreateHeadlessService(ctx context.Context, namespace, userID string) error {
 	serv := coreAPI.Service{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "Service",
@@ -27,13 +26,7 @@ func (k *Client) CreateService(ctx context.Context, namespace, userID, podSSHPor
 			Selector: map[string]string{
 				"app.kubernetes.io/name": userID,
 			},
-			Ports: []coreAPI.ServicePort{
-				{
-					Protocol:   coreAPI.ProtocolTCP,
-					Port:       22,
-					TargetPort: intstr.Parse(podSSHPort),
-				},
-			},
+			ClusterIP: "None",
 		},
 	}
 	_, err := k.client.CoreV1().Services(namespace).Create(ctx, &serv, v1.CreateOptions{})

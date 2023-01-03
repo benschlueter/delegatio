@@ -7,7 +7,6 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
-	"time"
 
 	"github.com/benschlueter/delegatio/cli/infrastructure"
 	"github.com/benschlueter/delegatio/cli/kubernetes"
@@ -21,10 +20,8 @@ func registerSignalHandler(cancelContext context.CancelFunc, done chan<- struct{
 	sigs := make(chan os.Signal, 1)
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
-	select {
-	case <-sigs:
-		break
-	}
+	<-sigs
+
 	log.Info("cancellation signal received")
 	cancelContext()
 	signal.Stop(sigs)
@@ -112,30 +109,30 @@ func main() {
 			log.With(zap.Error(err)).DPanic("failed to install helm charts")
 		}
 	}
-	err = kubeClient.CreateNamespace(ctx, "testchallenge")
-	if err != nil {
-		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("failed to create namespace")
-		} else {
-			log.With(zap.Error(err)).DPanic("failed to create namespace")
-		}
-	}
-	err = kubeClient.CreateChallengeStatefulSet(ctx, "testchallenge", "dummyuser")
-	if err != nil {
-		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("failed to create statefulset")
-		} else {
-			log.With(zap.Error(err)).DPanic("failed to create statefulset")
-		}
-	}
-	err = kubeClient.WaitForPodRunning(ctx, "testchallenge", "dummyuser-statefulset-0", 5*time.Minute)
-	if err != nil {
-		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("failed to wait for pod")
-		} else {
-			log.With(zap.Error(err)).DPanic("failed to wait for pod")
-		}
-	}
+	/* 	err = kubeClient.CreateNamespace(ctx, "testchallenge")
+	   	if err != nil {
+	   		if errors.Is(err, ctx.Err()) {
+	   			log.With(zap.Error(err)).Error("failed to create namespace")
+	   		} else {
+	   			log.With(zap.Error(err)).DPanic("failed to create namespace")
+	   		}
+	   	}
+	   	err = kubeClient.CreateChallengeStatefulSet(ctx, "testchallenge", "dummyuser")
+	   	if err != nil {
+	   		if errors.Is(err, ctx.Err()) {
+	   			log.With(zap.Error(err)).Error("failed to create statefulset")
+	   		} else {
+	   			log.With(zap.Error(err)).DPanic("failed to create statefulset")
+	   		}
+	   	}
+	   	err = kubeClient.WaitForPodRunning(ctx, "testchallenge", "dummyuser-statefulset-0", 5*time.Minute)
+	   	if err != nil {
+	   		if errors.Is(err, ctx.Err()) {
+	   			log.With(zap.Error(err)).Error("failed to wait for pod")
+	   		} else {
+	   			log.With(zap.Error(err)).DPanic("failed to wait for pod")
+	   		}
+	   	} */
 	/* 	err = kubeClient.CreatePodShell(ctx, "testchallenge", "dummyuser-statefulset-0", os.Stdin, os.Stdout, os.Stderr, nil)
 	   	if err != nil {
 	   		if errors.Is(err, ctx.Err()) {

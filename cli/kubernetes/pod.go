@@ -2,6 +2,7 @@ package kubernetes
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -31,7 +32,7 @@ func (k *Client) WaitForPodRunning(ctx context.Context, namespace, podName strin
 
 func isPodRunning(ctx context.Context, c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		pod, err := c.CoreV1().Pods(namespace).Get(ctx, podName, metaAPI.GetOptions{})
+		pod, err := c.CoreV1().Pods(namespace).Get(ctx, fmt.Sprintf("%s-statefulset-0", podName), metaAPI.GetOptions{})
 		if errors.IsNotFound(err) {
 			return false, nil
 		}
