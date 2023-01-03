@@ -74,10 +74,9 @@ func (s *sshRelay) StartServer(ctx context.Context) {
 	defer listener.Close()
 
 	// Accept all connections
-	s.log.Info("Listening on  `0.0.0.0:2200`")
+	s.log.Info("Listening on  \"0.0.0.0:2200\"")
 	go func(ctx context.Context) {
 		for {
-
 			tcpConn, err := listener.Accept()
 			if errors.Is(err, net.ErrClosed) {
 				return
@@ -114,7 +113,8 @@ func (s *sshRelay) handeConn(ctx context.Context, tcpConn net.Conn, config *ssh.
 	go ssh.DiscardRequests(reqs)
 	// Accept all channels
 	s.handleChannels(ctx, chans)
-	s.log.Info("closing ssh session", zap.String("addr", sshConn.RemoteAddr().String()),
+	s.log.Info("closing ssh session",
+		zap.String("addr", sshConn.RemoteAddr().String()),
 		zap.Binary("client version", sshConn.ClientVersion()),
 		zap.Binary("session", sshConn.SessionID()),
 	)
@@ -174,7 +174,7 @@ func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newCha
 					continue
 				}
 				if err := req.Reply(true, nil); err != nil {
-					s.log.Error("failled to respond to `shell` request", zap.Error(err))
+					s.log.Error("failled to respond to \"shell\" request", zap.Error(err))
 				}
 			case "pty-req":
 				termLen := req.Payload[3]
@@ -182,7 +182,7 @@ func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newCha
 				// Responding true (OK) here will let the client
 				// know we have a pty ready for input
 				if err := req.Reply(true, nil); err != nil {
-					s.log.Error("failled to respond to `pty-req`", zap.Error(err))
+					s.log.Error("failled to respond to \"pty-req\" request", zap.Error(err))
 				}
 			case "window-change":
 				s.log.Info("window change request received")
