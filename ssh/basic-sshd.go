@@ -166,6 +166,11 @@ func (s *sshRelay) handleChannels(ctx context.Context, chans <-chan ssh.NewChann
 		case <-ctx.Done():
 			return
 		case newChannel := <-chans:
+			// Not sure why the newChannel's can be nil. Experienced it only on my laptop
+			// starting around commit: 34c190c7ebb8ae80557e8359263fc286ffb4a401
+			if newChannel == nil {
+				continue
+			}
 			handleChannelWg.Add(1)
 			go s.handleChannel(ctx, handleChannelWg, newChannel)
 		}
@@ -173,17 +178,12 @@ func (s *sshRelay) handleChannels(ctx context.Context, chans <-chan ssh.NewChann
 }
 
 func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newChannel ssh.NewChannel) {
-	s.log.Info("enter handleChannel")
-	defer func(log *zap.Logger) {
-		log.Info("before wg done")
-		wg.Done()
-		log.Info("after wg done")
-	}(s.log)
+	defer wg.Done()
+
 	// Since we're handling a shell, we expect a
 	// channel type of "session". The also describes
 	// "x11", "direct-tcpip" and "forwarded-tcpip"
 	// channel types.
-	s.log.Info("before session compare")
 	if t := newChannel.ChannelType(); t != "session" {
 		s.log.Error("unknown channel type", zap.String("type", newChannel.ChannelType()))
 		err := newChannel.Reject(ssh.UnknownChannelType, fmt.Sprintf("unknown channel type: %s", t))
@@ -192,17 +192,16 @@ func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newCha
 		}
 		return
 	}
-	s.log.Info("handling channel request")
 
 	// At this point, we have the opportunity to reject the client's
-	// request for another logical connection
-	connection, requests, err := newChannel.Accept()
+	// request for another logical channel
+	channel, requests, err := newChannel.Accept()
 	if err != nil {
 		s.log.Error("could not accept the channel", zap.Error(err))
 		return
 	}
 	defer func(log *zap.Logger) {
-		err := connection.Close()
+		err := channel.Close()
 		if err != nil {
 			log.Error("error while closing connection", zap.Error(err))
 		}
@@ -244,16 +243,16 @@ func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newCha
 	err = s.client.CreatePodShell(ctx,
 		"testchallenge",
 		"dummyuser-statefulset-0",
-		connection,
-		connection,
-		connection,
+		channel,
+		channel,
+		channel,
 		window)
 	if err != nil {
 		s.log.Error("createPodShell exited with errorcode", zap.Error(err))
-		_, _ = connection.Write([]byte(fmt.Sprintf("closing connection, reason: %v", err)))
+		_, _ = channel.Write([]byte(fmt.Sprintf("closing connection, reason: %v", err)))
 		return
 	}
-	_, _ = connection.Write([]byte("graceful termination"))
+	_, _ = channel.Write([]byte("graceful termination"))
 }
 
 // parseDims extracts terminal dimensions (width x height) from the provided buffer.
