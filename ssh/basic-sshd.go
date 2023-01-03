@@ -11,6 +11,7 @@ import (
 	"os"
 	"strings"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/benschlueter/delegatio/cli/kubernetes"
@@ -22,11 +23,12 @@ import (
 // TODO: Maybe we should wait for all goroutines to finish before we return. Might require heavy refactoring.
 
 type sshRelay struct {
-	log          *zap.Logger
-	client       *kubernetes.Client
-	handleConnWG *sync.WaitGroup
-	users        map[string]struct{}
-	publicKeys   map[string]struct{}
+	log                *zap.Logger
+	client             *kubernetes.Client
+	handleConnWG       *sync.WaitGroup
+	currentConnections int64
+	users              map[string]struct{}
+	publicKeys         map[string]struct{}
 }
 
 func main() {
@@ -42,9 +44,10 @@ func main() {
 // NewSSHRelay returns a sshRelay.
 func NewSSHRelay(client *kubernetes.Client, log *zap.Logger) *sshRelay {
 	return &sshRelay{
-		client:       client,
-		log:          log,
-		handleConnWG: &sync.WaitGroup{},
+		client:             client,
+		log:                log,
+		handleConnWG:       &sync.WaitGroup{},
+		currentConnections: 0,
 		users: map[string]struct{}{
 			"testchallenge":  {},
 			"testchallenge1": {},
@@ -63,7 +66,6 @@ func (s *sshRelay) StartServer(ctx context.Context) {
 	// in favour of an SSH connection type. A ssh.ServerConn is created by passing an existing
 	// net.Conn and a ssh.ServerConfig to ssh.NewServerConn, in effect, upgrading the net.Conn
 	// into an ssh.ServerConn
-
 	config := &ssh.ServerConfig{
 		// Function is called to determine if the user is allowed to connect with the ssh server
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
@@ -87,7 +89,8 @@ func (s *sshRelay) StartServer(ctx context.Context) {
 		// sessions may not be a wise idea
 		// NoClientAuth: true,
 	}
-
+	done := make(chan struct{})
+	go s.periodicLogs(done)
 	// You can generate a keypair with 'ssh-keygen -t rsa'
 	privateBytes, err := os.ReadFile("./server_test")
 	if err != nil {
@@ -122,10 +125,12 @@ func (s *sshRelay) StartServer(ctx context.Context) {
 			}
 			s.log.Info("handling incomming connection", zap.String("addr", tcpConn.RemoteAddr().String()))
 			s.handleConnWG.Add(1)
+			atomic.AddInt64(&s.currentConnections, 1)
 			go s.handeConn(ctx, tcpConn, config)
 		}
 	}(ctx)
 	<-ctx.Done()
+	done <- struct{}{}
 	s.handleConnWG.Wait()
 }
 
@@ -173,6 +178,7 @@ func (s *sshRelay) handeConn(ctx context.Context, tcpConn net.Conn, config *ssh.
 		zap.Binary("session", sshConn.SessionID()),
 		zap.String("keyFingerprint", sshConn.Permissions.Extensions["pubKey"]),
 	)
+	atomic.AddInt64(&s.currentConnections, -1)
 }
 
 func (s *sshRelay) handleChannels(ctx context.Context, chans <-chan ssh.NewChannel, namespace, userID string) {
@@ -327,6 +333,21 @@ func (s *sshRelay) keepAlive(cancel context.CancelFunc, sshConn *ssh.ServerConn,
 			}
 		case <-done:
 			s.log.Debug("stopping keepAlive")
+			return
+		}
+	}
+}
+
+func (s *sshRelay) periodicLogs(done <-chan struct{}) {
+	t := time.NewTicker(10 * time.Second)
+	defer t.Stop()
+	s.log.Debug("starting periodicLogs")
+	for {
+		select {
+		case <-t.C:
+			s.log.Info("current active connections", zap.Int64("conn", s.currentConnections))
+		case <-done:
+			s.log.Debug("stopping periodicLogs")
 			return
 		}
 	}
