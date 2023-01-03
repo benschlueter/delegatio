@@ -166,10 +166,8 @@ func (s *sshRelay) handleChannels(ctx context.Context, chans <-chan ssh.NewChann
 		case <-ctx.Done():
 			return
 		case newChannel := <-chans:
-			// Not sure why the newChannel's can be nil. Experienced it only on my laptop
-			// starting around commit: 34c190c7ebb8ae80557e8359263fc286ffb4a401
 			if newChannel == nil {
-				continue
+				return
 			}
 			handleChannelWg.Add(1)
 			go s.handleChannel(ctx, handleChannelWg, newChannel)
@@ -213,7 +211,7 @@ func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newCha
 	}
 
 	// Sessions have out-of-band requests such as "shell", "pty-req" and "env"
-	go func() {
+	go func(<-chan *ssh.Request) {
 		for req := range requests {
 			switch req.Type {
 			case "shell":
@@ -238,7 +236,7 @@ func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newCha
 				window.Queue <- parseDims(req.Payload)
 			}
 		}
-	}()
+	}(requests)
 	// Fire up "kubectl exec" for this session
 	err = s.client.CreatePodShell(ctx,
 		"testchallenge",
