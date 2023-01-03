@@ -11,7 +11,7 @@ import (
 )
 
 // ExecCmd exec command on specific pod and wait the command's output.
-func (k *kubernetesClient) CreatePodShell(ctx context.Context, namespace, podName string, stdin io.Reader, stdout io.Writer, stderr io.Writer, resizeQueue remotecommand.TerminalSizeQueue) error {
+func (k *KubernetesClient) CreatePodShell(ctx context.Context, namespace, podName string, stdin io.Reader, stdout io.Writer, stderr io.Writer, resizeQueue remotecommand.TerminalSizeQueue) error {
 	cmd := []string{
 		"bash",
 	}

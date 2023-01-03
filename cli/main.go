@@ -11,6 +11,7 @@ import (
 
 	"github.com/benschlueter/delegatio/cli/infrastructure"
 	"github.com/benschlueter/delegatio/cli/kubernetes"
+	"github.com/benschlueter/delegatio/cli/ssh"
 
 	"go.uber.org/zap"
 )
@@ -139,19 +140,21 @@ func main() {
 	err = kubeClient.WaitForPodRunning(ctx, "testchallenge", "dummyuser-statefulset-0", 5*time.Minute)
 	if err != nil {
 		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("failed to create namespace")
+			log.With(zap.Error(err)).Error("failed to wait for pod")
 		} else {
-			log.With(zap.Error(err)).DPanic("failed to create namespace")
+			log.With(zap.Error(err)).DPanic("failed to wait for pod")
 		}
 	}
-	err = kubeClient.CreatePodShell(ctx, "testchallenge", "dummyuser-statefulset-0", os.Stdin, os.Stdout, os.Stderr, nil)
-	if err != nil {
-		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("failed to create namespace")
-		} else {
-			log.With(zap.Error(err)).DPanic("failed to create namespace")
-		}
-	}
+	sshRelay := ssh.NewSSHRelay(kubeClient, log.Named("ssh"))
+	sshRelay.StartServer(ctx)
+	/* 	err = kubeClient.CreatePodShell(ctx, "testchallenge", "dummyuser-statefulset-0", os.Stdin, os.Stdout, os.Stderr, nil)
+	   	if err != nil {
+	   		if errors.Is(err, ctx.Err()) {
+	   			log.With(zap.Error(err)).Error("failed to spawn shell")
+	   		} else {
+	   			log.With(zap.Error(err)).DPanic("failed to spawn shell")
+	   		}
+	   	} */
 
 	<-ctx.Done()
 	<-done

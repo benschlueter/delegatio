@@ -9,7 +9,7 @@ import (
 	"k8s.io/apimachinery/pkg/util/intstr"
 )
 
-func (k *kubernetesClient) CreateService(ctx context.Context, namespace, userID, podSSHPort string) error {
+func (k *KubernetesClient) CreateService(ctx context.Context, namespace, userID, podSSHPort string) error {
 	serv := coreAPI.Service{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "Service",

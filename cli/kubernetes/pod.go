@@ -13,7 +13,7 @@ import (
 	"k8s.io/kubernetes/pkg/client/conditions"
 )
 
-func (k *kubernetesClient) ListPods(ctx context.Context, namespace string) error {
+func (k *KubernetesClient) ListPods(ctx context.Context, namespace string) error {
 	podList, err := k.client.CoreV1().Pods("kube-system").List(ctx, metaAPI.ListOptions{})
 	if err != nil {
 		return err
@@ -25,7 +25,7 @@ func (k *kubernetesClient) ListPods(ctx context.Context, namespace string) error
 }
 
 // WaitForPodRunning waits for a pod to be running.
-func (k *kubernetesClient) WaitForPodRunning(ctx context.Context, namespace, podName string, timeout time.Duration) error {
+func (k *KubernetesClient) WaitForPodRunning(ctx context.Context, namespace, podName string, timeout time.Duration) error {
 	return wait.PollImmediate(time.Second, timeout, isPodRunning(ctx, k.client, podName, namespace))
 }
 

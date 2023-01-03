@@ -14,14 +14,14 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-type kubernetesClient struct {
+type KubernetesClient struct {
 	client     kubernetes.Interface
 	logger     *zap.Logger
 	restClient *rest.Config
 }
 
 // NewK8sClient returns a new kuberenetes client-go wrapper.
-func NewK8sClient(kubeconfigPath string, logger *zap.Logger) (*kubernetesClient, error) {
+func NewK8sClient(kubeconfigPath string, logger *zap.Logger) (*KubernetesClient, error) {
 	// use the current context in kubeconfig
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
@@ -32,14 +32,18 @@ func NewK8sClient(kubeconfigPath string, logger *zap.Logger) (*kubernetesClient,
 	if err != nil {
 		return nil, err
 	}
-	return &kubernetesClient{
+	return &KubernetesClient{
 		client:     client,
 		logger:     logger,
 		restClient: config,
 	}, nil
 }
 
-func (k *kubernetesClient) CreateNamespace(ctx context.Context, namespace string) error {
+func (k *KubernetesClient) GetClient() kubernetes.Interface {
+	return k.client
+}
+
+func (k *KubernetesClient) CreateNamespace(ctx context.Context, namespace string) error {
 	nspace := coreAPI.Namespace{
 		TypeMeta: metaAPI.TypeMeta{
 			Kind:       "Namespace",
@@ -53,7 +57,7 @@ func (k *kubernetesClient) CreateNamespace(ctx context.Context, namespace string
 	return err
 }
 
-func (k *kubernetesClient) CreateChallengeStatefulSet(ctx context.Context, challengeNamespace, userID, pubKeyUser string) error {
+func (k *KubernetesClient) CreateChallengeStatefulSet(ctx context.Context, challengeNamespace, userID, pubKeyUser string) error {
 	sSet := appsAPI.StatefulSet{
 		TypeMeta: metaAPI.TypeMeta{
 			Kind:       "StatefulSet",
@@ -154,6 +158,6 @@ func (k *kubernetesClient) CreateChallengeStatefulSet(ctx context.Context, chall
 }
 
 // InstallHelmStuff.
-func (k *kubernetesClient) InstallHelmStuff(ctx context.Context) error {
+func (k *KubernetesClient) InstallHelmStuff(ctx context.Context) error {
 	return helm.Install(ctx, k.logger.Named("helm"), "cilium")
 }
