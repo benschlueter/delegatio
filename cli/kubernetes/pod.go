@@ -2,7 +2,6 @@ package kubernetes
 
 import (
 	"context"
-	"fmt"
 	"time"
 
 	v1 "k8s.io/api/core/v1"
@@ -13,6 +12,7 @@ import (
 	"k8s.io/kubernetes/pkg/client/conditions"
 )
 
+// ListPods list all running pods in the "kube-system" namespace.
 func (k *KubernetesClient) ListPods(ctx context.Context, namespace string) error {
 	podList, err := k.client.CoreV1().Pods("kube-system").List(ctx, metaAPI.ListOptions{})
 	if err != nil {
@@ -31,8 +31,6 @@ func (k *KubernetesClient) WaitForPodRunning(ctx context.Context, namespace, pod
 
 func isPodRunning(ctx context.Context, c kubernetes.Interface, podName, namespace string) wait.ConditionFunc {
 	return func() (bool, error) {
-		fmt.Printf(".") // progress bar!
-
 		pod, err := c.CoreV1().Pods(namespace).Get(ctx, podName, metaAPI.GetOptions{})
 		if errors.IsNotFound(err) {
 			return false, nil
@@ -40,7 +38,6 @@ func isPodRunning(ctx context.Context, c kubernetes.Interface, podName, namespac
 		if err != nil {
 			return false, err
 		}
-
 		switch pod.Status.Phase {
 		case v1.PodRunning:
 			return true, nil
