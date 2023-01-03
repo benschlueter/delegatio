@@ -8,11 +8,12 @@ import (
 	metaAPI "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (k *KubernetesClient) CreateConfigMap(ctx context.Context, name, namespace string) error {
+// CreateConfigMap creates a configmap.
+func (k *Client) CreateConfigMap(ctx context.Context, name, namespace string) error {
 	cm := coreAPI.ConfigMap{
 		TypeMeta: metaAPI.TypeMeta{
 			Kind:       "ConfigMap",
-			APIVersion: "v1",
+			APIVersion: coreAPI.SchemeGroupVersion.Version,
 		},
 		ObjectMeta: metaAPI.ObjectMeta{
 			Name:      name,
@@ -23,7 +24,8 @@ func (k *KubernetesClient) CreateConfigMap(ctx context.Context, name, namespace 
 	return err
 }
 
-func (k *KubernetesClient) AddDataToConfigMap(ctx context.Context, mapName, namespace, key, value string) error {
+// AddDataToConfigMap adds data do a given configmap.
+func (k *Client) AddDataToConfigMap(ctx context.Context, mapName, namespace, key, value string) error {
 	cfgMap, err := k.client.CoreV1().ConfigMaps(namespace).Get(ctx, mapName, metaAPI.GetOptions{})
 	if err != nil {
 		return err

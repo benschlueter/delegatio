@@ -8,7 +8,8 @@ import (
 	metaAPI "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
-func (k *KubernetesClient) CreateIngress(ctx context.Context, namespace, userID string) error {
+// CreateIngress creates an ingress.
+func (k *Client) CreateIngress(ctx context.Context, namespace, userID string) error {
 	className := "nginx"
 	pathType := networkAPI.PathTypePrefix
 

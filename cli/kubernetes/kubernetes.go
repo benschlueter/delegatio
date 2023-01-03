@@ -14,14 +14,15 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
-type KubernetesClient struct {
+// Client is the struct used to access kubernetes helpers.
+type Client struct {
 	client     kubernetes.Interface
 	logger     *zap.Logger
 	restClient *rest.Config
 }
 
 // NewK8sClient returns a new kuberenetes client-go wrapper.
-func NewK8sClient(kubeconfigPath string, logger *zap.Logger) (*KubernetesClient, error) {
+func NewK8sClient(kubeconfigPath string, logger *zap.Logger) (*Client, error) {
 	// use the current context in kubeconfig
 	config, err := clientcmd.BuildConfigFromFlags("", kubeconfigPath)
 	if err != nil {
@@ -32,18 +33,20 @@ func NewK8sClient(kubeconfigPath string, logger *zap.Logger) (*KubernetesClient,
 	if err != nil {
 		return nil, err
 	}
-	return &KubernetesClient{
+	return &Client{
 		client:     client,
 		logger:     logger,
 		restClient: config,
 	}, nil
 }
 
-func (k *KubernetesClient) GetClient() kubernetes.Interface {
+// GetClient returns the kubernetes client.
+func (k *Client) GetClient() kubernetes.Interface {
 	return k.client
 }
 
-func (k *KubernetesClient) CreateNamespace(ctx context.Context, namespace string) error {
+// CreateNamespace creates a namespace.
+func (k *Client) CreateNamespace(ctx context.Context, namespace string) error {
 	nspace := coreAPI.Namespace{
 		TypeMeta: metaAPI.TypeMeta{
 			Kind:       "Namespace",
@@ -57,7 +60,8 @@ func (k *KubernetesClient) CreateNamespace(ctx context.Context, namespace string
 	return err
 }
 
-func (k *KubernetesClient) CreateChallengeStatefulSet(ctx context.Context, challengeNamespace, userID, pubKeyUser string) error {
+// CreateChallengeStatefulSet creates a statefulset.
+func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamespace, userID string) error {
 	sSet := appsAPI.StatefulSet{
 		TypeMeta: metaAPI.TypeMeta{
 			Kind:       "StatefulSet",
@@ -99,13 +103,13 @@ func (k *KubernetesClient) CreateChallengeStatefulSet(ctx context.Context, chall
 									},
 								},
 							},
-							VolumeMounts: []coreAPI.VolumeMount{
+							/* 							VolumeMounts: []coreAPI.VolumeMount{
 								{
 									Name:      "ssh-pub-key-configmap-volume",
 									MountPath: "/root/.ssh/authorized_keys",
 									SubPath:   userID,
 								},
-							},
+							}, */
 							Ports: []coreAPI.ContainerPort{
 								{
 									Name:          "ssh",
@@ -123,7 +127,7 @@ func (k *KubernetesClient) CreateChallengeStatefulSet(ctx context.Context, chall
 							},
 						},
 					},
-					Volumes: []coreAPI.Volume{
+					/* 					Volumes: []coreAPI.Volume{
 						{
 							Name: "ssh-pub-key-configmap-volume",
 							VolumeSource: coreAPI.VolumeSource{
@@ -134,30 +138,18 @@ func (k *KubernetesClient) CreateChallengeStatefulSet(ctx context.Context, chall
 								},
 							},
 						},
-					},
+					}, */
 				},
 			},
 		},
 	}
 
-	if err := k.CreateConfigMap(ctx, "ssh-pub-key-configmap", challengeNamespace); err != nil {
-		return err
-	}
-	if err := k.AddDataToConfigMap(ctx, "ssh-pub-key-configmap", challengeNamespace, userID, pubKeyUser); err != nil {
-		return err
-	}
-	if err := k.CreateService(ctx, challengeNamespace, userID, "22"); err != nil {
-		return err
-	}
-	if err := k.CreateIngress(ctx, challengeNamespace, userID); err != nil {
-		return err
-	}
 	_, err := k.client.AppsV1().StatefulSets(challengeNamespace).Create(ctx, &sSet, metaAPI.CreateOptions{})
 
 	return err
 }
 
-// InstallHelmStuff.
-func (k *KubernetesClient) InstallHelmStuff(ctx context.Context) error {
+// InstallHelmStuff installs cilium in the cluster.
+func (k *Client) InstallHelmStuff(ctx context.Context) error {
 	return helm.Install(ctx, k.logger.Named("helm"), "cilium")
 }

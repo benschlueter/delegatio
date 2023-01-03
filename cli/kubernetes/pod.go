@@ -13,8 +13,8 @@ import (
 )
 
 // ListPods list all running pods in the "kube-system" namespace.
-func (k *KubernetesClient) ListPods(ctx context.Context, namespace string) error {
-	podList, err := k.client.CoreV1().Pods("kube-system").List(ctx, metaAPI.ListOptions{})
+func (k *Client) ListPods(ctx context.Context, namespace string) error {
+	podList, err := k.client.CoreV1().Pods(namespace).List(ctx, metaAPI.ListOptions{})
 	if err != nil {
 		return err
 	}
@@ -25,7 +25,7 @@ func (k *KubernetesClient) ListPods(ctx context.Context, namespace string) error
 }
 
 // WaitForPodRunning waits for a pod to be running.
-func (k *KubernetesClient) WaitForPodRunning(ctx context.Context, namespace, podName string, timeout time.Duration) error {
+func (k *Client) WaitForPodRunning(ctx context.Context, namespace, podName string, timeout time.Duration) error {
 	return wait.PollImmediate(time.Second, timeout, isPodRunning(ctx, k.client, podName, namespace))
 }
 

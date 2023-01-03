@@ -11,7 +11,7 @@ import (
 )
 
 // CreatePodShell creates a shell on the specified pod.
-func (k *KubernetesClient) CreatePodShell(ctx context.Context, namespace, podName string, stdin io.Reader, stdout io.Writer, stderr io.Writer, resizeQueue remotecommand.TerminalSizeQueue) error {
+func (k *Client) CreatePodShell(ctx context.Context, namespace, podName string, stdin io.Reader, stdout io.Writer, stderr io.Writer, resizeQueue remotecommand.TerminalSizeQueue) error {
 	cmd := []string{
 		"bash",
 	}

@@ -21,7 +21,7 @@ import (
 
 type sshRelay struct {
 	log          *zap.Logger
-	client       *kubernetes.KubernetesClient
+	client       *kubernetes.Client
 	handleConnWG *sync.WaitGroup
 	users        map[string]struct{}
 	publicKeys   map[string]struct{}
@@ -38,7 +38,7 @@ func main() {
 }
 
 // NewSSHRelay returns a sshRelay.
-func NewSSHRelay(client *kubernetes.KubernetesClient, log *zap.Logger) *sshRelay {
+func NewSSHRelay(client *kubernetes.Client, log *zap.Logger) *sshRelay {
 	return &sshRelay{
 		client:       client,
 		log:          log,
@@ -59,14 +59,7 @@ func (s *sshRelay) StartServer(ctx context.Context) {
 	// into an ssh.ServerConn
 
 	config := &ssh.ServerConfig{
-		// Define a function to run when a client attempts a password login
-		PasswordCallback: func(c ssh.ConnMetadata, pass []byte) (*ssh.Permissions, error) {
-			// Should use constant-time compare (or better, salt+hash) in a production setting.
-			if c.User() == "foo" && string(pass) == "bar" {
-				return nil, nil
-			}
-			return nil, fmt.Errorf("password rejected for %q", c.User())
-		},
+		// Function is called to determine if the user is allowed to connect with the ssh server
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
 			s.log.Info("publickeycallback called", zap.String("user", conn.User()), zap.Binary("session", conn.SessionID()))
 			if _, ok := s.users[conn.User()]; !ok {
@@ -80,11 +73,10 @@ func (s *sshRelay) StartServer(ctx context.Context) {
 			return &ssh.Permissions{
 				Extensions: map[string]string{
 					"authType": "pk",
-					"pubKey":   compareKey,
+					"pubKey":   ssh.FingerprintSHA256(key),
 				},
 			}, nil
 		},
-		ServerVersion: "SSH-2.0-ETH-SECTRS",
 		// You may also explicitly allow anonymous client authentication, though anon bash
 		// sessions may not be a wise idea
 		// NoClientAuth: true,
@@ -144,6 +136,7 @@ func (s *sshRelay) handeConn(ctx context.Context, tcpConn net.Conn, config *ssh.
 		zap.String("addr", sshConn.RemoteAddr().String()),
 		zap.Binary("client version", sshConn.ClientVersion()),
 		zap.Binary("session", sshConn.SessionID()),
+		zap.String("keyFingerprint", sshConn.Permissions.Extensions["pubKey"]),
 	)
 	// Discard all global out-of-band Requests
 	// Dont care about graceful termination of this routine
@@ -154,6 +147,7 @@ func (s *sshRelay) handeConn(ctx context.Context, tcpConn net.Conn, config *ssh.
 		zap.String("addr", sshConn.RemoteAddr().String()),
 		zap.Binary("client version", sshConn.ClientVersion()),
 		zap.Binary("session", sshConn.SessionID()),
+		zap.String("keyFingerprint", sshConn.Permissions.Extensions["pubKey"]),
 	)
 }
 
@@ -166,6 +160,9 @@ func (s *sshRelay) handleChannels(ctx context.Context, chans <-chan ssh.NewChann
 		case <-ctx.Done():
 			return
 		case newChannel := <-chans:
+			// when we close the "channel" from newChannel.Accept() in s.handleChannel the ssh.NewChannel
+			// is closed from the library side as well. Thus it will always send nil. Return in this case.
+			s.log.Info("newchan", zap.Any("result", newChannel))
 			if newChannel == nil {
 				return
 			}
