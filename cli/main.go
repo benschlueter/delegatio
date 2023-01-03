@@ -11,7 +11,6 @@ import (
 
 	"github.com/benschlueter/delegatio/cli/infrastructure"
 	"github.com/benschlueter/delegatio/cli/kubernetes"
-	"github.com/benschlueter/delegatio/cli/ssh"
 
 	"go.uber.org/zap"
 )
@@ -145,8 +144,6 @@ func main() {
 			log.With(zap.Error(err)).DPanic("failed to wait for pod")
 		}
 	}
-	sshRelay := ssh.NewSSHRelay(kubeClient, log.Named("ssh"))
-	sshRelay.StartServer(ctx)
 	/* 	err = kubeClient.CreatePodShell(ctx, "testchallenge", "dummyuser-statefulset-0", os.Stdin, os.Stdout, os.Stderr, nil)
 	   	if err != nil {
 	   		if errors.Is(err, ctx.Err()) {

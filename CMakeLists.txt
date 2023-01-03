@@ -34,3 +34,9 @@ add_custom_target(delegatio-agent ALL
   go build -o ${CMAKE_BINARY_DIR}/delegatio-agent
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/cmd
 )
+
+
+add_custom_target(ssh ALL
+  go build -o ${CMAKE_BINARY_DIR}/ssh
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/ssh
+)

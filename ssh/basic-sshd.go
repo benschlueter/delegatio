@@ -1,7 +1,8 @@
-package ssh
+package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -22,6 +23,18 @@ type sshRelay struct {
 	log          *zap.Logger
 	client       *kubernetes.KubernetesClient
 	handleConnWG *sync.WaitGroup
+	users        map[string]struct{}
+	publicKeys   map[string]struct{}
+}
+
+func main() {
+	logger := zap.NewExample()
+	client, err := kubernetes.NewK8sClient("admin.conf", logger.Named("k8sAPI"))
+	if err != nil {
+		panic(err)
+	}
+	relay := NewSSHRelay(client, logger)
+	relay.StartServer(context.Background())
 }
 
 // NewSSHRelay returns a sshRelay.
@@ -30,6 +43,12 @@ func NewSSHRelay(client *kubernetes.KubernetesClient, log *zap.Logger) *sshRelay
 		client:       client,
 		log:          log,
 		handleConnWG: &sync.WaitGroup{},
+		users: map[string]struct{}{
+			"root": {},
+		},
+		publicKeys: map[string]struct{}{
+			"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDLYDO+DPlwJTKYU+S9Q1YkgC7lUJgfsq+V6VxmzdP+omp2EmEIEUsB8WFtr3kAgtAQntaCejJ9ITgoLimkoPs7bV1rA7BZZgRTL2sF+F5zJ1uXKNZz1BVeGGDDXHW5X5V/ZIlH5Bl4kNaAWGx/S5PIszkhyNXEkE6GHsSU4dz69rlutjSbwQRFLx8vjgdAxP9+jUbJMh9u5Dg1SrXiMYpzplJWFt/jI13dDlNTrhWW7790xhHur4fiQbhrVzru29BKNQtSywC+3eH2XKTzobK6h7ECS5X75ghemRIDPw32SHbQP7or1xI+MjFCrZsGyZr1L0yBFNkNAsztpWAqE2FZ": {},
+		},
 	}
 }
 
@@ -48,6 +67,24 @@ func (s *sshRelay) StartServer(ctx context.Context) {
 			}
 			return nil, fmt.Errorf("password rejected for %q", c.User())
 		},
+		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
+			s.log.Info("publickeycallback called", zap.String("user", conn.User()), zap.Binary("session", conn.SessionID()))
+			if _, ok := s.users[conn.User()]; !ok {
+				return nil, fmt.Errorf("user %s not in database", conn.User())
+			}
+			encodeKey := base64.StdEncoding.EncodeToString(key.Marshal())
+			compareKey := fmt.Sprintf("%s %s", key.Type(), encodeKey)
+			if _, ok := s.publicKeys[compareKey]; !ok {
+				return nil, fmt.Errorf("pubkey %v not in database", compareKey)
+			}
+			return &ssh.Permissions{
+				Extensions: map[string]string{
+					"authType": "pk",
+					"pubKey":   compareKey,
+				},
+			}, nil
+		},
+		ServerVersion: "SSH-2.0-ETH-SECTRS",
 		// You may also explicitly allow anonymous client authentication, though anon bash
 		// sessions may not be a wise idea
 		// NoClientAuth: true,
@@ -136,11 +173,17 @@ func (s *sshRelay) handleChannels(ctx context.Context, chans <-chan ssh.NewChann
 }
 
 func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newChannel ssh.NewChannel) {
-	defer wg.Done()
+	s.log.Info("enter handleChannel")
+	defer func(log *zap.Logger) {
+		log.Info("before wg done")
+		wg.Done()
+		log.Info("after wg done")
+	}(s.log)
 	// Since we're handling a shell, we expect a
 	// channel type of "session". The also describes
 	// "x11", "direct-tcpip" and "forwarded-tcpip"
 	// channel types.
+	s.log.Info("before session compare")
 	if t := newChannel.ChannelType(); t != "session" {
 		s.log.Error("unknown channel type", zap.String("type", newChannel.ChannelType()))
 		err := newChannel.Reject(ssh.UnknownChannelType, fmt.Sprintf("unknown channel type: %s", t))
@@ -149,6 +192,7 @@ func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newCha
 		}
 		return
 	}
+	s.log.Info("handling channel request")
 
 	// At this point, we have the opportunity to reject the client's
 	// request for another logical connection
@@ -157,7 +201,13 @@ func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newCha
 		s.log.Error("could not accept the channel", zap.Error(err))
 		return
 	}
-	defer connection.Close()
+	defer func(log *zap.Logger) {
+		err := connection.Close()
+		if err != nil {
+			log.Error("error while closing connection", zap.Error(err))
+		}
+		log.Info("closed channel connection")
+	}(s.log)
 
 	window := &Winsize{
 		Queue: make(chan *remotecommand.TerminalSize),
