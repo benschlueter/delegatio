@@ -10,7 +10,7 @@ import (
 	"k8s.io/kubectl/pkg/scheme"
 )
 
-// ExecCmd exec command on specific pod and wait the command's output.
+// CreatePodShell creates a shell on the specified pod.
 func (k *KubernetesClient) CreatePodShell(ctx context.Context, namespace, podName string, stdin io.Reader, stdout io.Writer, stderr io.Writer, resizeQueue remotecommand.TerminalSizeQueue) error {
 	cmd := []string{
 		"bash",
@@ -32,15 +32,11 @@ func (k *KubernetesClient) CreatePodShell(ctx context.Context, namespace, podNam
 		return err
 	}
 	k.logger.Info("spawning shell in pod", zap.String("name", podName))
-	err = exec.StreamWithContext(ctx, remotecommand.StreamOptions{
+	return exec.StreamWithContext(ctx, remotecommand.StreamOptions{
 		Stdin:             stdin,
 		Stdout:            stdout,
 		Stderr:            stderr,
 		Tty:               true,
 		TerminalSizeQueue: resizeQueue,
 	})
-	if err != nil {
-		return err
-	}
-	return nil
 }
