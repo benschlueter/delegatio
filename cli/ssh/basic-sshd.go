@@ -19,17 +19,17 @@ import (
 // TODO: Maybe we should wait for all goroutines to finish before we return. Might require heavy refactoring.
 
 type sshRelay struct {
-	log    *zap.Logger
-	client *kubernetes.KubernetesClient
-	wg     *sync.WaitGroup
+	log          *zap.Logger
+	client       *kubernetes.KubernetesClient
+	handleConnWG *sync.WaitGroup
 }
 
 // NewSSHRelay returns a sshRelay.
 func NewSSHRelay(client *kubernetes.KubernetesClient, log *zap.Logger) *sshRelay {
 	return &sshRelay{
-		client: client,
-		log:    log,
-		wg:     &sync.WaitGroup{},
+		client:       client,
+		log:          log,
+		handleConnWG: &sync.WaitGroup{},
 	}
 }
 
@@ -87,16 +87,16 @@ func (s *sshRelay) StartServer(ctx context.Context) {
 				continue
 			}
 			s.log.Info("handling incomming connection", zap.String("addr", tcpConn.RemoteAddr().String()))
-			s.wg.Add(1)
+			s.handleConnWG.Add(1)
 			go s.handeConn(ctx, tcpConn, config)
 		}
 	}(ctx)
 	<-ctx.Done()
-	s.wg.Wait()
+	s.handleConnWG.Wait()
 }
 
 func (s *sshRelay) handeConn(ctx context.Context, tcpConn net.Conn, config *ssh.ServerConfig) {
-	defer s.wg.Done()
+	defer s.handleConnWG.Done()
 	// Before use, a handshake must be performed on the incoming net.Conn.
 	sshConn, chans, reqs, err := ssh.NewServerConn(tcpConn, config)
 	if err != nil {
@@ -122,19 +122,21 @@ func (s *sshRelay) handeConn(ctx context.Context, tcpConn net.Conn, config *ssh.
 
 func (s *sshRelay) handleChannels(ctx context.Context, chans <-chan ssh.NewChannel) {
 	// Service the incoming Channel channel in go routine
+	handleChannelWg := &sync.WaitGroup{}
+	defer handleChannelWg.Wait()
 	for {
 		select {
 		case <-ctx.Done():
 			return
 		case newChannel := <-chans:
-			s.wg.Add(1)
-			go s.handleChannel(ctx, newChannel)
+			handleChannelWg.Add(1)
+			go s.handleChannel(ctx, handleChannelWg, newChannel)
 		}
 	}
 }
 
-func (s *sshRelay) handleChannel(ctx context.Context, newChannel ssh.NewChannel) {
-	defer s.wg.Done()
+func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newChannel ssh.NewChannel) {
+	defer wg.Done()
 	// Since we're handling a shell, we expect a
 	// channel type of "session". The also describes
 	// "x11", "direct-tcpip" and "forwarded-tcpip"
@@ -198,10 +200,10 @@ func (s *sshRelay) handleChannel(ctx context.Context, newChannel ssh.NewChannel)
 		window)
 	if err != nil {
 		s.log.Error("createPodShell exited with errorcode", zap.Error(err))
-		_, _ = connection.Write([]byte(fmt.Sprintf("closing connection %v\n", err)))
+		_, _ = connection.Write([]byte(fmt.Sprintf("\n\n-------------------------\nclosing connection %v\n-------------------------\n\n", err)))
 		return
 	}
-	_, _ = connection.Write([]byte("graceful terminateion"))
+	_, _ = connection.Write([]byte("graceful termination"))
 }
 
 // parseDims extracts terminal dimensions (width x height) from the provided buffer.
