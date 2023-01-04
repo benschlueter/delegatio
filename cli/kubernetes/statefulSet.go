@@ -56,13 +56,13 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 									},
 								},
 							},
-							/* 							VolumeMounts: []coreAPI.VolumeMount{
+							VolumeMounts: []coreAPI.VolumeMount{
 								{
-									Name:      "ssh-pub-key-configmap-volume",
-									MountPath: "/root/.ssh/authorized_keys",
+									Name:      "root-storage",
+									MountPath: "/root/",
 									SubPath:   userID,
 								},
-							}, */
+							},
 							/* 							Ports: []coreAPI.ContainerPort{
 								{
 									Name:          "ssh",
@@ -80,22 +80,21 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 							},
 						},
 					},
-					/* 					Volumes: []coreAPI.Volume{
+					Volumes: []coreAPI.Volume{
 						{
-							Name: "ssh-pub-key-configmap-volume",
+							Name: "root-storage",
 							VolumeSource: coreAPI.VolumeSource{
-								ConfigMap: &coreAPI.ConfigMapVolumeSource{
-									LocalObjectReference: coreAPI.LocalObjectReference{
-										Name: "ssh-pub-key-configmap",
-									},
+								PersistentVolumeClaim: &coreAPI.PersistentVolumeClaimVolumeSource{
+									ClaimName: "root-storage-claim",
 								},
 							},
 						},
-					}, */
+					},
 				},
 			},
 		},
 	}
+
 	if err := k.CreateHeadlessService(ctx, challengeNamespace, userID); err != nil {
 		return err
 	}

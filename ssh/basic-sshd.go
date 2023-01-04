@@ -144,6 +144,10 @@ func (s *sshRelay) handeConn(ctx context.Context, tcpConn net.Conn, config *ssh.
 	}
 	defer sshConn.Close()
 
+	if sshConn.Permissions == nil || sshConn.Permissions.Extensions == nil {
+		s.log.Error("no permissions found in ssh connection")
+		return
+	}
 	// if the connection is dead terminate it.
 	ctx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})

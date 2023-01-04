@@ -109,38 +109,20 @@ func main() {
 			log.With(zap.Error(err)).DPanic("failed to install helm charts")
 		}
 	}
-	/* 	err = kubeClient.CreateNamespace(ctx, "testchallenge")
-	   	if err != nil {
-	   		if errors.Is(err, ctx.Err()) {
-	   			log.With(zap.Error(err)).Error("failed to create namespace")
-	   		} else {
-	   			log.With(zap.Error(err)).DPanic("failed to create namespace")
-	   		}
-	   	}
-	   	err = kubeClient.CreateChallengeStatefulSet(ctx, "testchallenge", "dummyuser")
-	   	if err != nil {
-	   		if errors.Is(err, ctx.Err()) {
-	   			log.With(zap.Error(err)).Error("failed to create statefulset")
-	   		} else {
-	   			log.With(zap.Error(err)).DPanic("failed to create statefulset")
-	   		}
-	   	}
-	   	err = kubeClient.WaitForPodRunning(ctx, "testchallenge", "dummyuser-statefulset-0", 5*time.Minute)
-	   	if err != nil {
-	   		if errors.Is(err, ctx.Err()) {
-	   			log.With(zap.Error(err)).Error("failed to wait for pod")
-	   		} else {
-	   			log.With(zap.Error(err)).DPanic("failed to wait for pod")
-	   		}
-	   	} */
-	/* 	err = kubeClient.CreatePodShell(ctx, "testchallenge", "dummyuser-statefulset-0", os.Stdin, os.Stdout, os.Stderr, nil)
-	   	if err != nil {
-	   		if errors.Is(err, ctx.Err()) {
-	   			log.With(zap.Error(err)).Error("failed to spawn shell")
-	   		} else {
-	   			log.With(zap.Error(err)).DPanic("failed to spawn shell")
-	   		}
-	   	} */
+	if err := kubeClient.CreatePersistentVolume(ctx, "root-storage-claim", "testchallenge1"); err != nil {
+		if errors.Is(err, ctx.Err()) {
+			log.With(zap.Error(err)).Error("failed to install helm charts")
+		} else {
+			log.With(zap.Error(err)).DPanic("failed to install helm charts")
+		}
+	}
+	if err := kubeClient.CreatePersistentVolumeClaim(ctx, "root-storage-claim", "testchallenge1"); err != nil {
+		if errors.Is(err, ctx.Err()) {
+			log.With(zap.Error(err)).Error("failed to install helm charts")
+		} else {
+			log.With(zap.Error(err)).DPanic("failed to install helm charts")
+		}
+	}
 
 	<-ctx.Done()
 	<-done
