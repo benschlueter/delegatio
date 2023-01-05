@@ -101,7 +101,7 @@ func main() {
 			log.With(zap.Error(err)).DPanic("failed to connect to Kubernetes")
 		}
 	}
-	err = kubeClient.InstallHelmStuff(ctx)
+	err = kubeClient.InstallCilium(ctx)
 	if err != nil {
 		if errors.Is(err, ctx.Err()) {
 			log.With(zap.Error(err)).Error("failed to install helm charts")
@@ -109,20 +109,30 @@ func main() {
 			log.With(zap.Error(err)).DPanic("failed to install helm charts")
 		}
 	}
-	if err := kubeClient.CreatePersistentVolume(ctx, "root-storage-claim", "testchallenge1"); err != nil {
+	err = kubeClient.Client.CreateNamespace(ctx, "testchallenge1")
+	if err != nil {
 		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("failed to install helm charts")
+			log.With(zap.Error(err)).Error("failed to create namespace")
 		} else {
-			log.With(zap.Error(err)).DPanic("failed to install helm charts")
+			log.With(zap.Error(err)).DPanic("failed to create namespace")
 		}
 	}
-	if err := kubeClient.CreatePersistentVolumeClaim(ctx, "root-storage-claim", "testchallenge1"); err != nil {
-		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("failed to install helm charts")
-		} else {
-			log.With(zap.Error(err)).DPanic("failed to install helm charts")
-		}
-	}
+	/* 	err = kubeClient.CreatePersistentVolume(ctx, "testchallenge1", "root-storage-claim")
+	   	if err != nil {
+	   		if errors.Is(err, ctx.Err()) {
+	   			log.With(zap.Error(err)).Error("failed to CreatePersistentVolume")
+	   		} else {
+	   			log.With(zap.Error(err)).DPanic("failed to CreatePersistentVolume")
+	   		}
+	   	}
+	   	err = kubeClient.CreatePersistentVolumeClaim(ctx, "testchallenge1", "root-storage-claim")
+	   	if err != nil {
+	   		if errors.Is(err, ctx.Err()) {
+	   			log.With(zap.Error(err)).Error("failed to CreatePersistentVolumeClaim")
+	   		} else {
+	   			log.With(zap.Error(err)).DPanic("failed to CreatePersistentVolumeClaim")
+	   		}
+	   	} */
 
 	<-ctx.Done()
 	<-done

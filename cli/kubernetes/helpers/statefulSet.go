@@ -1,4 +1,4 @@
-package kubernetes
+package helpers
 
 import (
 	"context"
@@ -8,6 +8,7 @@ import (
 	appsAPI "k8s.io/api/apps/v1"
 	coreAPI "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metaAPI "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -58,18 +59,11 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 							},
 							VolumeMounts: []coreAPI.VolumeMount{
 								{
-									Name:      "root-storage",
+									Name:      "home-storage",
 									MountPath: "/root/",
 									SubPath:   userID,
 								},
 							},
-							/* 							Ports: []coreAPI.ContainerPort{
-								{
-									Name:          "ssh",
-									Protocol:      coreAPI.ProtocolTCP,
-									ContainerPort: 22,
-								},
-							}, */
 							ImagePullPolicy: coreAPI.PullAlways,
 							SecurityContext: &coreAPI.SecurityContext{
 								Capabilities: &coreAPI.Capabilities{
@@ -82,11 +76,31 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 					},
 					Volumes: []coreAPI.Volume{
 						{
-							Name: "root-storage",
+							Name: "home-storage",
 							VolumeSource: coreAPI.VolumeSource{
 								PersistentVolumeClaim: &coreAPI.PersistentVolumeClaimVolumeSource{
-									ClaimName: "root-storage-claim",
+									ClaimName: fmt.Sprintf("pvc-%s-statefulset-0", userID),
 								},
+							},
+						},
+					},
+				},
+			},
+			VolumeClaimTemplates: []coreAPI.PersistentVolumeClaim{
+				{
+					ObjectMeta: metaAPI.ObjectMeta{
+						Name: "pvc",
+						Annotations: map[string]string{
+							"volume.beta.kubernetes.io/storage-class": "azurefile-csi",
+						},
+					},
+					Spec: coreAPI.PersistentVolumeClaimSpec{
+						AccessModes: []coreAPI.PersistentVolumeAccessMode{
+							coreAPI.PersistentVolumeAccessMode("ReadWriteMany"),
+						},
+						Resources: coreAPI.ResourceRequirements{
+							Requests: coreAPI.ResourceList{
+								coreAPI.ResourceStorage: resource.MustParse("5Gi"),
 							},
 						},
 					},

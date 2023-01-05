@@ -135,7 +135,10 @@ func (s *sshRelay) StartServer(ctx context.Context) {
 }
 
 func (s *sshRelay) handeConn(ctx context.Context, tcpConn net.Conn, config *ssh.ServerConfig) {
-	defer s.handleConnWG.Done()
+	defer func() {
+		s.handleConnWG.Done()
+		atomic.AddInt64(&s.currentConnections, -1)
+	}()
 	// Before use, a handshake must be performed on the incoming net.Conn.
 	sshConn, chans, reqs, err := ssh.NewServerConn(tcpConn, config)
 	if err != nil {
@@ -151,6 +154,9 @@ func (s *sshRelay) handeConn(ctx context.Context, tcpConn net.Conn, config *ssh.
 	// if the connection is dead terminate it.
 	ctx, cancel := context.WithCancel(ctx)
 	done := make(chan struct{})
+	defer func() {
+		done <- struct{}{}
+	}()
 	go s.keepAlive(cancel, sshConn, done)
 
 	s.log.Info("new ssh connection",
@@ -161,11 +167,18 @@ func (s *sshRelay) handeConn(ctx context.Context, tcpConn net.Conn, config *ssh.
 	)
 	// Discard all global out-of-band Requests.
 	// We dont care about graceful termination of this routine.
-	go ssh.DiscardRequests(reqs)
+	go func() {
+		for req := range reqs {
+			if req.WantReply {
+				req.Reply(false, nil)
+			}
+			s.log.Info("discared request")
+		}
+	}()
 
 	// Check if the pods are ready and we can exec on them.
 	// Otherwise spawn the pods.
-	if err := s.makeKubernetesReady(ctx, sshConn); err != nil {
+	if err := s.client.CreateAndWaitForRessources(ctx, sshConn.User(), sshConn.Permissions.Extensions["pubKey"]); err != nil {
 		s.log.Error("creating/waiting for kubernetes ressources",
 			zap.Error(err),
 			zap.String("userID", sshConn.Permissions.Extensions["pubKey"]),
@@ -175,14 +188,12 @@ func (s *sshRelay) handeConn(ctx context.Context, tcpConn net.Conn, config *ssh.
 	}
 	// Accept all channels.
 	s.handleChannels(ctx, chans, sshConn.User(), sshConn.Permissions.Extensions["pubKey"])
-	done <- struct{}{}
 	s.log.Info("closing ssh session",
 		zap.String("addr", sshConn.RemoteAddr().String()),
 		zap.Binary("client version", sshConn.ClientVersion()),
 		zap.Binary("session", sshConn.SessionID()),
 		zap.String("keyFingerprint", sshConn.Permissions.Extensions["pubKey"]),
 	)
-	atomic.AddInt64(&s.currentConnections, -1)
 }
 
 func (s *sshRelay) handleChannels(ctx context.Context, chans <-chan ssh.NewChannel, namespace, userID string) {
@@ -200,6 +211,7 @@ func (s *sshRelay) handleChannels(ctx context.Context, chans <-chan ssh.NewChann
 				return
 			}
 			handleChannelWg.Add(1)
+			s.log.Debug("handling new channel request")
 			go s.handleChannel(ctx, handleChannelWg, newChannel, namespace, userID)
 		}
 	}
@@ -243,6 +255,7 @@ func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newCha
 	// Sessions have out-of-band requests such as "shell", "pty-req" and "env"
 	go func(<-chan *ssh.Request) {
 		for req := range requests {
+			s.log.Debug("received data over request channel", zap.Any("req", req))
 			switch req.Type {
 			case "shell":
 				// We only accept the default shell
@@ -262,7 +275,6 @@ func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newCha
 					s.log.Error("failled to respond to \"pty-req\" request", zap.Error(err))
 				}
 			case "window-change":
-				s.log.Info("window change request received")
 				window.Queue <- parseDims(req.Payload)
 			}
 		}
@@ -301,22 +313,6 @@ type Winsize struct {
 // Next sets the size.
 func (w *Winsize) Next() *remotecommand.TerminalSize {
 	return <-w.Queue
-}
-
-func (s *sshRelay) makeKubernetesReady(ctx context.Context, sshConn *ssh.ServerConn) error {
-	exists, err := s.client.StatefulSetExists(ctx, sshConn.User(), sshConn.Permissions.Extensions["pubKey"])
-	if err != nil {
-		return err
-	}
-	if !exists {
-		if err := s.client.CreateStatefulSetForUser(ctx, sshConn.User(), sshConn.Permissions.Extensions["pubKey"]); err != nil {
-			return err
-		}
-	}
-	if err := s.client.WaitForPodRunning(ctx, sshConn.User(), sshConn.Permissions.Extensions["pubKey"], 1*time.Minute); err != nil {
-		return err
-	}
-	return nil
 }
 
 func (s *sshRelay) keepAlive(cancel context.CancelFunc, sshConn *ssh.ServerConn, done <-chan struct{}) {

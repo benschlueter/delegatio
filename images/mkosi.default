@@ -22,6 +22,9 @@ Packages=
          runc
          cri-o
 
+         samba
+         cifs-utils
+
 [Validation]
 Password=password
 
