@@ -172,7 +172,9 @@ func (s *sshRelay) handeConn(ctx context.Context, tcpConn net.Conn, config *ssh.
 	go func() {
 		for req := range reqs {
 			if req.WantReply {
-				req.Reply(false, nil)
+				if err := req.Reply(false, nil); err != nil {
+					s.log.Error("failed to reply to request", zap.Error(err))
+				}
 			}
 			s.log.Info("discared request")
 		}
@@ -263,6 +265,7 @@ func (s *sshRelay) handleChannel(ctx context.Context, wg *sync.WaitGroup, newCha
 				// We only accept the default shell
 				// (i.e. no command in the Payload)
 				if len(req.Payload) != 0 {
+					s.log.Error("failled to respond to \"shell\" request", zap.Error(err))
 					continue
 				}
 				if err := req.Reply(true, nil); err != nil {

@@ -10,12 +10,18 @@ import (
 )
 
 var (
+	// LibvirtStoragePoolPath is the path where the storage pool is located.
 	LibvirtStoragePoolPath = "/var/lib/libvirt/images/"
-	BaseDiskName           = "delegatio"
-	BootDiskName           = "delegatio-boot"
-	DiskPoolName           = "delegatio-pool"
-	NetworkName            = "delegatio-net"
+	// BaseDiskName is the name for the immutable base disk, which the VMs use as COW backend.
+	BaseDiskName = "delegatio"
+	// BootDiskName is the name of the boot drive for the VMs, the number of each VM is appended.
+	BootDiskName = "delegatio-boot"
+	// DiskPoolName is the name of the storage pool in which the drives are organized.
+	DiskPoolName = "delegatio-pool"
+	// NetworkName is the name of the network in which the VMs are connected.
+	NetworkName = "delegatio-net"
 
+	// NetworkXMLConfig is the libvirt network configuration.
 	NetworkXMLConfig = libvirtxml.Network{
 		Name: NetworkName,
 		Forward: &libvirtxml.NetworkForward{
@@ -53,6 +59,7 @@ var (
 			},
 		},
 	}
+	// PoolXMLConfig is the libvirt storage pool configuration.
 	PoolXMLConfig = libvirtxml.StoragePool{
 		Name:   DiskPoolName,
 		Type:   "dir",
@@ -66,6 +73,7 @@ var (
 			},
 		},
 	}
+	// VolumeBootXMLConfig is the libvirt storage volume configuration for the boot drive.
 	VolumeBootXMLConfig = libvirtxml.StorageVolume{
 		Name: BootDiskName,
 		Type: "file",
@@ -87,7 +95,7 @@ var (
 			Value: uint64(100),
 		},
 	}
-
+	// VolumeBaseXMLConfig is the libvirt storage volume configuration for the immutable base disk.
 	VolumeBaseXMLConfig = libvirtxml.StorageVolume{
 		Type: "file",
 		Name: BaseDiskName,
@@ -103,7 +111,8 @@ var (
 		},
 	}
 
-	port            = uint(0)
+	port = uint(0)
+	// DomainXMLConfig is the libvirt domain configuration.
 	DomainXMLConfig = libvirtxml.Domain{
 		Name: "MUST-BE-FILLED-WITH-STH-VM",
 		Type: "kvm",
