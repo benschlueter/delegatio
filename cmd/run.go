@@ -25,7 +25,7 @@ var version = "0.0.0"
 
 func run(dialer pubapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger,
 ) {
-	defer zapLoggerCore.Sync()
+	defer func() { _ = zapLoggerCore.Sync() }()
 	zapLoggerCore.Info("starting coordinator", zap.String("version", version))
 
 	core, err := core.NewCore(zapLoggerCore)
