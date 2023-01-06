@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright (c) Benedict Schlueter
+ */
+
 package helpers
 
 import (
@@ -75,8 +79,8 @@ func (k *Client) CreateSecret(ctx context.Context) error {
 			Namespace: "kube-system",
 		},
 		Data: map[string][]byte{
-			"azurestorageaccountname": []byte("."),
-			"azurestorageaccountkey":  []byte("."),
+			"azurestorageaccountname": []byte("delegatiokube"),
+			"azurestorageaccountkey":  []byte("dDT6N/8laMdsF8lUsbOc6sKbFTZYWNCKt5YF6b4hqGMI+fOw4X7HsPJTTcUBYwlOjIi6viAQ38iB+AStzSxAlQ=="),
 		},
 	}
 

@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright (c) Benedict Schlueter
+ */
+
 package qemu
 
 import (
@@ -59,6 +63,7 @@ func (l *LibvirtInstance) waitForCompletion(ctx context.Context, pid int, domain
 	}
 }
 
+// JoinClusterQemuGuestAgent executes kubeadm join on the guest using the qemu guest agent.
 func (l *LibvirtInstance) JoinClusterQemuGuestAgent(ctx context.Context, id string, joinToken *kubeadm.BootstrapTokenDiscovery) (err error) {
 	domain, err := l.Conn.LookupDomainByName(id)
 	if err != nil {
@@ -81,7 +86,9 @@ func (l *LibvirtInstance) JoinClusterQemuGuestAgent(ctx context.Context, id stri
 	}
 	l.Log.Info("kubeadm returned")
 	var response qemuExecResponse
-	json.Unmarshal([]byte(result), &response)
+	if err := json.Unmarshal([]byte(result), &response); err != nil {
+		return err
+	}
 
 	l.Log.Info("wait for completion")
 
@@ -96,6 +103,7 @@ func (l *LibvirtInstance) JoinClusterQemuGuestAgent(ctx context.Context, id stri
 	return
 }
 
+// InitializeKubernetesQemuGuestAgent executes kubeadm init on the guest using the qemu guest agent.
 func (l *LibvirtInstance) InitializeKubernetesQemuGuestAgent(ctx context.Context) (output string, err error) {
 	domain, err := l.Conn.LookupDomainByName("delegatio-0")
 	if err != nil {
@@ -118,7 +126,9 @@ func (l *LibvirtInstance) InitializeKubernetesQemuGuestAgent(ctx context.Context
 	}
 	l.Log.Info("kubeadm init scheduled")
 	var response qemuExecResponse
-	json.Unmarshal([]byte(result), &response)
+	if err := json.Unmarshal([]byte(result), &response); err != nil {
+		return "", err
+	}
 
 	stateResponse, err := l.waitForCompletion(ctx, response.Return.Pid, domain)
 	if err != nil {

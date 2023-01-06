@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright (c) Benedict Schlueter
+ */
+
 package qemu
 
 import (
@@ -16,6 +20,7 @@ import (
 	kubeadm "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 )
 
+// JoinClustergRPC joins a cluster using the gRPC API.
 func (l *LibvirtInstance) JoinClustergRPC(ctx context.Context, id string, joinToken *kubeadm.BootstrapTokenDiscovery) (err error) {
 	domain, err := l.Conn.LookupDomainByName(id)
 	if err != nil {
@@ -119,6 +124,7 @@ func (l *LibvirtInstance) executeWriteInitConfiguration(ctx context.Context, cli
 	return err
 }
 
+// InitializeKubernetesgRPC initializes a kubernetes cluster using the gRPC API.
 func (l *LibvirtInstance) InitializeKubernetesgRPC(ctx context.Context, initConfigK8s []byte) (output []byte, err error) {
 	domain, err := l.Conn.LookupDomainByName("delegatio-0")
 	if err != nil {
@@ -213,6 +219,7 @@ func (l *LibvirtInstance) getKubeconfgRPC(ctx context.Context) (output []byte, e
 	}
 }
 
+// WriteKubeconfigToDisk writes the kubeconfig to disk.
 func (l *LibvirtInstance) WriteKubeconfigToDisk(ctx context.Context) error {
 	file, err := l.getKubeconfgRPC(ctx)
 	if err != nil {

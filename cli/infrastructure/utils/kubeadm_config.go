@@ -1,16 +1,14 @@
+/* SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright (c) Edgeless Systems GmbH
+ * Copyright (c) Benedict Schlueter
+ */
+
 package utils
 
 import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletconf "k8s.io/kubelet/config/v1beta1"
 	kubeadm "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
-)
-
-// Uses types defined here: https://kubernetes.io/docs/reference/config-api/kubeadm-config.v1beta3/
-// Slimmed down to the fields we require
-
-const (
-	bindPort = 6443
 )
 
 // KubeadmInitYAML groups multiple kubernetes config files into one struct.
@@ -34,9 +32,8 @@ func InitConfiguration() KubeadmInitYAML {
 					"cloud-provider": "external",
 				},
 			},
-			// AdvertiseAddress will be overwritten later
 			LocalAPIEndpoint: kubeadm.APIEndpoint{
-				BindPort: bindPort,
+				BindPort: 6443,
 			},
 		},
 		ClusterConfiguration: kubeadm.ClusterConfiguration{
@@ -56,7 +53,6 @@ func InitConfiguration() KubeadmInitYAML {
 				},
 			},
 		},
-		// warning: this config is applied to every node in the cluster!
 		KubeletConfiguration: kubeletconf.KubeletConfiguration{
 			TypeMeta: v1.TypeMeta{
 				APIVersion: kubeletconf.SchemeGroupVersion.String(),

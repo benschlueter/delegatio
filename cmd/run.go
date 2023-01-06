@@ -1,3 +1,8 @@
+/* SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright (c) Edgeless Systems GmbH
+ * Copyright (c) Benedict Schlueter
+ */
+
 package main
 
 import (

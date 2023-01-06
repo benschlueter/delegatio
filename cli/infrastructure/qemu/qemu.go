@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright (c) Benedict Schlueter
+ */
+
 package qemu
 
 import (
@@ -12,6 +16,7 @@ import (
 
 const numNodes = 3
 
+// LibvirtInstance is a wrapper around libvirt.
 type LibvirtInstance struct {
 	ConnMux            sync.Mutex
 	Conn               *libvirt.Connect
@@ -25,10 +30,12 @@ type LibvirtInstance struct {
 	CanelChannels      []chan struct{}
 }
 
+// DomainInfo contains information about a domain.
 type DomainInfo struct {
 	guestAgentReady bool
 }
 
+// ConnectWithInfrastructureService connects to the libvirt instance.
 func (l *LibvirtInstance) ConnectWithInfrastructureService(ctx context.Context, url string) error {
 	conn, err := libvirt.NewConnect(url)
 	if err != nil {
@@ -38,6 +45,7 @@ func (l *LibvirtInstance) ConnectWithInfrastructureService(ctx context.Context, 
 	return nil
 }
 
+// InitializeInfrastructure initializes the infrastructure.
 func (l *LibvirtInstance) InitializeInfrastructure(ctx context.Context) (err error) {
 	// sanity check
 	if err := l.TerminateInfrastructure(); err != nil {
@@ -55,6 +63,7 @@ func (l *LibvirtInstance) InitializeInfrastructure(ctx context.Context) (err err
 	return err
 }
 
+// CreateInstance creates a new instance. The instance consists of a boot image and a domain.
 func (l *LibvirtInstance) CreateInstance(id string) (err error) {
 	if err := l.createBootImage("delegatio-" + id); err != nil {
 		return err
@@ -65,6 +74,7 @@ func (l *LibvirtInstance) CreateInstance(id string) (err error) {
 	return nil
 }
 
+// InitializeKubernetes initializes kubernetes on the infrastructure.
 func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context, k8sConfig []byte) (err error) {
 	g, ctxGo := errgroup.WithContext(ctx)
 	for i := 0; i < numNodes; i++ {

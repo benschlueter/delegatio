@@ -1,3 +1,7 @@
+/* SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright (c) Benedict Schlueter
+ */
+
 package qemu
 
 import (
@@ -8,6 +12,7 @@ import (
 	"libvirt.org/go/libvirt"
 )
 
+// TerminateInfrastructure deletes all resources created by the infrastructure.
 func (l *LibvirtInstance) TerminateInfrastructure() error {
 	var err error
 	err = multierr.Append(err, l.deleteNetwork())
@@ -16,6 +21,7 @@ func (l *LibvirtInstance) TerminateInfrastructure() error {
 	return err
 }
 
+// TerminateConnection closes the libvirt connection.
 func (l *LibvirtInstance) TerminateConnection() error {
 	_, err := l.Conn.Close()
 	return err

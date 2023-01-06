@@ -1,3 +1,8 @@
+/* SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright (c) Benedict Schlueter
+ */
+
+// code based on https://gist.github.com/protosam/53cf7970e17e06135f1622fa9955415f#file-basic-sshd-go
 package main
 
 import (
@@ -20,7 +25,8 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-// TODO: Maybe we should wait for all goroutines to finish before we return. Might require heavy refactoring.
+// TODO: Add support for multiple users (i.e. network storage for sshRelay.users / sshRelay.publicKeys)
+// TODO: Add support for vscode ssh extension
 
 type sshRelay struct {
 	log                *zap.Logger
@@ -85,13 +91,10 @@ func (s *sshRelay) StartServer(ctx context.Context) {
 				},
 			}, nil
 		},
-		// You may also explicitly allow anonymous client authentication, though anon bash
-		// sessions may not be a wise idea
-		// NoClientAuth: true,
 	}
 	done := make(chan struct{})
 	go s.periodicLogs(done)
-	// You can generate a keypair with 'ssh-keygen -t rsa'
+
 	privateBytes, err := os.ReadFile("./server_test")
 	if err != nil {
 		log.Fatal("Failed to load private key (./server_test)", err)
@@ -104,19 +107,18 @@ func (s *sshRelay) StartServer(ctx context.Context) {
 
 	config.AddHostKey(private)
 
-	// Once a ServerConfig has been configured, connections can be accepted.
 	listener, err := net.Listen("tcp", "0.0.0.0:2200")
 	if err != nil {
 		log.Fatalf("Failed to listen on 2200 (%s)", err)
 	}
 	defer listener.Close()
 
-	// Accept all connections
 	s.log.Info("Listening on  \"0.0.0.0:2200\"")
 	go func(ctx context.Context) {
 		for {
 			tcpConn, err := listener.Accept()
 			if errors.Is(err, net.ErrClosed) {
+				s.log.Error("failed to accept incoming connection", zap.Error(err))
 				return
 			}
 			if err != nil {
@@ -352,5 +354,3 @@ func (s *sshRelay) periodicLogs(done <-chan struct{}) {
 		}
 	}
 }
-
-// corrected from https://gist.github.com/jpillora/b480fde82bff51a06238
