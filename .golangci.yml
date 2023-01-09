@@ -17,6 +17,9 @@ linters:
     - typecheck
     - unused
     # Additional linters
+    - contextcheck
+    - exportloopref
+
     - bodyclose
     - errname
     - exportloopref
@@ -36,6 +39,10 @@ issues:
   include:
     - EXC0012
     - EXC0014
+  exclude-rules:
+    - linters:
+      - govet
+      text: "printf: fmt.Errorf call needs 2 args but has 3 args"
 
 linters-settings:
   errcheck:
