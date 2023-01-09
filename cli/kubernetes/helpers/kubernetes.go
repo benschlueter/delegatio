@@ -6,6 +6,7 @@ package helpers
 
 import (
 	"context"
+	"sync"
 	"time"
 
 	"go.uber.org/zap"
@@ -21,6 +22,8 @@ type Client struct {
 	client     kubernetes.Interface
 	logger     *zap.Logger
 	restClient *rest.Config
+	requestID  int
+	mux        sync.Mutex
 }
 
 // NewClient returns a new kuberenetes client-go wrapper.
@@ -39,6 +42,8 @@ func NewClient(kubeconfigPath string, logger *zap.Logger) (*Client, error) {
 		client:     client,
 		logger:     logger,
 		restClient: config,
+		requestID:  1,
+		mux:        sync.Mutex{},
 	}, nil
 }
 

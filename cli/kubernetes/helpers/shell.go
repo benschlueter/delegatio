@@ -15,7 +15,7 @@ import (
 )
 
 // CreatePodShell creates a shell on the specified pod.
-func (k *Client) CreatePodShell(ctx context.Context, namespace, podName string, stdin io.Reader, stdout io.Writer, stderr io.Writer, resizeQueue remotecommand.TerminalSizeQueue) error {
+func (k *Client) CreatePodShell(ctx context.Context, namespace, podName string, stdin io.Reader, stdout io.Writer, stderr io.Writer, resizeQueue remotecommand.TerminalSizeQueue, tty bool) error {
 	cmd := []string{
 		"bash",
 	}
@@ -25,7 +25,7 @@ func (k *Client) CreatePodShell(ctx context.Context, namespace, podName string, 
 		Stdin:   true,
 		Stdout:  true,
 		Stderr:  true,
-		TTY:     true,
+		TTY:     tty,
 	}
 	req.VersionedParams(
 		option,
@@ -40,7 +40,7 @@ func (k *Client) CreatePodShell(ctx context.Context, namespace, podName string, 
 		Stdin:             stdin,
 		Stdout:            stdout,
 		Stderr:            stderr,
-		Tty:               true,
+		Tty:               tty,
 		TerminalSizeQueue: resizeQueue,
 	})
 }
