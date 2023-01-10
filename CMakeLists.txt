@@ -9,6 +9,7 @@ enable_testing()
 add_custom_target(cli ALL
   go build -o ${CMAKE_BINARY_DIR}/cli -ldflags "-X main.version=${PROJECT_VERSION}"
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/cli
+  BYPRODUCTS cli
 )
 
 #
@@ -33,10 +34,14 @@ add_custom_target(images ALL
 add_custom_target(delegatio-agent ALL
   go build -o ${CMAKE_BINARY_DIR}/delegatio-agent
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/cmd
+  BYPRODUCTS delegatio-agent
 )
+
+add_dependencies(cpy delegatio-agent)
 
 
 add_custom_target(ssh ALL
   go build -o ${CMAKE_BINARY_DIR}/ssh
   WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/ssh
+  BYPRODUCTS ssh
 )
