@@ -1,6 +1,7 @@
 /* SPDX-License-Identifier: AGPL-3.0-only
  * Copyright (c) Edgeless Systems GmbH
  * Copyright (c) Benedict Schlueter
+ * Copyright (c) Leonard Cohnen
  */
 
 package main
@@ -12,7 +13,6 @@ import (
 	"github.com/benschlueter/delegatio/client/core"
 	"github.com/benschlueter/delegatio/client/vmapi"
 	"github.com/benschlueter/delegatio/client/vmapi/vmproto"
-	"github.com/edgelesssys/constellation/coordinator/pubapi"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
@@ -23,7 +23,7 @@ import (
 
 var version = "0.0.0"
 
-func run(dialer pubapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger,
+func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger,
 ) {
 	defer func() { _ = zapLoggerCore.Sync() }()
 	zapLoggerCore.Info("starting coordinator", zap.String("version", version))
