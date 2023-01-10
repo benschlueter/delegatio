@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.11)
-project(Deledatio LANGUAGES C VERSION 2.0.0)
+project(Delegatio LANGUAGES C VERSION 2.0.0)
 
 enable_testing()
 
