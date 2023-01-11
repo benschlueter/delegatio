@@ -12,7 +12,6 @@ import (
 	appsAPI "k8s.io/api/apps/v1"
 	coreAPI "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metaAPI "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -61,13 +60,13 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 									},
 								},
 							},
-							VolumeMounts: []coreAPI.VolumeMount{
+							/* 							VolumeMounts: []coreAPI.VolumeMount{
 								{
 									Name:      "home-storage",
 									MountPath: "/root/",
 									SubPath:   userID,
 								},
-							},
+							}, */
 							ImagePullPolicy: coreAPI.PullAlways,
 							SecurityContext: &coreAPI.SecurityContext{
 								Capabilities: &coreAPI.Capabilities{
@@ -78,7 +77,7 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 							},
 						},
 					},
-					Volumes: []coreAPI.Volume{
+					/* 					Volumes: []coreAPI.Volume{
 						{
 							Name: "home-storage",
 							VolumeSource: coreAPI.VolumeSource{
@@ -87,10 +86,10 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 								},
 							},
 						},
-					},
+					}, */
 				},
 			},
-			VolumeClaimTemplates: []coreAPI.PersistentVolumeClaim{
+			/* 			VolumeClaimTemplates: []coreAPI.PersistentVolumeClaim{
 				{
 					ObjectMeta: metaAPI.ObjectMeta{
 						Name: "pvc",
@@ -109,7 +108,7 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 						},
 					},
 				},
-			},
+			}, */
 		},
 	}
 

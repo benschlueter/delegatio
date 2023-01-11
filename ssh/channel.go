@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"encoding/binary"
 	"fmt"
 	"sync"
 
@@ -42,7 +41,11 @@ func NewSSHChannelHandler(parent *sshConnectionHandler, channel ssh.Channel, req
 
 // Serve starts the server. It will block until the context is canceled.
 func (s *SSHChannelHandler) Serve(ctx context.Context) {
-	defer s.wg.Wait()
+	ctx, cancel := context.WithCancel(ctx)
+	defer func() {
+		cancel()
+		s.wg.Wait()
+	}()
 	for {
 		select {
 		case <-ctx.Done():
@@ -66,13 +69,19 @@ func (s *SSHChannelHandler) Serve(ctx context.Context) {
 					s.log.Error("failled to unmarshal pty request", zap.Error(err))
 					continue
 				}
-				s.log.Info("pty request", zap.Any("ptyReq", ptyReq))
+				s.log.Info("pty request", zap.Any("data", ptyReq))
 				s.ptyReq = &ptyReq
 				if err := req.Reply(true, nil); err != nil {
 					s.log.Error("failled to respond to \"pty-req\" request", zap.Error(err))
 				}
 			case "window-change":
-				s.window.Queue <- parseDims(req.Payload)
+				windowChange := WindowChangeRequestPayload{}
+				if err := ssh.Unmarshal(req.Payload, &windowChange); err != nil {
+					s.log.Error("failled to unmarshal window-change request", zap.Error(err))
+					continue
+				}
+				s.log.Info("window-change", zap.Any("data", windowChange))
+				s.window.Queue <- &remotecommand.TerminalSize{Width: uint16(windowChange.WidthColumns), Height: uint16(windowChange.HeightRows)}
 			default:
 				if req.WantReply {
 					if err := req.Reply(false, nil); err != nil {
@@ -95,25 +104,21 @@ func (s *SSHChannelHandler) handleShell(ctx context.Context) {
 	// Fire up "kubectl exec" for this session
 	tty := false
 	if s.ptyReq != nil {
+		// Be safe and feed the queue in a goroutine. If somehow another window-change request is pending the connecton
+		// will deadlock.
+		go func() {
+			s.window.Queue <- &remotecommand.TerminalSize{Width: uint16(s.ptyReq.WidthColumns), Height: uint16(s.ptyReq.HeightRows)}
+		}()
 		tty = true
 	}
+
 	err := s.parent.parent.client.CreatePodShell(ctx, s.parent.namespace, fmt.Sprintf("%s-statefulset-0", s.parent.authenticatedUserID), s.channel, s.window, tty)
 	if err != nil {
-		s.log.Error("createPodShell exited with errorcode", zap.Error(err))
+		s.log.Error("createPodShell exited", zap.Error(err))
 		_, _ = s.channel.Write([]byte(fmt.Sprintf("closing connection, reason: %v", err)))
 		return
 	}
 	_, _ = s.channel.Write([]byte("graceful termination"))
-}
-
-// parseDims extracts terminal dimensions (width x height) from the provided buffer.
-func parseDims(b []byte) *remotecommand.TerminalSize {
-	w := binary.BigEndian.Uint32(b)
-	h := binary.BigEndian.Uint32(b[4:])
-	return &remotecommand.TerminalSize{
-		Width:  uint16(w),
-		Height: uint16(h),
-	}
 }
 
 // Winsize stores the Height and Width of a terminal.
@@ -121,7 +126,7 @@ type Winsize struct {
 	Queue chan *remotecommand.TerminalSize
 }
 
-// Next sets the size.
+// Next returns the size. The chanel must be served. Otherwise the connection will hang.
 func (w *Winsize) Next() *remotecommand.TerminalSize {
 	return <-w.Queue
 }
