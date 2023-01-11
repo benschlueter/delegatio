@@ -12,6 +12,7 @@ import (
 
 	"github.com/benschlueter/delegatio/client/config"
 	"github.com/benschlueter/delegatio/client/vmapi/vmproto"
+	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -220,12 +221,15 @@ func (l *LibvirtInstance) getKubeconfgRPC(ctx context.Context) (output []byte, e
 }
 
 // WriteKubeconfigToDisk writes the kubeconfig to disk.
-func (l *LibvirtInstance) WriteKubeconfigToDisk(ctx context.Context) error {
+func (l *LibvirtInstance) WriteKubeconfigToDisk(ctx context.Context) (err error) {
 	file, err := l.getKubeconfgRPC(ctx)
 	if err != nil {
 		return err
 	}
 	adminConfigFile, err := os.Create("admin.conf")
+	defer func() {
+		err = multierr.Append(err, adminConfigFile.Close())
+	}()
 	if err != nil {
 		return fmt.Errorf("failed to create admin config file %v: %w", adminConfigFile.Name(), err)
 	}
@@ -233,5 +237,5 @@ func (l *LibvirtInstance) WriteKubeconfigToDisk(ctx context.Context) error {
 	if _, err := adminConfigFile.Write(file); err != nil {
 		return fmt.Errorf("writing kubeadm init yaml config %v failed: %w", adminConfigFile.Name(), err)
 	}
-	return adminConfigFile.Close()
+	return
 }
