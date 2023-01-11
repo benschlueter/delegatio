@@ -47,14 +47,14 @@ func (s *sshConnectionHandler) HandleGlobalConnection(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
 		cancel()
-		if err := s.connection.Close(); err != nil {
+		if err := s.connection.Wait(); err != nil {
 			s.log.Error("failed to close connection", zap.Error(err))
 		}
 	}()
 
 	go s.keepAlive(ctx, cancel, s.connection)
 
-	s.log.Info("start handling new ssh connection")
+	s.log.Info("start handling new ssh session")
 
 	// Discard all global out-of-band Requests.
 	// We dont care about graceful termination of this routine.
@@ -65,7 +65,7 @@ func (s *sshConnectionHandler) HandleGlobalConnection(ctx context.Context) {
 					s.log.Error("failed to reply to request", zap.Error(err))
 				}
 			}
-			s.log.Info("discared request")
+			s.log.Info("discared global request")
 		}
 	}()
 
@@ -80,27 +80,33 @@ func (s *sshConnectionHandler) HandleGlobalConnection(ctx context.Context) {
 		return
 	}
 	// handle channel requests
-	s.handleChannels(ctx, s.channel)
-	s.log.Info("closing ssh session")
+	s.handleChannels(ctx)
+	s.log.Info("closing session")
 }
 
-func (s *sshConnectionHandler) handleChannels(ctx context.Context, chans <-chan ssh.NewChannel) {
+func (s *sshConnectionHandler) handleChannels(ctx context.Context) {
 	// Service the incoming Channel channel in go routine
+	ctx, cancel := context.WithCancel(ctx)
 	handleChannelWg := &sync.WaitGroup{}
-	defer handleChannelWg.Wait()
+	defer func() {
+		cancel()
+		s.log.Info("waiting for channels to shutdown gracefully")
+		handleChannelWg.Wait()
+		s.log.Info("channels shutdown gracefully")
+	}()
 	for {
 		select {
 		case <-ctx.Done():
 			return
-		case newChannel, ok := <-chans:
+		case newChannel, ok := <-s.channel:
 			// when we close the "channel" from newChannel.Accept() in s.handleChannel the ssh.NewChannel
 			// is closed from the library side as well.
 			if !ok {
-				s.log.Debug("channel closed")
+				s.log.Debug("global channel closed")
 				return
 			}
 			handleChannelWg.Add(1)
-			s.log.Debug("handling new channel request")
+			s.log.Debug("handling new global channel request")
 			go s.handleChannel(ctx, handleChannelWg, newChannel)
 		}
 	}
@@ -108,11 +114,9 @@ func (s *sshConnectionHandler) handleChannels(ctx context.Context, chans <-chan 
 
 func (s *sshConnectionHandler) handleChannel(ctx context.Context, wg *sync.WaitGroup, newChannel ssh.NewChannel) {
 	defer wg.Done()
-
 	// Since we're handling a shell, we expect a
 	// channel type of "session". The also describes
-	// "x11", "direct-tcpip" and "forwarded-tcpip"
-	// channel types.
+	// "x11", and "forwarded-tcpip" channel types.
 	switch newChannel.ChannelType() {
 	case "session":
 		s.handleChannelTypeSession(ctx, newChannel)
@@ -135,13 +139,6 @@ func (s *sshConnectionHandler) handleChannelTypeSession(ctx context.Context, new
 		s.log.Error("could not accept the channel", zap.Error(err))
 		return
 	}
-	defer func(log *zap.Logger) {
-		err := channel.Close()
-		if err != nil {
-			log.Error("closing connection", zap.Error(err))
-		}
-		log.Debug("closed channel connection")
-	}(s.log)
 
 	channelStruct := NewSSHChannelHandler(s, channel, requests)
 	channelStruct.Serve(ctx)
@@ -170,13 +167,13 @@ func (s *sshConnectionHandler) handleChannelTypeDirectTCPIP(ctx context.Context,
 	}
 	err = s.parent.client.CreatePodPortForward(ctx, s.namespace, fmt.Sprintf("%s-statefulset-0", s.authenticatedUserID), fmt.Sprint(payload.PortToConnect), channel)
 	if err != nil {
-		s.log.Error("could not create port forward", zap.Error(err))
+		s.log.Error("createPodPortForward exited", zap.Error(err))
 		return
 	}
 	defer func(log *zap.Logger) {
 		err := channel.Close()
 		if err != nil {
-			log.Error("closing connection", zap.Error(err))
+			log.Error("closing direct TCPIP channel", zap.Error(err))
 		}
 		log.Debug("closed \"DirectTCPIP\" channel")
 	}(s.log)
@@ -199,7 +196,7 @@ func (s *sshConnectionHandler) keepAlive(ctx context.Context, cancel context.Can
 			}
 
 			if retries > 3 {
-				s.log.Info("keepAlive failed 3 times, closing connection")
+				s.log.Info("keepAlive failed 4 times, closing connection")
 				cancel()
 			}
 		case <-ctx.Done():

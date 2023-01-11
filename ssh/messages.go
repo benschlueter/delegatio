@@ -1,13 +1,25 @@
+/* SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright (c) Benedict Schlueter
+ */
+
 package main
 
 // PtyRequestPayload is the payload for a pty request.
 type PtyRequestPayload struct {
-	Term     string
-	Columns  uint32
-	Rows     uint32
-	Width    uint32
-	Height   uint32
-	ModeList []byte
+	Term         string
+	WidthColumns uint32
+	HeightRows   uint32
+	WidthPixels  uint32
+	HeightPixels uint32
+	ModeList     []byte
+}
+
+// WindowChangeRequestPayload is the payload for a window-change request.
+type WindowChangeRequestPayload struct {
+	WidthColumns uint32
+	HeightRows   uint32
+	WidthPixels  uint32
+	HeightPixels uint32
 }
 
 // ForwardTCPChannelOpenPayload is the payload for a forward-tcpip channel open request.

@@ -13,9 +13,11 @@ import (
 	"log"
 	"net"
 	"os"
+	"os/signal"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"time"
 
 	"github.com/benschlueter/delegatio/cli/kubernetes"
@@ -40,13 +42,24 @@ type sshServer struct {
 }
 
 func main() {
-	logger := zap.NewExample()
+	zapconf := zap.NewDevelopmentConfig()
+	zapconf.Level.SetLevel(zap.DebugLevel)
+	logger, err := zapconf.Build()
+	if err != nil {
+		logger.With(zap.Error(err)).DPanic("Failed to create logger")
+	}
+	defer func() { _ = logger.Sync() }()
 	client, err := kubernetes.NewK8sClient("admin.conf", logger.Named("k8sAPI"))
 	if err != nil {
 		panic(err)
 	}
 	server := NewSSHServer(client, logger)
-	server.StartServer(context.Background())
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+
+	done := make(chan struct{})
+	go registerSignalHandler(cancel, done, logger)
+	server.StartServer(ctx)
 }
 
 // NewSSHServer returns a sshServer.
@@ -120,7 +133,7 @@ func (s *sshServer) StartServer(ctx context.Context) {
 		for {
 			tcpConn, err := listener.Accept()
 			if errors.Is(err, net.ErrClosed) {
-				s.log.Error("failed to accept incoming connection", zap.Error(err))
+				// s.log.Error("failed to accept incoming connection", zap.Error(err))
 				return
 			}
 			if err != nil {
@@ -138,7 +151,9 @@ func (s *sshServer) StartServer(ctx context.Context) {
 		s.log.Error("failed to close listener", zap.Error(err))
 	}
 	done <- struct{}{}
+	s.log.Info("waiting for all connections to terminate gracefully")
 	s.handleConnWG.Wait()
+	s.log.Info("closing program")
 }
 
 func (s *sshServer) validateAndProcessConnection(ctx context.Context, tcpConn net.Conn, config *ssh.ServerConfig) {
@@ -174,4 +189,17 @@ func (s *sshServer) periodicLogs(done <-chan struct{}) {
 			return
 		}
 	}
+}
+
+func registerSignalHandler(cancelContext context.CancelFunc, done chan<- struct{}, log *zap.Logger) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	<-sigs
+
+	log.Info("cancellation signal received")
+	cancelContext()
+	signal.Stop(sigs)
+	close(sigs)
+	done <- struct{}{}
 }

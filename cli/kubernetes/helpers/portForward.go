@@ -39,8 +39,11 @@ func (k *Client) CreatePodPortForward(ctx context.Context, namespace, podName, p
 		k.logger.Error("failed to dial kubeapi server", zap.Error(err))
 		return err
 	}
-
-	defer channel.Close()
+	defer func() {
+		if err := connection.Close(); err != nil {
+			k.logger.Error("closing kubeapi connection", zap.Error(err))
+		}
+	}()
 
 	k.logger.Info("handling for forwarding connection", zap.String("pod", podName), zap.String("port", podPort))
 
@@ -72,8 +75,9 @@ func (k *Client) CreatePodPortForward(ctx context.Context, namespace, podName, p
 			k.logger.Error("error reading from error stream", zap.Error(err), zap.String("pod", podName), zap.String("port", podPort))
 		case len(message) > 0:
 			errorChan <- fmt.Errorf("error during forward request to kubeapi %%s:%s : %s", podName, podPort, string(message))
-			k.logger.Error("an error occurred forwarding", zap.String("pod", podName), zap.String("port", podPort), zap.String("message", string(message)))
+			k.logger.Error("error during forwarding", zap.String("pod", podName), zap.String("port", podPort), zap.String("message", string(message)))
 		}
+		k.logger.Info("closing errorStream go routine")
 		close(errorChan)
 	}()
 
@@ -99,9 +103,6 @@ func (k *Client) CreatePodPortForward(ctx context.Context, namespace, podName, p
 	}()
 
 	go func() {
-		// inform server we're not sending any more data after copy unblocks
-		defer dataStream.Close()
-
 		// Copy from the local port to the remote side.
 		if _, err := io.Copy(dataStream, channel); err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
 			k.logger.Error("error copying from local connection to remote stream", zap.Error(err))
@@ -112,11 +113,18 @@ func (k *Client) CreatePodPortForward(ctx context.Context, namespace, podName, p
 
 	// wait for either a local->remote error or for copying from remote->local to finish
 	select {
+	case <-ctx.Done():
+		if err := dataStream.Close(); err != nil {
+			k.logger.Error("closing the dataStream", zap.Error(err))
+		}
+		return ctx.Err()
 	case <-remoteDone:
 	case <-localError:
 	}
 
-	// always expect something on errorChan (it may be nil)
+	// if we exited because of an internal kubeapi error we expect that
+	// 1. the error is returned by io.Copy
+	// 2. kubeapi sends additional data over the error stream
 	err = <-errorChan
 	return err
 }
