@@ -14,5 +14,4 @@ Delegatio is a framework that can be used to manage homework of, i.e., system se
 * Webserver to deploy a website to generate ssh keys and sync them with the ssh daemon
 * HA KV storage for the ssh daemon
 * Support for multiple control planes
-* ssh daemon vscode remote ssh support
 * Harden Kubernetes Pods
