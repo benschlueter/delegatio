@@ -8,10 +8,7 @@ Delegatio is a framework that can be used to manage homework of, i.e., system se
 
 ## TODO
 * Unittests
-* Abstract storage 
-* Refactor build system
-* Merge ssh daemon into Kubernetes
+* Abstract storage
 * Webserver to deploy a website to generate ssh keys and sync them with the ssh daemon
-* HA KV storage for the ssh daemon
 * Support for multiple control planes
 * Harden Kubernetes Pods

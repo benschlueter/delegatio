@@ -21,6 +21,7 @@ type APIClient interface {
 	ExecCommandStream(ctx context.Context, in *ExecCommandStreamRequest, opts ...grpc.CallOption) (API_ExecCommandStreamClient, error)
 	ExecCommand(ctx context.Context, in *ExecCommandRequest, opts ...grpc.CallOption) (*ExecCommandResponse, error)
 	WriteFile(ctx context.Context, in *WriteFileRequest, opts ...grpc.CallOption) (*WriteFileResponse, error)
+	ReadFile(ctx context.Context, in *ReadFileRequest, opts ...grpc.CallOption) (*ReadFileResponse, error)
 }
 
 type aPIClient struct {
@@ -81,6 +82,15 @@ func (c *aPIClient) WriteFile(ctx context.Context, in *WriteFileRequest, opts ..
 	return out, nil
 }
 
+func (c *aPIClient) ReadFile(ctx context.Context, in *ReadFileRequest, opts ...grpc.CallOption) (*ReadFileResponse, error) {
+	out := new(ReadFileResponse)
+	err := c.cc.Invoke(ctx, "/vmapi.API/ReadFile", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // APIServer is the server API for API service.
 // All implementations must embed UnimplementedAPIServer
 // for forward compatibility
@@ -88,6 +98,7 @@ type APIServer interface {
 	ExecCommandStream(*ExecCommandStreamRequest, API_ExecCommandStreamServer) error
 	ExecCommand(context.Context, *ExecCommandRequest) (*ExecCommandResponse, error)
 	WriteFile(context.Context, *WriteFileRequest) (*WriteFileResponse, error)
+	ReadFile(context.Context, *ReadFileRequest) (*ReadFileResponse, error)
 	mustEmbedUnimplementedAPIServer()
 }
 
@@ -103,6 +114,9 @@ func (UnimplementedAPIServer) ExecCommand(context.Context, *ExecCommandRequest) 
 }
 func (UnimplementedAPIServer) WriteFile(context.Context, *WriteFileRequest) (*WriteFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method WriteFile not implemented")
+}
+func (UnimplementedAPIServer) ReadFile(context.Context, *ReadFileRequest) (*ReadFileResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method ReadFile not implemented")
 }
 func (UnimplementedAPIServer) mustEmbedUnimplementedAPIServer() {}
 
@@ -174,6 +188,24 @@ func _API_WriteFile_Handler(srv interface{}, ctx context.Context, dec func(inter
 	return interceptor(ctx, in, info, handler)
 }
 
+func _API_ReadFile_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(ReadFileRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).ReadFile(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vmapi.API/ReadFile",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).ReadFile(ctx, req.(*ReadFileRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // API_ServiceDesc is the grpc.ServiceDesc for API service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -188,6 +220,10 @@ var API_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "WriteFile",
 			Handler:    _API_WriteFile_Handler,
+		},
+		{
+			MethodName: "ReadFile",
+			Handler:    _API_ReadFile_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

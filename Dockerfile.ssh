@@ -1,0 +1,16 @@
+FROM golang:1.19.5-bullseye
+# Copy Repo
+COPY go.mod /delegatio/
+COPY go.sum /delegatio/
+
+WORKDIR /delegatio
+RUN go mod download
+
+COPY ./ /delegatio
+
+WORKDIR /delegatio/ssh
+RUN go build -o ssh .
+
+CMD /delegatio/ssh/ssh
+
+

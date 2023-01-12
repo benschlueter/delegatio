@@ -1,6 +1,6 @@
 FROM	 archlinux:latest
 RUN	 pacman -Syy
-RUN	 pacman -S --noconfirm openssh
+RUN	 pacman -S --noconfirm openssh go git gcc make cmake libvirt
 
 # Generate host keys
 #RUN  /usr/bin/ssh-keygen -A

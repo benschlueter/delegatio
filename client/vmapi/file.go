@@ -24,3 +24,14 @@ func (a *API) WriteFile(ctx context.Context, in *vmproto.WriteFileRequest) (*vmp
 	}
 	return &vmproto.WriteFileResponse{}, nil
 }
+
+// ReadFile reads a file and returns its content.
+func (a *API) ReadFile(ctx context.Context, in *vmproto.ReadFileRequest) (*vmproto.ReadFileResponse, error) {
+	a.logger.Info("request to read file", zap.String("path", in.Filepath), zap.String("name", in.Filename))
+	content, err := os.ReadFile(filepath.Join(in.Filepath, in.Filename))
+	if err != nil {
+		a.logger.Error("failed to read file", zap.String("path", in.Filepath), zap.String("name", in.Filename), zap.Error(err))
+		return nil, status.Errorf(codes.Internal, "file read failed exited with error code: %v", err)
+	}
+	return &vmproto.ReadFileResponse{Content: content}, nil
+}
