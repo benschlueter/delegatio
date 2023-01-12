@@ -13,34 +13,32 @@ import (
 )
 
 // CreatePersistentVolume creates a persistent volume.
-func (k *Client) CreatePersistentVolume(ctx context.Context, namespace, name string) error {
-	secretNamespace := "default"
+func (k *Client) CreatePersistentVolume(ctx context.Context, name string) error {
 	pVolume := coreAPI.PersistentVolume{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "PersistentVolume",
 			APIVersion: coreAPI.SchemeGroupVersion.Version,
 		},
 		ObjectMeta: v1.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
+			Name: name,
 		},
 		Spec: coreAPI.PersistentVolumeSpec{
 			Capacity: coreAPI.ResourceList{
 				coreAPI.ResourceStorage: resource.MustParse("5Gi"),
 			},
-			StorageClassName: "azurefile-csi",
+			StorageClassName: "nfs",
 			AccessModes: []coreAPI.PersistentVolumeAccessMode{
 				coreAPI.ReadWriteMany,
 			},
 			PersistentVolumeReclaimPolicy: coreAPI.PersistentVolumeReclaimPolicy("Retain"),
 			PersistentVolumeSource: coreAPI.PersistentVolumeSource{
-				AzureFile: &coreAPI.AzureFilePersistentVolumeSource{
-					SecretName:      "azure-secret",
-					SecretNamespace: &secretNamespace,
-					ShareName:       "cluster",
-					ReadOnly:        false,
+				NFS: &coreAPI.NFSVolumeSource{
+					Server:   "10.42.0.1",
+					Path:     "/",
+					ReadOnly: false,
 				},
 			},
+			MountOptions: []string{"nfsvers=4.2"},
 		},
 	}
 

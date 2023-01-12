@@ -14,10 +14,10 @@ import (
 	"k8s.io/kubectl/pkg/scheme"
 )
 
-// CreatePodShell creates a shell on the specified pod.
-func (k *Client) CreatePodShell(ctx context.Context, namespace, podName string, stdin io.Reader, stdout io.Writer, stderr io.Writer, resizeQueue remotecommand.TerminalSizeQueue, tty bool) error {
+// CreateExecInPod creates a shell on the specified pod.
+func (k *Client) CreateExecInPod(ctx context.Context, namespace, podName, command string, stdin io.Reader, stdout io.Writer, stderr io.Writer, resizeQueue remotecommand.TerminalSizeQueue, tty bool) error {
 	cmd := []string{
-		"bash",
+		command,
 	}
 	req := k.client.CoreV1().RESTClient().Post().Resource("pods").Name(podName).Namespace(namespace).SubResource("exec")
 	option := &v1.PodExecOptions{

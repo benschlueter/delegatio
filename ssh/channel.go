@@ -21,7 +21,6 @@ type SSHChannelHandler struct {
 	ptyReq   *PtyRequestPayload
 	wg       *sync.WaitGroup
 	log      *zap.Logger
-	done     chan struct{}
 	window   *Winsize
 	parent   *sshConnectionHandler
 }
@@ -33,7 +32,6 @@ func NewSSHChannelHandler(parent *sshConnectionHandler, channel ssh.Channel, req
 		channel:  channel,
 		requests: requests,
 		wg:       &sync.WaitGroup{},
-		done:     make(chan struct{}),
 		window:   &Winsize{Queue: make(chan *remotecommand.TerminalSize)},
 		parent:   parent,
 	}
@@ -58,6 +56,7 @@ func (s *SSHChannelHandler) Serve(ctx context.Context) {
 			s.log.Debug("received data over request channel", zap.Any("req", req))
 			switch req.Type {
 			case "shell":
+				s.log.Info("shell request", zap.Any("data", req.Payload))
 				s.wg.Add(1)
 				go s.handleShell(ctx)
 				if err := req.Reply(true, nil); err != nil {
@@ -80,8 +79,20 @@ func (s *SSHChannelHandler) Serve(ctx context.Context) {
 					s.log.Error("failled to unmarshal window-change request", zap.Error(err))
 					continue
 				}
-				s.log.Info("window-change", zap.Any("data", windowChange))
+				s.log.Info("window-change request", zap.Any("data", windowChange))
 				s.window.Queue <- &remotecommand.TerminalSize{Width: uint16(windowChange.WidthColumns), Height: uint16(windowChange.HeightRows)}
+			case "subsystem":
+				subSys := SubsystemRequestPayload{}
+				if err := ssh.Unmarshal(req.Payload, &subSys); err != nil {
+					s.log.Error("failled to unmarshal window-change request", zap.Error(err))
+					continue
+				}
+				s.log.Info("subsystem request", zap.Any("data", subSys))
+				s.wg.Add(1)
+				go s.handleSubsystem(ctx, subSys.Subsystem)
+				if err := req.Reply(true, nil); err != nil {
+					s.log.Error("failled to respond to \"subsystem\" request", zap.Error(err))
+				}
 			default:
 				if req.WantReply {
 					if err := req.Reply(false, nil); err != nil {
@@ -94,13 +105,17 @@ func (s *SSHChannelHandler) Serve(ctx context.Context) {
 	}
 }
 
+// Close closes all remaining resources associated with the server.
+func (s *SSHChannelHandler) Close() {
+	close(s.window.Queue)
+	if err := s.channel.Close(); err != nil {
+		s.log.Error("failed to close channel", zap.Error(err))
+	}
+}
+
 func (s *SSHChannelHandler) handleShell(ctx context.Context) {
 	defer s.wg.Done()
-	defer func() {
-		if err := s.channel.Close(); err != nil {
-			s.log.Error("failed to close channel", zap.Error(err))
-		}
-	}()
+
 	// Fire up "kubectl exec" for this session
 	tty := false
 	if s.ptyReq != nil {
@@ -119,6 +134,38 @@ func (s *SSHChannelHandler) handleShell(ctx context.Context) {
 		return
 	}
 	_, _ = s.channel.Write([]byte("graceful termination"))
+}
+
+// handleSubsystem handles the "subsystem" request. This is used for SFTP.
+// This is used by "scp" to copy files from the localhost to the pod or vice versa.
+func (s *SSHChannelHandler) handleSubsystem(ctx context.Context, cmd string) {
+	defer s.wg.Done()
+	subSysMap := map[string]string{
+		"sftp": "/usr/lib/ssh/sftp-server",
+	}
+	parsedSubsystem, ok := subSysMap[cmd]
+	if !ok {
+		s.log.Error("unknown subsystem", zap.String("subsystem", cmd))
+		_, _ = s.channel.Write([]byte(fmt.Sprintf("unknown subsystem: %s", cmd)))
+		return
+	}
+
+	tty := false
+	if s.ptyReq != nil {
+		// Be safe and feed the queue in a goroutine. If somehow another window-change request is pending the connecton
+		// will deadlock.
+		go func() {
+			s.window.Queue <- &remotecommand.TerminalSize{Width: uint16(s.ptyReq.WidthColumns), Height: uint16(s.ptyReq.HeightRows)}
+		}()
+		tty = true
+	}
+
+	err := s.parent.parent.client.ExecuteCommandInPod(ctx, s.parent.namespace, fmt.Sprintf("%s-statefulset-0", s.parent.authenticatedUserID), parsedSubsystem, s.channel, s.window, tty)
+	if err != nil {
+		s.log.Error("ExecuteCommandInPod exited", zap.Error(err))
+		_, _ = s.channel.Write([]byte(fmt.Sprintf("closing connection, reason: %v", err)))
+		return
+	}
 }
 
 // Winsize stores the Height and Width of a terminal.

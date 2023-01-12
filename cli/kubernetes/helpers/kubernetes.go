@@ -10,8 +10,6 @@ import (
 	"time"
 
 	"go.uber.org/zap"
-	v1 "k8s.io/api/core/v1"
-	metaAPI "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -70,28 +68,4 @@ func (k *Client) CreateStatefulSetForUser(ctx context.Context, challengeNamespac
 		return err
 	}
 	return k.WaitForPodRunning(ctx, challengeNamespace, userID, 4*time.Minute)
-}
-
-// CreateSecret creates a secret.
-func (k *Client) CreateSecret(ctx context.Context) error {
-	secret := v1.Secret{
-		TypeMeta: metaAPI.TypeMeta{
-			Kind:       "Secret",
-			APIVersion: v1.SchemeGroupVersion.Version,
-		},
-		ObjectMeta: metaAPI.ObjectMeta{
-			Name:      "azure-disk-secret",
-			Namespace: "kube-system",
-		},
-		Data: map[string][]byte{
-			"azurestorageaccountname": []byte("delegatiokube"),
-			"azurestorageaccountkey":  []byte("dDT6N/8laMdsF8lUsbOc6sKbFTZYWNCKt5YF6b4hqGMI+fOw4X7HsPJTTcUBYwlOjIi6viAQ38iB+AStzSxAlQ=="),
-		},
-	}
-
-	_, err := k.client.CoreV1().Secrets("kube-system").Create(ctx, &secret, metaAPI.CreateOptions{})
-	if err != nil {
-		return err
-	}
-	return nil
 }

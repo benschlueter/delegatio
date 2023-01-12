@@ -117,22 +117,31 @@ func main() {
 			log.With(zap.Error(err)).DPanic("failed to create namespace")
 		}
 	}
-	/* 	err = kubeClient.CreatePersistentVolume(ctx, "testchallenge1", "root-storage-claim")
-	   	if err != nil {
-	   		if errors.Is(err, ctx.Err()) {
-	   			log.With(zap.Error(err)).Error("failed to CreatePersistentVolume")
-	   		} else {
-	   			log.With(zap.Error(err)).DPanic("failed to CreatePersistentVolume")
-	   		}
-	   	}
-	   	err = kubeClient.CreatePersistentVolumeClaim(ctx, "testchallenge1", "root-storage-claim")
-	   	if err != nil {
-	   		if errors.Is(err, ctx.Err()) {
-	   			log.With(zap.Error(err)).Error("failed to CreatePersistentVolumeClaim")
-	   		} else {
-	   			log.With(zap.Error(err)).DPanic("failed to CreatePersistentVolumeClaim")
-	   		}
-	   	} */
+	err = kubeClient.Client.CreateStorageClass(ctx, "nfs", "Retain")
+	if err != nil {
+		if errors.Is(err, ctx.Err()) {
+			log.With(zap.Error(err)).Error("failed to CreateStorageClass")
+		} else {
+			log.With(zap.Error(err)).DPanic("failed to CreateStorageClass")
+		}
+	}
+	err = kubeClient.CreatePersistentVolume(ctx, "nfs-storage")
+	if err != nil {
+		if errors.Is(err, ctx.Err()) {
+			log.With(zap.Error(err)).Error("failed to CreatePersistentVolume")
+		} else {
+			log.With(zap.Error(err)).DPanic("failed to CreatePersistentVolume")
+		}
+	}
+	err = kubeClient.CreatePersistentVolumeClaim(ctx, "testchallenge1", "nfs-storage", "nfs")
+	if err != nil {
+		if errors.Is(err, ctx.Err()) {
+			log.With(zap.Error(err)).Error("failed to CreatePersistentVolumeClaim")
+		} else {
+			log.With(zap.Error(err)).DPanic("failed to CreatePersistentVolumeClaim")
+		}
+	}
+	log.Info("finished kubernetes initialization")
 
 	<-ctx.Done()
 	<-done
