@@ -44,6 +44,7 @@ type sshServer struct {
 func main() {
 	zapconf := zap.NewDevelopmentConfig()
 	zapconf.Level.SetLevel(zap.DebugLevel)
+	zapconf.DisableStacktrace = true
 	logger, err := zapconf.Build()
 	if err != nil {
 		logger.With(zap.Error(err)).DPanic("Failed to create logger")
@@ -173,7 +174,7 @@ func (s *sshServer) validateAndProcessConnection(ctx context.Context, tcpConn ne
 	}
 	s.log.Info("authentication of connection successful", zap.Binary("session", sshConn.SessionID()))
 	sshConnection := NewSSHConnectionHandler(s, sshConn, chans, reqs)
-	sshConnection.HandleGlobalConnection(ctx)
+	sshConnection.handleGlobalConnection(ctx)
 }
 
 func (s *sshServer) periodicLogs(done <-chan struct{}) {

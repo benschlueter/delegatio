@@ -22,6 +22,11 @@ type WindowChangeRequestPayload struct {
 	HeightPixels uint32
 }
 
+// SubsystemRequestPayload is the payload for a subsystem request.
+type SubsystemRequestPayload struct {
+	Subsystem string
+}
+
 // ForwardTCPChannelOpenPayload is the payload for a forward-tcpip channel open request.
 // RFC 4254 Section 7.2.
 type ForwardTCPChannelOpenPayload struct {

@@ -42,19 +42,19 @@ func NewSSHConnectionHandler(parent *sshServer, connection *ssh.ServerConn, chan
 	}
 }
 
-func (s *sshConnectionHandler) HandleGlobalConnection(ctx context.Context) {
+func (s *sshConnectionHandler) handleGlobalConnection(ctx context.Context) {
 	// if the connection is dead terminate it.
 	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
 		cancel()
-		if err := s.connection.Wait(); err != nil {
+		if err := s.connection.Close(); err != nil {
 			s.log.Error("failed to close connection", zap.Error(err))
 		}
 	}()
 
 	go s.keepAlive(ctx, cancel, s.connection)
 
-	s.log.Info("start handling new ssh session")
+	s.log.Info("starting ssh session")
 
 	// Discard all global out-of-band Requests.
 	// We dont care about graceful termination of this routine.
@@ -69,8 +69,7 @@ func (s *sshConnectionHandler) HandleGlobalConnection(ctx context.Context) {
 		}
 	}()
 
-	// Check if the pods are ready and we can exec on them.
-	// Otherwise spawn the pods.
+	// Check that all kubernetes ressources are ready and usable for future use.
 	if err := s.parent.client.CreateAndWaitForRessources(ctx, s.connection.User(), s.authenticatedUserID); err != nil {
 		s.log.Error("creating/waiting for kubernetes ressources",
 			zap.Error(err),
@@ -99,8 +98,6 @@ func (s *sshConnectionHandler) handleChannels(ctx context.Context) {
 		case <-ctx.Done():
 			return
 		case newChannel, ok := <-s.channel:
-			// when we close the "channel" from newChannel.Accept() in s.handleChannel the ssh.NewChannel
-			// is closed from the library side as well.
 			if !ok {
 				s.log.Debug("global channel closed")
 				return
@@ -114,9 +111,7 @@ func (s *sshConnectionHandler) handleChannels(ctx context.Context) {
 
 func (s *sshConnectionHandler) handleChannel(ctx context.Context, wg *sync.WaitGroup, newChannel ssh.NewChannel) {
 	defer wg.Done()
-	// Since we're handling a shell, we expect a
-	// channel type of "session". The also describes
-	// "x11", and "forwarded-tcpip" channel types.
+	// Currently unsupported channel types: "x11", and "forwarded-tcpip".
 	switch newChannel.ChannelType() {
 	case "session":
 		s.handleChannelTypeSession(ctx, newChannel)
@@ -131,9 +126,9 @@ func (s *sshConnectionHandler) handleChannel(ctx context.Context, wg *sync.WaitG
 	}
 }
 
+// handleChannelTypeSession handles the channelSession, it will block until the connection is closed by the client,
+// or the ctx is cancelled.
 func (s *sshConnectionHandler) handleChannelTypeSession(ctx context.Context, newChannel ssh.NewChannel) {
-	// At this point, we have the opportunity to reject the client's
-	// request for another logical channel
 	channel, requests, err := newChannel.Accept()
 	if err != nil {
 		s.log.Error("could not accept the channel", zap.Error(err))
@@ -142,11 +137,12 @@ func (s *sshConnectionHandler) handleChannelTypeSession(ctx context.Context, new
 
 	channelStruct := NewSSHChannelHandler(s, channel, requests)
 	channelStruct.Serve(ctx)
+	channelStruct.Close()
 }
 
 // handleChannelTypeDirectTCPIP handles the DirectTCPIP request from the client. We get a channel and should connect it to the
 // Address and Port requested in the ExtraData from the channel.
-// Note that the lifetime of the portForwarding is bound to the SSH connection, not the the channel itself.
+// Note that the lifetime of the portForwarding is bound to the channel.
 func (s *sshConnectionHandler) handleChannelTypeDirectTCPIP(ctx context.Context, newChannel ssh.NewChannel) {
 	var payload ForwardTCPChannelOpenPayload
 	err := ssh.Unmarshal(newChannel.ExtraData(), &payload)
@@ -165,6 +161,7 @@ func (s *sshConnectionHandler) handleChannelTypeDirectTCPIP(ctx context.Context,
 		s.log.Error("could not accept the channel", zap.Error(err))
 		return
 	}
+	// this call will block until the context is cancelled, the channel is closed from the client side, or kubeapi is closing the channel (most likely an error).
 	err = s.parent.client.CreatePodPortForward(ctx, s.namespace, fmt.Sprintf("%s-statefulset-0", s.authenticatedUserID), fmt.Sprint(payload.PortToConnect), channel)
 	if err != nil {
 		s.log.Error("createPodPortForward exited", zap.Error(err))
@@ -177,9 +174,9 @@ func (s *sshConnectionHandler) handleChannelTypeDirectTCPIP(ctx context.Context,
 		}
 		log.Debug("closed \"DirectTCPIP\" channel")
 	}(s.log)
-	// stopChan <- struct{}{}
 }
 
+// keepAlive sends keep alive requests to the client, if the client is not respong 4 times, deallocate all server ressources.
 func (s *sshConnectionHandler) keepAlive(ctx context.Context, cancel context.CancelFunc, sshConn *ssh.ServerConn) {
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()

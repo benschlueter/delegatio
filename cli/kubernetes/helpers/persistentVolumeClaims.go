@@ -13,23 +13,22 @@ import (
 )
 
 // CreatePersistentVolumeClaim creates a persistent volume claim.
-func (k *Client) CreatePersistentVolumeClaim(ctx context.Context, namespace, name string) error {
-	stclass := "azurefile-csi"
+func (k *Client) CreatePersistentVolumeClaim(ctx context.Context, namespace, claimName, storageClassName string) error {
 	pVolumeClaim := coreAPI.PersistentVolumeClaim{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "PersistentVolumeClaim",
 			APIVersion: coreAPI.SchemeGroupVersion.Version,
 		},
 		ObjectMeta: v1.ObjectMeta{
-			Name:      name,
+			Name:      claimName,
 			Namespace: namespace,
 		},
 		Spec: coreAPI.PersistentVolumeClaimSpec{
 			AccessModes: []coreAPI.PersistentVolumeAccessMode{
 				coreAPI.ReadWriteMany,
 			},
-			VolumeName:       name,
-			StorageClassName: &stclass,
+			VolumeName:       claimName,
+			StorageClassName: &storageClassName,
 			Resources: coreAPI.ResourceRequirements{
 				Requests: coreAPI.ResourceList{
 					coreAPI.ResourceStorage: resource.MustParse("5Gi"),

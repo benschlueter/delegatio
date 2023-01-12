@@ -58,7 +58,12 @@ func (k *Client) CreateAndWaitForRessources(ctx context.Context, namespace, user
 
 // CreatePodShell creates a shell on the specified pod.
 func (k *Client) CreatePodShell(ctx context.Context, namespace, podName string, channel ssh.Channel, resizeQueue remotecommand.TerminalSizeQueue, tty bool) error {
-	return k.Client.CreatePodShell(ctx, namespace, podName, channel, channel, channel, resizeQueue, tty)
+	return k.Client.CreateExecInPod(ctx, namespace, podName, "bash", channel, channel, channel, resizeQueue, tty)
+}
+
+// ExecuteCommandInPod executes a command in the specified pod.
+func (k *Client) ExecuteCommandInPod(ctx context.Context, namespace, podName, command string, channel ssh.Channel, resizeQueue remotecommand.TerminalSizeQueue, tty bool) error {
+	return k.Client.CreateExecInPod(ctx, namespace, podName, command, channel, channel, channel, resizeQueue, tty)
 }
 
 // CreatePodPortForward creates a port forward on the specified pod.
@@ -67,17 +72,11 @@ func (k *Client) CreatePodPortForward(ctx context.Context, namespace, podName, p
 }
 
 // CreatePersistentVolume creates a shell on the specified pod.
-func (k *Client) CreatePersistentVolume(ctx context.Context, namespace, volumeName string) error {
-	/* 	if err := exec.Command("kubectl", "apply", "-f", "secret.yaml").Run(); err != nil {
-		return err
-	} */
-	if err := k.Client.CreateSecret(ctx); err != nil {
-		return err
-	}
-	return k.Client.CreatePersistentVolume(ctx, namespace, volumeName)
+func (k *Client) CreatePersistentVolume(ctx context.Context, volumeName string) error {
+	return k.Client.CreatePersistentVolume(ctx, volumeName)
 }
 
 // CreatePersistentVolumeClaim creates a shell on the specified pod.
-func (k *Client) CreatePersistentVolumeClaim(ctx context.Context, namespace, volumeName string) error {
-	return k.Client.CreatePersistentVolumeClaim(ctx, namespace, volumeName)
+func (k *Client) CreatePersistentVolumeClaim(ctx context.Context, namespace, volumeName, storageClass string) error {
+	return k.Client.CreatePersistentVolumeClaim(ctx, namespace, volumeName, storageClass)
 }

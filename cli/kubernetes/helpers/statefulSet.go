@@ -60,13 +60,13 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 									},
 								},
 							},
-							/* 							VolumeMounts: []coreAPI.VolumeMount{
+							VolumeMounts: []coreAPI.VolumeMount{
 								{
 									Name:      "home-storage",
 									MountPath: "/root/",
 									SubPath:   userID,
 								},
-							}, */
+							},
 							ImagePullPolicy: coreAPI.PullAlways,
 							SecurityContext: &coreAPI.SecurityContext{
 								Capabilities: &coreAPI.Capabilities{
@@ -77,24 +77,25 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 							},
 						},
 					},
-					/* 					Volumes: []coreAPI.Volume{
+					Volumes: []coreAPI.Volume{
 						{
 							Name: "home-storage",
 							VolumeSource: coreAPI.VolumeSource{
 								PersistentVolumeClaim: &coreAPI.PersistentVolumeClaimVolumeSource{
-									ClaimName: fmt.Sprintf("pvc-%s-statefulset-0", userID),
+									// ClaimName: fmt.Sprintf("pvc-%s-statefulset-0", userID),
+									ClaimName: "nfs-storage",
 								},
 							},
 						},
-					}, */
+					},
 				},
 			},
-			/* 			VolumeClaimTemplates: []coreAPI.PersistentVolumeClaim{
+			/* VolumeClaimTemplates: []coreAPI.PersistentVolumeClaim{
 				{
 					ObjectMeta: metaAPI.ObjectMeta{
 						Name: "pvc",
 						Annotations: map[string]string{
-							"volume.beta.kubernetes.io/storage-class": "azurefile-csi",
+							"volume.beta.kubernetes.io/storage-class": "nfs",
 						},
 					},
 					Spec: coreAPI.PersistentVolumeClaimSpec{
