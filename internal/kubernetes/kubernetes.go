@@ -47,9 +47,9 @@ func (k *Client) CreateAndWaitForRessources(ctx context.Context, namespace, user
 		return err
 	}
 	if !exists {
-		if err := k.Client.CreateServiceAccount(ctx, "testchallenge1", "development"); err != nil {
+		/* 		if err := k.Client.CreateServiceAccount(ctx, namespace, "development"); err != nil {
 			return err
-		}
+		} */
 		/* 		if err := k.Client.CreateClusterRoleBinding(ctx, "testchallenge1", "development"); err != nil {
 			return err
 		} */

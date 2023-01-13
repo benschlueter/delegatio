@@ -84,7 +84,7 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 							VolumeSource: coreAPI.VolumeSource{
 								PersistentVolumeClaim: &coreAPI.PersistentVolumeClaimVolumeSource{
 									// ClaimName: fmt.Sprintf("pvc-%s-statefulset-0", userID),
-									ClaimName: "nfs-storage",
+									ClaimName: challengeNamespace,
 								},
 							},
 						},

@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/infrastructure"
 
 	"go.uber.org/zap"
@@ -72,7 +73,7 @@ func main() {
 		log.With(zap.Error(err)).DPanic("failed to initialize infrastructure")
 	}
 	log.Info("finished infrastructure initialization")
-	if err := createKubernetes(ctx, log, creds); err != nil {
+	if err := createKubernetes(ctx, log, creds, config.GetExampleConfig()); err != nil {
 		log.With(zap.Error(err)).DPanic("failed to initialize kubernetes")
 	}
 	log.Info("finished kubernetes initialization")
