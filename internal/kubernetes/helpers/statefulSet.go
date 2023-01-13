@@ -47,8 +47,8 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 					},
 				},
 				Spec: coreAPI.PodSpec{
-					ServiceAccountName:           "development",
-					AutomountServiceAccountToken: &automountServiceAccountToken,
+					/* 					ServiceAccountName:           "development",
+					   					AutomountServiceAccountToken: &automountServiceAccountToken, */
 					Containers: []coreAPI.Container{
 						{
 							Name:  "archlinux-container-ssh",
