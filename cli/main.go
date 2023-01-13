@@ -1,15 +1,17 @@
+/* SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright (c) Benedict Schlueter
+ */
+
 package main
 
 import (
 	"context"
-	"errors"
 	"flag"
 	"os"
 	"os/signal"
 	"syscall"
 
-	"github.com/benschlueter/delegatio/cli/infrastructure"
-	"github.com/benschlueter/delegatio/cli/kubernetes"
+	"github.com/benschlueter/delegatio/internal/infrastructure"
 
 	"go.uber.org/zap"
 )
@@ -65,81 +67,13 @@ func main() {
 		log.Info("connection successfully closed")
 	}(log, lInstance)
 
-	if err := lInstance.ConnectWithInfrastructureService(ctx, "qemu:///system"); err != nil {
-		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("failed to connect to infrastructure service")
-		} else {
-			log.With(zap.Error(err)).DPanic("failed to connect to infrastructure service")
-		}
-	}
-
-	if err := lInstance.InitializeInfrastructure(ctx); err != nil {
-		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("failed to start VMs")
-		} else {
-			log.With(zap.Error(err)).DPanic("failed to start VMs")
-		}
-	}
-
-	kubeConf, err := infrastructure.GetKubeInitConfig()
+	creds, err := createInfrastructure(ctx, log, lInstance)
 	if err != nil {
-		log.With(zap.Error(err)).DPanic("failed to get kubeConfig")
+		log.With(zap.Error(err)).DPanic("failed to initialize infrastructure")
 	}
-
-	if err := lInstance.InitializeKubernetes(ctx, kubeConf); err != nil {
-		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("failed to run Kubernetes")
-		} else {
-			log.With(zap.Error(err)).DPanic("failed to run Kubernetes")
-		}
-	}
-	kubeClient, err := kubernetes.NewK8sClient("./admin.conf", log.Named("k8sAPI"))
-	if err != nil {
-		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("failed to connect to Kubernetes")
-		} else {
-			log.With(zap.Error(err)).DPanic("failed to connect to Kubernetes")
-		}
-	}
-	err = kubeClient.InstallCilium(ctx)
-	if err != nil {
-		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("failed to install helm charts")
-		} else {
-			log.With(zap.Error(err)).DPanic("failed to install helm charts")
-		}
-	}
-	err = kubeClient.Client.CreateNamespace(ctx, "testchallenge1")
-	if err != nil {
-		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("failed to create namespace")
-		} else {
-			log.With(zap.Error(err)).DPanic("failed to create namespace")
-		}
-	}
-	err = kubeClient.Client.CreateStorageClass(ctx, "nfs", "Retain")
-	if err != nil {
-		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("failed to CreateStorageClass")
-		} else {
-			log.With(zap.Error(err)).DPanic("failed to CreateStorageClass")
-		}
-	}
-	err = kubeClient.CreatePersistentVolume(ctx, "nfs-storage")
-	if err != nil {
-		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("failed to CreatePersistentVolume")
-		} else {
-			log.With(zap.Error(err)).DPanic("failed to CreatePersistentVolume")
-		}
-	}
-	err = kubeClient.CreatePersistentVolumeClaim(ctx, "testchallenge1", "nfs-storage", "nfs")
-	if err != nil {
-		if errors.Is(err, ctx.Err()) {
-			log.With(zap.Error(err)).Error("failed to CreatePersistentVolumeClaim")
-		} else {
-			log.With(zap.Error(err)).DPanic("failed to CreatePersistentVolumeClaim")
-		}
+	log.Info("finished infrastructure initialization")
+	if err := createKubernetes(ctx, log, creds); err != nil {
+		log.With(zap.Error(err)).DPanic("failed to initialize kubernetes")
 	}
 	log.Info("finished kubernetes initialization")
 

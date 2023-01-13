@@ -20,7 +20,8 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/benschlueter/delegatio/cli/kubernetes"
+	"github.com/benschlueter/delegatio/internal/kubernetes"
+	"github.com/benschlueter/delegatio/internal/store"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
@@ -37,11 +38,12 @@ type sshServer struct {
 	client             *kubernetes.Client
 	handleConnWG       *sync.WaitGroup
 	currentConnections int64
-	users              map[string]struct{}
-	publicKeys         map[string]struct{}
+	sshStore           store.Store
 }
 
 func main() {
+	var client *kubernetes.Client
+	var err error
 	zapconf := zap.NewDevelopmentConfig()
 	zapconf.Level.SetLevel(zap.DebugLevel)
 	zapconf.DisableStacktrace = true
@@ -50,11 +52,23 @@ func main() {
 		logger.With(zap.Error(err)).DPanic("Failed to create logger")
 	}
 	defer func() { _ = logger.Sync() }()
-	client, err := kubernetes.NewK8sClient("admin.conf", logger.Named("k8sAPI"))
+	_, err = os.Stat("./admin.conf")
+	if errors.Is(err, os.ErrNotExist) {
+		client, err = kubernetes.NewK8sClient(logger.Named("k8sAPI"), "")
+		if err != nil {
+			logger.With(zap.Error(err)).DPanic("failed to create k8s client")
+		}
+	} else {
+		client, err = kubernetes.NewK8sClient(logger.Named("k8sAPI"), "./admin.conf")
+		if err != nil {
+			logger.With(zap.Error(err)).DPanic("failed to create k8s client")
+		}
+	}
+	store, err := getKubernetesData(logger)
 	if err != nil {
 		panic(err)
 	}
-	server := NewSSHServer(client, logger)
+	server := NewSSHServer(client, logger, store)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
@@ -64,22 +78,13 @@ func main() {
 }
 
 // NewSSHServer returns a sshServer.
-func NewSSHServer(client *kubernetes.Client, log *zap.Logger) *sshServer {
+func NewSSHServer(client *kubernetes.Client, log *zap.Logger, storage store.Store) *sshServer {
 	return &sshServer{
 		client:             client,
 		log:                log,
 		handleConnWG:       &sync.WaitGroup{},
 		currentConnections: 0,
-		users: map[string]struct{}{
-			"testchallenge":  {},
-			"testchallenge1": {},
-			"testchallenge2": {},
-			"testchallenge3": {},
-			"testchallenge4": {},
-		},
-		publicKeys: map[string]struct{}{
-			"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDLYDO+DPlwJTKYU+S9Q1YkgC7lUJgfsq+V6VxmzdP+omp2EmEIEUsB8WFtr3kAgtAQntaCejJ9ITgoLimkoPs7bV1rA7BZZgRTL2sF+F5zJ1uXKNZz1BVeGGDDXHW5X5V/ZIlH5Bl4kNaAWGx/S5PIszkhyNXEkE6GHsSU4dz69rlutjSbwQRFLx8vjgdAxP9+jUbJMh9u5Dg1SrXiMYpzplJWFt/jI13dDlNTrhWW7790xhHur4fiQbhrVzru29BKNQtSywC+3eH2XKTzobK6h7ECS5X75ghemRIDPw32SHbQP7or1xI+MjFCrZsGyZr1L0yBFNkNAsztpWAqE2FZ": {},
-		},
+		sshStore:           storage,
 	}
 }
 
@@ -92,12 +97,12 @@ func (s *sshServer) StartServer(ctx context.Context) {
 		// Function is called to determine if the user is allowed to connect with the ssh server
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
 			s.log.Info("publickeycallback called", zap.String("user", conn.User()), zap.Binary("session", conn.SessionID()))
-			if _, ok := s.users[conn.User()]; !ok {
+			if _, err := s.sshStore.Get(conn.User()); err != nil {
 				return nil, fmt.Errorf("user %s not in database", conn.User())
 			}
 			encodeKey := base64.StdEncoding.EncodeToString(key.Marshal())
 			compareKey := fmt.Sprintf("%s %s", key.Type(), encodeKey)
-			if _, ok := s.publicKeys[compareKey]; !ok {
+			if _, err := s.sshStore.Get(compareKey); err != nil {
 				return nil, fmt.Errorf("pubkey %v not in database", compareKey)
 			}
 			return &ssh.Permissions{

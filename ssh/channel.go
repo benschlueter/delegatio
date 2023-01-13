@@ -108,13 +108,15 @@ func (s *SSHChannelHandler) Serve(ctx context.Context) {
 // Close closes all remaining resources associated with the server.
 func (s *SSHChannelHandler) Close() {
 	close(s.window.Queue)
-	if err := s.channel.Close(); err != nil {
-		s.log.Error("failed to close channel", zap.Error(err))
-	}
 }
 
 func (s *SSHChannelHandler) handleShell(ctx context.Context) {
 	defer s.wg.Done()
+	defer func() {
+		if err := s.channel.Close(); err != nil {
+			s.log.Error("failed to close channel", zap.Error(err))
+		}
+	}()
 
 	// Fire up "kubectl exec" for this session
 	tty := false

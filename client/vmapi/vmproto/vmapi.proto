@@ -9,6 +9,7 @@ service API {
   rpc ExecCommandStream(ExecCommandStreamRequest) returns (stream ExecCommandStreamResponse);
   rpc ExecCommand(ExecCommandRequest) returns (ExecCommandResponse);
   rpc WriteFile(WriteFileRequest) returns (WriteFileResponse);
+  rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
 }
 
 message ExecCommandStreamRequest {
@@ -39,6 +40,16 @@ message WriteFileRequest {
 }
 
 message WriteFileResponse {
+}
+
+message ReadFileRequest {
+  string filepath = 1;
+  string filename = 2;
+
+}
+
+message ReadFileResponse {
+  bytes content = 3;
 }
 
 
