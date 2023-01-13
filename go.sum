@@ -1030,8 +1030,8 @@ k8s.io/utils v0.0.0-20221128185143-99ec85e7a448 h1:KTgPnR10d5zhztWptI952TNtt/4u5
 k8s.io/utils v0.0.0-20221128185143-99ec85e7a448/go.mod h1:OLgZIPagt7ERELqWJFomSt595RzquPNLL48iOWgYOg0=
 libvirt.org/go/libvirt v1.8010.0 h1:q4UeuyzSp7GiYUB5T3ytzeXh41hp9JqNQu150NkO+7A=
 libvirt.org/go/libvirt v1.8010.0/go.mod h1:1WiFE8EjZfq+FCVog+rvr1yatKbKZ9FaFMZgEqxEJqQ=
-libvirt.org/go/libvirtxml v1.8009.0 h1:29wyVe4m08S3JBSJnMJ/0WCWWcq8Xl5zF5NIa2RtXdI=
-libvirt.org/go/libvirtxml v1.8009.0/go.mod h1:7Oq2BLDstLr/XtoQD8Fr3mfDNrzlI3utYKySXF2xkng=
+libvirt.org/go/libvirtxml v1.8010.0 h1:Z5WLY3UmZocR4I28tNOAm0JzvJzGsZzlNoPP61hxSaI=
+libvirt.org/go/libvirtxml v1.8010.0/go.mod h1:7Oq2BLDstLr/XtoQD8Fr3mfDNrzlI3utYKySXF2xkng=
 oras.land/oras-go v1.2.0 h1:yoKosVIbsPoFMqAIFHTnrmOuafHal+J/r+I5bdbVWu4=
 oras.land/oras-go v1.2.0/go.mod h1:pFNs7oHp2dYsYMSS82HaX5l4mpnGO7hbpPN6EWH2ltc=
 rsc.io/binaryregexp v0.2.0/go.mod h1:qTv7/COck+e2FymRvadv62gMdZztPaShugOCi3I+8D8=
