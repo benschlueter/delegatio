@@ -47,7 +47,7 @@ require (
 	k8s.io/kubelet v0.0.0
 	k8s.io/kubernetes v1.26.0
 	libvirt.org/go/libvirt v1.8010.0
-	libvirt.org/go/libvirtxml v1.8009.0
+	libvirt.org/go/libvirtxml v1.8010.0
 )
 
 require (
