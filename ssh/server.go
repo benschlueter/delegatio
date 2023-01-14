@@ -22,6 +22,7 @@ import (
 
 	"github.com/benschlueter/delegatio/internal/kubernetes"
 	"github.com/benschlueter/delegatio/internal/store"
+	"github.com/benschlueter/delegatio/internal/storewrapper"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
@@ -64,7 +65,7 @@ func main() {
 			logger.With(zap.Error(err)).DPanic("failed to create k8s client")
 		}
 	}
-	store, err := getKubernetesData(logger)
+	store, err := etcdConnector(logger, client)
 	if err != nil {
 		panic(err)
 	}
@@ -88,6 +89,10 @@ func NewSSHServer(client *kubernetes.Client, log *zap.Logger, storage store.Stor
 	}
 }
 
+func (s *sshServer) data() storewrapper.StoreWrapper {
+	return storewrapper.StoreWrapper{Store: s.sshStore}
+}
+
 func (s *sshServer) StartServer(ctx context.Context) {
 	// In the latest version of crypto/ssh (after Go 1.3), the SSH server type has been removed
 	// in favour of an SSH connection type. A ssh.ServerConn is created by passing an existing
@@ -97,12 +102,12 @@ func (s *sshServer) StartServer(ctx context.Context) {
 		// Function is called to determine if the user is allowed to connect with the ssh server
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
 			s.log.Info("publickeycallback called", zap.String("user", conn.User()), zap.Binary("session", conn.SessionID()))
-			if _, err := s.sshStore.Get(conn.User()); err != nil {
+			if err := s.data().GetChallenge(conn.User(), nil); err != nil {
 				return nil, fmt.Errorf("user %s not in database", conn.User())
 			}
 			encodeKey := base64.StdEncoding.EncodeToString(key.Marshal())
 			compareKey := fmt.Sprintf("%s %s", key.Type(), encodeKey)
-			if _, err := s.sshStore.Get(compareKey); err != nil {
+			if err := s.data().GetPublicKey(compareKey, nil); err != nil {
 				return nil, fmt.Errorf("pubkey %v not in database", compareKey)
 			}
 			return &ssh.Permissions{

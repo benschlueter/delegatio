@@ -9,6 +9,7 @@ import (
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/kubernetes"
+	"github.com/benschlueter/delegatio/internal/storewrapper"
 	"go.uber.org/zap"
 )
 
@@ -18,7 +19,7 @@ func InitalizeChallenges(ctx context.Context, log *zap.Logger, kubeClient *kuber
 		log.With(zap.Error(err)).Error("failed to CreateStorageClass")
 		return err
 	}
-	etcdStore := kubeClient.Client.SharedStore
+	stWrapper := storewrapper.StoreWrapper{Store: kubeClient.Client.SharedStore}
 
 	for namespace := range config.Challenges {
 		if err := kubeClient.Client.CreateNamespace(ctx, namespace); err != nil {
@@ -34,15 +35,15 @@ func InitalizeChallenges(ctx context.Context, log *zap.Logger, kubeClient *kuber
 			log.With(zap.Error(err)).Error("failed to CreatePersistentVolumeClaim")
 			return err
 		}
-		if err := etcdStore.Put(namespace, []byte{0x1}); err != nil {
+		if err := stWrapper.PutChallenge(namespace, nil); err != nil {
 			return err
 		}
 	}
 	for publicKey, realName := range config.PubKeyToUser {
-		if err := etcdStore.Put(publicKey, []byte(realName)); err != nil {
+		if err := stWrapper.PutPublicKey(publicKey, realName); err != nil {
 			return err
 		}
-		log.Info("added user to etcd", zap.String("publicKey", publicKey), zap.String("realName", realName))
+		log.Info("added user to store", zap.String("publicKey", publicKey), zap.String("realName", realName))
 	}
 
 	return nil

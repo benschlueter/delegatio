@@ -17,16 +17,11 @@ import (
 	"go.uber.org/zap"
 )
 
-func getKubernetesData(logger *zap.Logger) (store.Store, error) {
-	var client *kubernetes.Client
+func etcdConnector(logger *zap.Logger, client *kubernetes.Client) (store.Store, error) {
 	var err error
 	var ns string
 	_, err = os.Stat("./admin.conf")
 	if errors.Is(err, os.ErrNotExist) {
-		client, err = kubernetes.NewK8sClient(logger.Named("k8sAPI"), "")
-		if err != nil {
-			return nil, err
-		}
 		// ns is not ready when container spawns
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -37,10 +32,6 @@ func getKubernetesData(logger *zap.Logger) (store.Store, error) {
 		}
 	} else {
 		ns = "ssh"
-		client, err = kubernetes.NewK8sClient(logger.Named("k8sAPI"), "./admin.conf")
-		if err != nil {
-			return nil, err
-		}
 	}
 	logger.Info("namespace", zap.String("namespace", ns))
 	configData, err := client.Client.GetConfigMapData(context.Background(), ns, "etcd-credentials")
