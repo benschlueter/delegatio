@@ -67,8 +67,14 @@ func main() {
 	}
 	store, err := etcdConnector(logger, client)
 	if err != nil {
-		panic(err)
+		logger.With(zap.Error(err)).DPanic("connecting to etcd")
 	}
+	keys, err := storewrapper.StoreWrapper{Store: store}.GetAllKeys()
+	if err != nil {
+		logger.With(zap.Error(err)).DPanic("getting all keys from etcd")
+	}
+	logger.Debug("data in store", zap.Strings("keys", keys))
+
 	server := NewSSHServer(client, logger, store)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -89,10 +95,6 @@ func NewSSHServer(client *kubernetes.Client, log *zap.Logger, storage store.Stor
 	}
 }
 
-func (s *sshServer) data() storewrapper.StoreWrapper {
-	return storewrapper.StoreWrapper{Store: s.sshStore}
-}
-
 func (s *sshServer) StartServer(ctx context.Context) {
 	// In the latest version of crypto/ssh (after Go 1.3), the SSH server type has been removed
 	// in favour of an SSH connection type. A ssh.ServerConn is created by passing an existing
@@ -102,13 +104,13 @@ func (s *sshServer) StartServer(ctx context.Context) {
 		// Function is called to determine if the user is allowed to connect with the ssh server
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
 			s.log.Info("publickeycallback called", zap.String("user", conn.User()), zap.Binary("session", conn.SessionID()))
-			if err := s.data().GetChallenge(conn.User(), nil); err != nil {
-				return nil, fmt.Errorf("user %s not in database", conn.User())
+			if ok, err := s.data().ChallengeExists(conn.User()); err != nil || !ok {
+				return nil, fmt.Errorf("user %s not in database or internal store error %w", conn.User(), err)
 			}
 			encodeKey := base64.StdEncoding.EncodeToString(key.Marshal())
 			compareKey := fmt.Sprintf("%s %s", key.Type(), encodeKey)
-			if err := s.data().GetPublicKey(compareKey, nil); err != nil {
-				return nil, fmt.Errorf("pubkey %v not in database", compareKey)
+			if ok, err := s.data().PublicKeyExists(compareKey); err != nil || !ok {
+				return nil, fmt.Errorf("pubkey %v not in database or internal store error %w", compareKey, err)
 			}
 			return &ssh.Permissions{
 				Extensions: map[string]string{
@@ -200,6 +202,10 @@ func (s *sshServer) periodicLogs(done <-chan struct{}) {
 			return
 		}
 	}
+}
+
+func (s *sshServer) data() storewrapper.StoreWrapper {
+	return storewrapper.StoreWrapper{Store: s.sshStore}
 }
 
 func registerSignalHandler(cancelContext context.CancelFunc, done chan<- struct{}, log *zap.Logger) {

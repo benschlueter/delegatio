@@ -35,15 +35,15 @@ func InitalizeChallenges(ctx context.Context, log *zap.Logger, kubeClient *kuber
 			log.With(zap.Error(err)).Error("failed to CreatePersistentVolumeClaim")
 			return err
 		}
-		if err := stWrapper.PutChallenge(namespace, nil); err != nil {
+		if err := stWrapper.PutChallengeData(namespace, nil); err != nil {
 			return err
 		}
 	}
 	for publicKey, realName := range config.PubKeyToUser {
-		if err := stWrapper.PutPublicKey(publicKey, realName); err != nil {
+		if err := stWrapper.PutPublicKeyData(publicKey, realName); err != nil {
 			return err
 		}
-		log.Info("added user to store", zap.String("publicKey", publicKey), zap.String("realName", realName))
+		log.Info("added user to store", zap.String("publicKey", publicKey), zap.Any("userinfo", realName))
 	}
 
 	return nil
