@@ -52,12 +52,12 @@ func (s StoreWrapper) PutPublicKey(pubkey string, target any) error {
 	if err != nil {
 		return err
 	}
-	return s.Store.Put(challengeLocationPrefix+pubkey, publicKeyData)
+	return s.Store.Put(publicKeyPrefix+pubkey, publicKeyData)
 }
 
 // GetPublicKey gets data associated with the publicKey.
 func (s StoreWrapper) GetPublicKey(publickey string, target any) error {
-	publicKeyData, err := s.Store.Get(challengeLocationPrefix + publickey)
+	publicKeyData, err := s.Store.Get(publicKeyPrefix + publickey)
 	if err != nil {
 		return err
 	}
