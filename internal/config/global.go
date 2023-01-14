@@ -7,21 +7,18 @@ package config
 import (
 	"encoding/json"
 	"os"
+	"time"
 )
 
-// UserConfiguration is the configuration for the user.
-type UserConfiguration struct {
-	PubKeyToUser map[string]UserInformation      `yaml:"pubkeysToUser" json:"pubkeysToUser"`
-	Challenges   map[string]ChallengeInformation `yaml:"challenges" json:"challenges"`
-}
-
-// UserInformation holds the data for a user.
-type UserInformation struct {
-	RealName string
-}
-
-// ChallengeInformation holds the data for a challenge.
-type ChallengeInformation struct{}
+// ClusterConfiguration is the configuration for the cluster.
+// Infrastructure and Kubernetes configdata is stored here.
+var (
+	ClusterConfiguration = ClusterConfig{
+		NumberOfWorkers: 2,
+		NumberOfMasters: 1,
+	}
+	CleanUpTimeout = 10 * time.Second
+)
 
 // GetExampleConfig writes an example config to config.json.
 func GetExampleConfig() *UserConfiguration {

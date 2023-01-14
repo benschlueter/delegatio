@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/url"
 
+	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/infrastructure/utils"
 	"github.com/benschlueter/delegatio/internal/kubernetes"
 	"go.uber.org/zap"
@@ -54,7 +55,7 @@ func InitializeSSH(ctx context.Context, log *zap.Logger, kubeClient *kubernetes.
 		return err
 	}
 
-	if err := kubeClient.Client.CreateDeployment(ctx, sshNamespaceName, "ssh-relay", 2); err != nil {
+	if err := kubeClient.Client.CreateDeployment(ctx, sshNamespaceName, "ssh-relay", int32(config.ClusterConfiguration.NumberOfWorkers)); err != nil {
 		return err
 	}
 	if err := kubeClient.Client.CreateService(ctx, sshNamespaceName, "ssh-relay"); err != nil {

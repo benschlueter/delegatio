@@ -9,12 +9,11 @@ import (
 	"strconv"
 	"sync"
 
+	"github.com/benschlueter/delegatio/internal/config"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
 	"libvirt.org/go/libvirt"
 )
-
-const numNodes = 3
 
 // LibvirtInstance is a wrapper around libvirt.
 type LibvirtInstance struct {
@@ -77,7 +76,9 @@ func (l *LibvirtInstance) CreateInstance(id string) (err error) {
 // InitializeKubernetes initializes kubernetes on the infrastructure.
 func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context, k8sConfig []byte) (err error) {
 	g, ctxGo := errgroup.WithContext(ctx)
-	for i := 0; i < numNodes; i++ {
+	for i := 0; i < config.ClusterConfiguration.NumberOfWorkers+config.ClusterConfiguration.NumberOfMasters; i++ {
+		// the wrapper is necessary to prevent an update of the loop variable.
+		// without it, it would race and have the same value all the time.
 		func(id int) {
 			g.Go(func() error {
 				return l.CreateInstance(strconv.Itoa(id))
@@ -115,7 +116,7 @@ func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context, k8sConfig []
 	}
 
 	g, ctxGo = errgroup.WithContext(ctx)
-	for i := 1; i < numNodes; i++ {
+	for i := 1; i < config.ClusterConfiguration.NumberOfWorkers+config.ClusterConfiguration.NumberOfMasters; i++ {
 		func(id int) {
 			g.Go(func() error {
 				return l.JoinClustergRPC(ctxGo, "delegatio-"+strconv.Itoa(id), kubeadmJoinToken)

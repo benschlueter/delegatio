@@ -8,6 +8,7 @@ import (
 	"encoding/json"
 	"errors"
 
+	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/store"
 )
 
@@ -59,6 +60,27 @@ func (s StoreWrapper) ChallengeExists(challengeName string) (bool, error) {
 	return true, nil
 }
 
+// GetAllChallenges gets all challenge names.
+func (s StoreWrapper) GetAllChallenges() (map[string]config.ChallengeInformation, error) {
+	chIterator, err := s.Store.Iterator(challengeLocationPrefix)
+	if err != nil {
+		return nil, err
+	}
+	challenges := make(map[string]config.ChallengeInformation)
+	for chIterator.HasNext() {
+		key, err := chIterator.GetNext()
+		if err != nil {
+			return nil, err
+		}
+		var challenge config.ChallengeInformation
+		if err := s.GetChallengeData(key, &challenge); err != nil {
+			return nil, err
+		}
+		challenges[key] = challenge
+	}
+	return challenges, nil
+}
+
 // PutPublicKeyData puts a publicKey and associated data of the key into the store.
 func (s StoreWrapper) PutPublicKeyData(pubkey string, target any) error {
 	publicKeyData, err := json.Marshal(target)
@@ -92,20 +114,25 @@ func (s StoreWrapper) PublicKeyExists(publicKey string) (bool, error) {
 	return true, nil
 }
 
-// GetAllChallenges gets all challenge names.
-func (s StoreWrapper) GetAllChallenges(publickey string) (challenges []string, err error) {
-	chIterator, err := s.Store.Iterator(challengeLocationPrefix)
+// GetAllPublicKeys gets all publicKeys and the associated user information.
+func (s StoreWrapper) GetAllPublicKeys() (map[string]config.UserInformation, error) {
+	pubKeyIterator, err := s.Store.Iterator(publicKeyPrefix)
 	if err != nil {
-		return
+		return nil, err
 	}
-	for chIterator.HasNext() {
-		challenge, err := chIterator.GetNext()
+	userData := make(map[string]config.UserInformation)
+	for pubKeyIterator.HasNext() {
+		key, err := pubKeyIterator.GetNext()
 		if err != nil {
 			return nil, err
 		}
-		challenges = append(challenges, challenge)
+		var user config.UserInformation
+		if err := s.GetPublicKeyData(key, &user); err != nil {
+			return nil, err
+		}
+		userData[key] = user
 	}
-	return
+	return userData, nil
 }
 
 // GetAllKeys prints everything in the store.

@@ -24,7 +24,6 @@ func registerSignalHandler(cancelContext context.CancelFunc, done chan<- struct{
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	<-sigs
-
 	log.Info("cancellation signal received")
 	cancelContext()
 	signal.Stop(sigs)
@@ -83,6 +82,10 @@ func main() {
 	log.Info("finished kubernetes initialization")
 
 	<-ctx.Done()
-
+	cleanUpCtx, secondCancel := context.WithTimeout(context.Background(), config.CleanUpTimeout)
+	defer secondCancel()
+	if err := kubewrapper.saveKubernetesState(cleanUpCtx, "./kubernetes-state.json"); err != nil {
+		log.Error("failed to save kubernetes state", zap.Error(err))
+	}
 	<-done
 }

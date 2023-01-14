@@ -6,6 +6,8 @@ package main
 
 import (
 	"context"
+	"encoding/json"
+	"os"
 
 	"github.com/benschlueter/delegatio/cli/apps"
 	"github.com/benschlueter/delegatio/internal/config"
@@ -48,5 +50,16 @@ func (kW *kubeWrapper) createKubernetes(ctx context.Context, creds *utils.EtcdCr
 }
 
 func (kW *kubeWrapper) saveKubernetesState(ctx context.Context, configFile string) error {
+	configData, err := kW.kubeClient.Client.GetStoreUserData()
+	if err != nil {
+		return err
+	}
+	byteData, err := json.Marshal(configData)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(configFile, byteData, 0o600); err != nil {
+		return err
+	}
 	return nil
 }
