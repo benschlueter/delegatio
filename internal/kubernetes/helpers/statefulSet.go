@@ -47,8 +47,8 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 					},
 				},
 				Spec: coreAPI.PodSpec{
-					ServiceAccountName:           "development",
-					AutomountServiceAccountToken: &automountServiceAccountToken,
+					/* 					ServiceAccountName:           "development",
+					   					AutomountServiceAccountToken: &automountServiceAccountToken, */
 					Containers: []coreAPI.Container{
 						{
 							Name:  "archlinux-container-ssh",
@@ -84,7 +84,7 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 							VolumeSource: coreAPI.VolumeSource{
 								PersistentVolumeClaim: &coreAPI.PersistentVolumeClaimVolumeSource{
 									// ClaimName: fmt.Sprintf("pvc-%s-statefulset-0", userID),
-									ClaimName: "nfs-storage",
+									ClaimName: challengeNamespace,
 								},
 							},
 						},
@@ -100,6 +100,26 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 	_, err := k.Client.AppsV1().StatefulSets(challengeNamespace).Create(ctx, &sSet, metaAPI.CreateOptions{})
 
 	return err
+}
+
+// CreateStatefulSetForUser creates want waits for the statefulSet.
+func (k *Client) CreateStatefulSetForUser(ctx context.Context, challengeNamespace, userID string) error {
+	exists, err := k.NamespaceExists(ctx, challengeNamespace)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		if err := k.CreateNamespace(ctx, challengeNamespace); err != nil {
+			return err
+		}
+	}
+	if err := k.CreateChallengeStatefulSet(ctx, challengeNamespace, userID); err != nil {
+		return err
+	}
+	if err := k.WaitForStatefulSet(ctx, challengeNamespace, userID, 20*time.Second); err != nil {
+		return err
+	}
+	return k.WaitForPodRunning(ctx, challengeNamespace, userID, 4*time.Minute)
 }
 
 // WaitForStatefulSet waits for a statefulSet to be active.

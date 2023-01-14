@@ -6,6 +6,8 @@ package kubernetes
 
 import (
 	"context"
+	"net"
+	"net/url"
 	"time"
 
 	"github.com/benschlueter/delegatio/internal/kubernetes/helm"
@@ -37,7 +39,16 @@ func NewK8sClient(logger *zap.Logger, kubeconfigPath string) (*Client, error) {
 
 // InstallCilium installs cilium in the cluster.
 func (k *Client) InstallCilium(ctx context.Context) error {
-	return helm.Install(ctx, k.logger.Named("helm"), "cilium")
+	u, err := url.Parse(k.Client.RestConfig.Host)
+	if err != nil {
+		return err
+	}
+	k.logger.Info("endpoint", zap.String("api", u.Host))
+	host, _, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		return err
+	}
+	return helm.Install(ctx, k.logger.Named("helm"), "cilium", host)
 }
 
 // CreateAndWaitForRessources creates the ressources for a user in a namespace.
@@ -47,9 +58,9 @@ func (k *Client) CreateAndWaitForRessources(ctx context.Context, namespace, user
 		return err
 	}
 	if !exists {
-		if err := k.Client.CreateServiceAccount(ctx, "testchallenge1", "development"); err != nil {
+		/* 		if err := k.Client.CreateServiceAccount(ctx, namespace, "development"); err != nil {
 			return err
-		}
+		} */
 		/* 		if err := k.Client.CreateClusterRoleBinding(ctx, "testchallenge1", "development"); err != nil {
 			return err
 		} */

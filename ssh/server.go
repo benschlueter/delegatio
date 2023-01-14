@@ -22,6 +22,7 @@ import (
 
 	"github.com/benschlueter/delegatio/internal/kubernetes"
 	"github.com/benschlueter/delegatio/internal/store"
+	"github.com/benschlueter/delegatio/internal/storewrapper"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
@@ -64,10 +65,16 @@ func main() {
 			logger.With(zap.Error(err)).DPanic("failed to create k8s client")
 		}
 	}
-	store, err := getKubernetesData(logger)
+	store, err := etcdConnector(logger, client)
 	if err != nil {
-		panic(err)
+		logger.With(zap.Error(err)).DPanic("connecting to etcd")
 	}
+	keys, err := storewrapper.StoreWrapper{Store: store}.GetAllKeys()
+	if err != nil {
+		logger.With(zap.Error(err)).DPanic("getting all keys from etcd")
+	}
+	logger.Debug("data in store", zap.Strings("keys", keys))
+
 	server := NewSSHServer(client, logger, store)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
@@ -97,13 +104,13 @@ func (s *sshServer) StartServer(ctx context.Context) {
 		// Function is called to determine if the user is allowed to connect with the ssh server
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
 			s.log.Info("publickeycallback called", zap.String("user", conn.User()), zap.Binary("session", conn.SessionID()))
-			if _, err := s.sshStore.Get(conn.User()); err != nil {
-				return nil, fmt.Errorf("user %s not in database", conn.User())
+			if ok, err := s.data().ChallengeExists(conn.User()); err != nil || !ok {
+				return nil, fmt.Errorf("user %s not in database or internal store error %w", conn.User(), err)
 			}
 			encodeKey := base64.StdEncoding.EncodeToString(key.Marshal())
 			compareKey := fmt.Sprintf("%s %s", key.Type(), encodeKey)
-			if _, err := s.sshStore.Get(compareKey); err != nil {
-				return nil, fmt.Errorf("pubkey %v not in database", compareKey)
+			if ok, err := s.data().PublicKeyExists(compareKey); err != nil || !ok {
+				return nil, fmt.Errorf("pubkey %v not in database or internal store error %w", compareKey, err)
 			}
 			return &ssh.Permissions{
 				Extensions: map[string]string{
@@ -195,6 +202,10 @@ func (s *sshServer) periodicLogs(done <-chan struct{}) {
 			return
 		}
 	}
+}
+
+func (s *sshServer) data() storewrapper.StoreWrapper {
+	return storewrapper.StoreWrapper{Store: s.sshStore}
 }
 
 func registerSignalHandler(cancelContext context.CancelFunc, done chan<- struct{}, log *zap.Logger) {

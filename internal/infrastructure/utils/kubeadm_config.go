@@ -35,6 +35,8 @@ func InitConfiguration() KubeadmInitYAML {
 			LocalAPIEndpoint: kubeadm.APIEndpoint{
 				BindPort: 6443,
 			},
+			// kube-proxy will be replaced by cilium.
+			SkipPhases: []string{"addon/kube-proxy"},
 		},
 		ClusterConfiguration: kubeadm.ClusterConfiguration{
 			TypeMeta: v1.TypeMeta{

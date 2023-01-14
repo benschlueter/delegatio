@@ -9,7 +9,9 @@ import (
 	"fmt"
 )
 
-// Store is the interface for persistence.
+// Store is the interface for persistent store.
+// Currently two backends are supported,
+// stdstore (mainly for testing) and etcd for production.
 type Store interface {
 	// BeginTransaction starts a new transaction.
 	BeginTransaction() (Transaction, error)

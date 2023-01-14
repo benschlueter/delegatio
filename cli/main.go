@@ -11,6 +11,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/infrastructure"
 
 	"go.uber.org/zap"
@@ -23,7 +24,6 @@ func registerSignalHandler(cancelContext context.CancelFunc, done chan<- struct{
 	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
 
 	<-sigs
-
 	log.Info("cancellation signal received")
 	cancelContext()
 	signal.Stop(sigs)
@@ -69,14 +69,23 @@ func main() {
 
 	creds, err := createInfrastructure(ctx, log, lInstance)
 	if err != nil {
-		log.With(zap.Error(err)).DPanic("failed to initialize infrastructure")
+		log.With(zap.Error(err)).DPanic("create infrastructure")
 	}
 	log.Info("finished infrastructure initialization")
-	if err := createKubernetes(ctx, log, creds); err != nil {
+	kubewrapper, err := NewKubeWrapper(log.Named("kubeWrapper"), "./admin.conf")
+	if err != nil {
+		log.With(zap.Error(err)).DPanic("new kubeWrapper")
+	}
+	if err := kubewrapper.createKubernetes(ctx, creds, config.GetExampleConfig()); err != nil {
 		log.With(zap.Error(err)).DPanic("failed to initialize kubernetes")
 	}
 	log.Info("finished kubernetes initialization")
 
 	<-ctx.Done()
+	cleanUpCtx, secondCancel := context.WithTimeout(context.Background(), config.CleanUpTimeout)
+	defer secondCancel()
+	if err := kubewrapper.saveKubernetesState(cleanUpCtx, "./kubernetes-state.json"); err != nil {
+		log.Error("failed to save kubernetes state", zap.Error(err))
+	}
 	<-done
 }

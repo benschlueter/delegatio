@@ -5,12 +5,13 @@
 package helpers
 
 import (
-	"context"
+	"errors"
 	"sync"
-	"time"
 
+	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/infrastructure/utils"
 	"github.com/benschlueter/delegatio/internal/store"
+	"github.com/benschlueter/delegatio/internal/storewrapper"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
@@ -62,6 +63,9 @@ func NewClient(logger *zap.Logger, kubeconfigPath string) (kubeClient *Client, e
 
 // ConnectToStore connects to the etcd store.
 func (k *Client) ConnectToStore(creds *utils.EtcdCredentials, endpoints []string) error {
+	if k.SharedStore != nil {
+		k.logger.Info("client is already connected to store, reconnecting")
+	}
 	sharedStore, err := store.NewEtcdStore(endpoints, k.logger.Named("etcd"), creds.CaCertData, creds.PeerCertData, creds.KeyData)
 	if err != nil {
 		return err
@@ -70,27 +74,21 @@ func (k *Client) ConnectToStore(creds *utils.EtcdCredentials, endpoints []string
 	return nil
 }
 
-// GetClient returns the kubernetes client.
-func (k *Client) GetClient() kubernetes.Interface {
-	return k.Client
-}
-
-// CreateStatefulSetForUser creates want waits for the statefulSet.
-func (k *Client) CreateStatefulSetForUser(ctx context.Context, challengeNamespace, userID string) error {
-	exists, err := k.NamespaceExists(ctx, challengeNamespace)
+// GetStoreUserData saves the relevant store data to a config file.
+func (k *Client) GetStoreUserData() (data *config.UserConfiguration, err error) {
+	if k.SharedStore == nil {
+		k.logger.Info("client is not connected to etcd")
+		return nil, errors.New("client is not connected to etcd")
+	}
+	stWrapper := storewrapper.StoreWrapper{Store: k.SharedStore}
+	challenges, err := stWrapper.GetAllChallenges()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	if !exists {
-		if err := k.CreateNamespace(ctx, challengeNamespace); err != nil {
-			return err
-		}
+	userData, err := stWrapper.GetAllPublicKeys()
+	if err != nil {
+		return nil, err
 	}
-	if err := k.CreateChallengeStatefulSet(ctx, challengeNamespace, userID); err != nil {
-		return err
-	}
-	if err := k.WaitForStatefulSet(ctx, challengeNamespace, userID, 20*time.Second); err != nil {
-		return err
-	}
-	return k.WaitForPodRunning(ctx, challengeNamespace, userID, 4*time.Minute)
+	data = &config.UserConfiguration{PubKeyToUser: userData, Challenges: challenges}
+	return data, nil
 }
