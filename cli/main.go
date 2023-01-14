@@ -70,14 +70,19 @@ func main() {
 
 	creds, err := createInfrastructure(ctx, log, lInstance)
 	if err != nil {
-		log.With(zap.Error(err)).DPanic("failed to initialize infrastructure")
+		log.With(zap.Error(err)).DPanic("create infrastructure")
 	}
 	log.Info("finished infrastructure initialization")
-	if err := createKubernetes(ctx, log, creds, config.GetExampleConfig()); err != nil {
+	kubewrapper, err := NewKubeWrapper(log.Named("kubeWrapper"), "./admin.conf")
+	if err != nil {
+		log.With(zap.Error(err)).DPanic("new kubeWrapper")
+	}
+	if err := kubewrapper.createKubernetes(ctx, creds, config.GetExampleConfig()); err != nil {
 		log.With(zap.Error(err)).DPanic("failed to initialize kubernetes")
 	}
 	log.Info("finished kubernetes initialization")
 
 	<-ctx.Done()
+
 	<-done
 }

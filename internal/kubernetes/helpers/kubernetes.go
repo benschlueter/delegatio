@@ -5,9 +5,7 @@
 package helpers
 
 import (
-	"context"
 	"sync"
-	"time"
 
 	"github.com/benschlueter/delegatio/internal/infrastructure/utils"
 	"github.com/benschlueter/delegatio/internal/store"
@@ -70,27 +68,3 @@ func (k *Client) ConnectToStore(creds *utils.EtcdCredentials, endpoints []string
 	return nil
 }
 
-// GetClient returns the kubernetes client.
-func (k *Client) GetClient() kubernetes.Interface {
-	return k.Client
-}
-
-// CreateStatefulSetForUser creates want waits for the statefulSet.
-func (k *Client) CreateStatefulSetForUser(ctx context.Context, challengeNamespace, userID string) error {
-	exists, err := k.NamespaceExists(ctx, challengeNamespace)
-	if err != nil {
-		return err
-	}
-	if !exists {
-		if err := k.CreateNamespace(ctx, challengeNamespace); err != nil {
-			return err
-		}
-	}
-	if err := k.CreateChallengeStatefulSet(ctx, challengeNamespace, userID); err != nil {
-		return err
-	}
-	if err := k.WaitForStatefulSet(ctx, challengeNamespace, userID, 20*time.Second); err != nil {
-		return err
-	}
-	return k.WaitForPodRunning(ctx, challengeNamespace, userID, 4*time.Minute)
-}

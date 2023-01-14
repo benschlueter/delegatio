@@ -15,24 +15,38 @@ import (
 	"go.uber.org/zap"
 )
 
-func createKubernetes(ctx context.Context, log *zap.Logger, creds *utils.EtcdCredentials, config *config.UserConfiguration) error {
-	kubeClient, err := kubernetes.NewK8sClient(log.Named("k8sAPI"), "./admin.conf")
-	if err != nil {
-		log.With(zap.Error(err)).Error("failed to connect to Kubernetes")
-		return err
-	}
+// kubeWrapper is a wrapper around internal kubernets.Client.
+type kubeWrapper struct {
+	kubeClient *kubernetes.Client
+	logger     *zap.Logger
+}
 
-	if err := kubeClient.InstallCilium(ctx); err != nil {
-		log.With(zap.Error(err)).Error("failed to install helm charts")
+// NewKubeWrapper returns a new kubeWrapper.
+func NewKubeWrapper(logger *zap.Logger, adminConfPath string) (*kubeWrapper, error) {
+	kubeClient, err := kubernetes.NewK8sClient(logger.Named("k8sAPI"), adminConfPath)
+	if err != nil {
+		logger.With(zap.Error(err)).Error("failed to connect to Kubernetes")
+		return nil, err
+	}
+	return &kubeWrapper{kubeClient: kubeClient, logger: logger}, nil
+}
+
+func (kW *kubeWrapper) createKubernetes(ctx context.Context, creds *utils.EtcdCredentials, config *config.UserConfiguration) error {
+	if err := kW.kubeClient.InstallCilium(ctx); err != nil {
+		kW.logger.With(zap.Error(err)).Error("failed to install helm charts")
 		return err
 	}
-	if err := apps.InitializeSSH(ctx, log, kubeClient, creds); err != nil {
-		log.With(zap.Error(err)).Error("failed to deploy ssh config")
+	if err := apps.InitializeSSH(ctx, kW.logger.Named("ssh"), kW.kubeClient, creds); err != nil {
+		kW.logger.With(zap.Error(err)).Error("failed to deploy ssh config")
 		return err
 	}
-	if err := apps.InitalizeChallenges(ctx, log, kubeClient, config); err != nil {
-		log.With(zap.Error(err)).Error("failed to deploy challenges")
+	if err := apps.InitalizeChallenges(ctx, kW.logger.Named("challenges"), kW.kubeClient, config); err != nil {
+		kW.logger.With(zap.Error(err)).Error("failed to deploy challenges")
 		return err
 	}
+	return nil
+}
+
+func (kW *kubeWrapper) saveKubernetesState(ctx context.Context, configFile string) error {
 	return nil
 }

@@ -102,6 +102,26 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 	return err
 }
 
+// CreateStatefulSetForUser creates want waits for the statefulSet.
+func (k *Client) CreateStatefulSetForUser(ctx context.Context, challengeNamespace, userID string) error {
+	exists, err := k.NamespaceExists(ctx, challengeNamespace)
+	if err != nil {
+		return err
+	}
+	if !exists {
+		if err := k.CreateNamespace(ctx, challengeNamespace); err != nil {
+			return err
+		}
+	}
+	if err := k.CreateChallengeStatefulSet(ctx, challengeNamespace, userID); err != nil {
+		return err
+	}
+	if err := k.WaitForStatefulSet(ctx, challengeNamespace, userID, 20*time.Second); err != nil {
+		return err
+	}
+	return k.WaitForPodRunning(ctx, challengeNamespace, userID, 4*time.Minute)
+}
+
 // WaitForStatefulSet waits for a statefulSet to be active.
 func (k *Client) WaitForStatefulSet(ctx context.Context, namespace, statefulSetName string, timeout time.Duration) error {
 	return wait.PollImmediate(time.Second, timeout, isStatefulSetActive(ctx, k.Client, statefulSetName, namespace))
