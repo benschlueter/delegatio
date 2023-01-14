@@ -49,7 +49,7 @@ func (kW *kubeWrapper) createKubernetes(ctx context.Context, creds *utils.EtcdCr
 	return nil
 }
 
-func (kW *kubeWrapper) saveKubernetesState(ctx context.Context, configFile string) error {
+func (kW *kubeWrapper) saveKubernetesState(_ context.Context, configFile string) error {
 	configData, err := kW.kubeClient.Client.GetStoreUserData()
 	if err != nil {
 		return err
