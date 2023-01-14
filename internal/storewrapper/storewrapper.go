@@ -7,6 +7,7 @@ package storewrapper
 import (
 	"encoding/json"
 	"errors"
+	"strings"
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/store"
@@ -72,6 +73,7 @@ func (s StoreWrapper) GetAllChallenges() (map[string]config.ChallengeInformation
 		if err != nil {
 			return nil, err
 		}
+		key = strings.TrimPrefix(key, challengeLocationPrefix)
 		var challenge config.ChallengeInformation
 		if err := s.GetChallengeData(key, &challenge); err != nil {
 			return nil, err
@@ -126,6 +128,7 @@ func (s StoreWrapper) GetAllPublicKeys() (map[string]config.UserInformation, err
 		if err != nil {
 			return nil, err
 		}
+		key = strings.TrimPrefix(key, publicKeyPrefix)
 		var user config.UserInformation
 		if err := s.GetPublicKeyData(key, &user); err != nil {
 			return nil, err
