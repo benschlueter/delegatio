@@ -21,6 +21,9 @@ func (k *Client) CreateStorageClass(ctx context.Context, name string, reclaimPol
 		},
 		ObjectMeta: v1.ObjectMeta{
 			Name: name,
+			Annotations: map[string]string{
+				"storageclass.kubernetes.io/is-default-class": "true",
+			},
 		},
 		Provisioner:   "kubernetes.io/nfs",
 		ReclaimPolicy: &reclaimPolicy,

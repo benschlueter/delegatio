@@ -37,6 +37,8 @@ func Install(ctx context.Context, logger *zap.Logger, name, apiServerAddr string
 		"kubeProxyReplacement": "strict",
 		"k8sServicePort":       "6443",
 		"k8sServiceHost":       apiServerAddr,
+		/* 		"prometheus.enabled":          "true",
+		   		"operator.prometheus.enabled": true, */
 	}
 
 	rel, err := iCli.RunWithContext(ctx, chart, vals)

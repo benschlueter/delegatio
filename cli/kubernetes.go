@@ -13,6 +13,7 @@ import (
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/infrastructure/utils"
 	"github.com/benschlueter/delegatio/internal/kubernetes"
+	v1 "k8s.io/api/core/v1"
 
 	"go.uber.org/zap"
 )
@@ -44,6 +45,14 @@ func (kW *kubeWrapper) createKubernetes(ctx context.Context, creds *utils.EtcdCr
 	}
 	if err := apps.InitalizeChallenges(ctx, kW.logger.Named("challenges"), kW.kubeClient, config); err != nil {
 		kW.logger.With(zap.Error(err)).Error("failed to deploy challenges")
+		return err
+	}
+	if err := kW.kubeClient.Client.CreatePersistentVolume(ctx, "prometheus-2", string(v1.ReadWriteOnce)); err != nil {
+		kW.logger.With(zap.Error(err)).Error("failed to create persistent volume")
+		return err
+	}
+	if err := kW.kubeClient.Client.CreatePersistentVolume(ctx, "prometheus-1", string(v1.ReadWriteOnce)); err != nil {
+		kW.logger.With(zap.Error(err)).Error("failed to create persistent volume")
 		return err
 	}
 	return nil
