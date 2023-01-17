@@ -13,11 +13,6 @@ import (
 
 // Install installs the given helm chart.
 func Install(ctx context.Context, logger *zap.Logger, name, apiServerAddr string) error {
-	// chartPath := "/home/bschlueter/University/Github/delegatio/internal/kubernetes/helm/charts/" + name
-	chart, err := loader.Load("https://github.com/cilium/charts/raw/master/cilium-1.12.5.tgz")
-	if err != nil {
-		return err
-	}
 	settings := cli.New()
 	settings.KubeConfig = "./admin.conf"
 
@@ -33,6 +28,15 @@ func Install(ctx context.Context, logger *zap.Logger, name, apiServerAddr string
 	iCli.ReleaseName = "cilium"
 	iCli.Namespace = "kube-system"
 	iCli.CreateNamespace = true
+	path, err := iCli.LocateChart("https://github.com/cilium/charts/raw/master/cilium-1.12.5.tgz", settings)
+	if err != nil {
+		return err
+	}
+	logger.Info("helm chart located", zap.String("path", path))
+	chart, err := loader.Load(path)
+	if err != nil {
+		return err
+	}
 	vals := map[string]interface{}{
 		"kubeProxyReplacement": "strict",
 		"k8sServicePort":       "6443",
