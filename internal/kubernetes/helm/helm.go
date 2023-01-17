@@ -13,8 +13,8 @@ import (
 
 // Install installs the given helm chart.
 func Install(ctx context.Context, logger *zap.Logger, name, apiServerAddr string) error {
-	chartPath := "/home/bschlueter/University/Github/delegatio/internal/kubernetes/helm/charts/" + name
-	chart, err := loader.Load(chartPath)
+	// chartPath := "/home/bschlueter/University/Github/delegatio/internal/kubernetes/helm/charts/" + name
+	chart, err := loader.Load("https://github.com/cilium/charts/raw/master/cilium-1.12.5.tgz")
 	if err != nil {
 		return err
 	}
