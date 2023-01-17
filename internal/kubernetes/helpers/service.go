@@ -52,7 +52,7 @@ func (k *Client) CreateService(ctx context.Context, namespace, serviceName strin
 			},
 		},
 		Spec: coreAPI.ServiceSpec{
-			Type: coreAPI.ServiceTypeClusterIP,
+			Type: coreAPI.ServiceTypeLoadBalancer,
 			Selector: map[string]string{
 				"app.kubernetes.io/name": serviceName,
 			},

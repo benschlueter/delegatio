@@ -6,7 +6,7 @@ package utils
 
 // EtcdCredentials contains the credentials for etcd.
 type EtcdCredentials struct {
-	PeerCertData []byte // "/etc/kubernetes/pki/etcd/peer.crt"
-	KeyData      []byte // "/etc/kubernetes/pki/etcd/peer.key"
-	CaCertData   []byte // "/etc/kubernetes/pki/etcd/server.crt"
+	PeerCertData []byte // self generated
+	KeyData      []byte // self generated
+	CaCertData   []byte // "/etc/kubernetes/pki/etcd/ca.crt"
 }

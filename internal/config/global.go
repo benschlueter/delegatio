@@ -18,6 +18,8 @@ var (
 		NumberOfMasters: 1,
 	}
 	CleanUpTimeout = 10 * time.Second
+	CiliumPath     = "https://github.com/cilium/charts/raw/master/cilium-1.12.5.tgz"
+	CiliumHash     = "a9211be3d0d43b91aaaece1191a69c1c676a6226194bec7d806111086e620ab8"
 )
 
 // GetExampleConfig writes an example config to config.json.
