@@ -90,8 +90,7 @@ func (k *Client) CreatePodPortForward(ctx context.Context, namespace, podName, p
 	}
 	defer connection.RemoveStreams(dataStream)
 
-	localError := make(chan struct{})
-	remoteDone := make(chan struct{})
+	streamRoutineDone := make(chan struct{})
 
 	go func() {
 		// Copy from the remote side to the local port.
@@ -99,7 +98,7 @@ func (k *Client) CreatePodPortForward(ctx context.Context, namespace, podName, p
 			k.logger.Error("error copying from remote stream to local connection", zap.Error(err))
 		}
 		// inform the select below that the remote copy is done
-		close(remoteDone)
+		streamRoutineDone <- struct{}{}
 	}()
 
 	go func() {
@@ -107,8 +106,9 @@ func (k *Client) CreatePodPortForward(ctx context.Context, namespace, podName, p
 		if _, err := io.Copy(dataStream, channel); err != nil && !strings.Contains(err.Error(), "use of closed network connection") {
 			k.logger.Error("error copying from local connection to remote stream", zap.Error(err))
 			// break out of the select below without waiting for the other copy to finish
-			close(localError)
 		}
+		// inform the select below that the local copy is done
+		streamRoutineDone <- struct{}{}
 	}()
 
 	// wait for either a local->remote error or for copying from remote->local to finish
@@ -118,13 +118,13 @@ func (k *Client) CreatePodPortForward(ctx context.Context, namespace, podName, p
 			k.logger.Error("closing the dataStream", zap.Error(err))
 		}
 		return ctx.Err()
-	case <-remoteDone:
-	case <-localError:
+	case err := <-errorChan:
+		if err := dataStream.Close(); err != nil {
+			k.logger.Error("closing the dataStream", zap.Error(err))
+		}
+		return err
+	case <-streamRoutineDone:
+		k.logger.Info("stream routine done")
+		return nil
 	}
-
-	// if we exited because of an internal kubeapi error we expect that
-	// 1. the error is returned by io.Copy
-	// 2. kubeapi sends additional data over the error stream
-	err = <-errorChan
-	return err
 }

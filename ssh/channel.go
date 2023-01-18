@@ -117,7 +117,6 @@ func (s *SSHChannelHandler) handleShell(ctx context.Context) {
 			s.log.Error("failed to close channel", zap.Error(err))
 		}
 	}()
-
 	// Fire up "kubectl exec" for this session
 	tty := false
 	if s.ptyReq != nil {
