@@ -19,16 +19,28 @@ import (
 
 var version = "0.0.0"
 
-func registerSignalHandler(cancelContext context.CancelFunc, done chan<- struct{}, log *zap.Logger) {
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+func registerSignalHandler(ctx context.Context, log *zap.Logger) (context.Context, context.CancelFunc) {
+	ctx, cancelFunc := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+	stopped := make(chan struct{}, 1)
+	done := make(chan struct{}, 1)
 
-	<-sigs
-	log.Info("cancellation signal received")
-	cancelContext()
-	signal.Stop(sigs)
-	close(sigs)
-	done <- struct{}{}
+	go func() {
+		defer func() {
+			cancelFunc()
+			stopped <- struct{}{}
+		}()
+		select {
+		case <-ctx.Done():
+			log.Info("ctrl+c caught, stopping gracefully")
+		case <-done:
+			log.Info("done signal received, stopping gracefully")
+		}
+	}()
+
+	return ctx, func() {
+		done <- struct{}{}
+		<-stopped
+	}
 }
 
 func main() {
@@ -43,16 +55,13 @@ func main() {
 	defer func() { _ = log.Sync() }()
 	log.Info("starting delegatio cli", zap.String("version", version))
 
-	ctx, cancel := context.WithCancel(context.Background())
+	ctx, cancel := registerSignalHandler(context.Background(), log)
 	defer cancel()
 
 	if imageLocation == "" {
 		flag.Usage()
 		os.Exit(1)
 	}
-
-	done := make(chan struct{})
-	go registerSignalHandler(cancel, done, log)
 
 	lInstance := infrastructure.NewQemu(log.Named("infra"), imageLocation)
 
@@ -87,5 +96,4 @@ func main() {
 	if err := kubewrapper.saveKubernetesState(cleanUpCtx, "./kubernetes-state.json"); err != nil {
 		log.Error("failed to save kubernetes state", zap.Error(err))
 	}
-	<-done
 }
