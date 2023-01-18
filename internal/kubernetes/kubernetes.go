@@ -14,6 +14,7 @@ import (
 	"github.com/benschlueter/delegatio/internal/kubernetes/helpers"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
@@ -94,7 +95,7 @@ func (k *Client) CreatePodPortForward(ctx context.Context, namespace, podName, p
 
 // CreatePersistentVolume creates a shell on the specified pod.
 func (k *Client) CreatePersistentVolume(ctx context.Context, volumeName string) error {
-	return k.Client.CreatePersistentVolume(ctx, volumeName)
+	return k.Client.CreatePersistentVolume(ctx, volumeName, string(v1.ReadWriteMany))
 }
 
 // CreatePersistentVolumeClaim creates a shell on the specified pod.

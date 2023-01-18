@@ -13,7 +13,7 @@ import (
 
 // CreateIngress creates an ingress.
 func (k *Client) CreateIngress(ctx context.Context, namespace string) error {
-	className := "nginx"
+	className := "haproxy"
 	pathType := networkAPI.PathTypePrefix
 
 	ing := networkAPI.Ingress{
@@ -63,19 +63,34 @@ func (k *Client) CreateIngress(ctx context.Context, namespace string) error {
 			IngressClassName: &className,
 		},
 	}
-	if err := k.CreateNamespace(ctx, "ingress-nginx"); err != nil {
-		return err
-	}
-	if err := k.CreateNamespace(ctx, "tcp-services"); err != nil {
-		return err
-	}
-	if err := k.CreateConfigMap(ctx, "tcp-services", "ingress-nginx"); err != nil {
-		return err
-	}
-	if err := k.AddDataToConfigMap(ctx, "tcp-services", "ingress-nginx", "22", "ssh/ssh-relay-service:2200"); err != nil {
-		return err
-	}
 
+	class := networkAPI.IngressClass{
+		TypeMeta: metaAPI.TypeMeta{
+			Kind:       "IngressClass",
+			APIVersion: networkAPI.SchemeGroupVersion.Version,
+		},
+		ObjectMeta: metaAPI.ObjectMeta{
+			Name: className,
+		},
+		Spec: networkAPI.IngressClassSpec{
+			Controller: "haproxy.org/ingress-controller",
+		},
+	}
+	/* 	if err := k.CreateNamespace(ctx, "ingress-nginx"); err != nil {
+	   		return err
+	   	}
+	   	if err := k.CreateNamespace(ctx, "tcp-services"); err != nil {
+	   		return err
+	   	} */
+	if err := k.CreateConfigMap(ctx, "default", "my-tcpservices-configmap"); err != nil {
+		return err
+	}
+	if err := k.AddDataToConfigMap(ctx, "default", "my-tcpservices-configmap", "22", "ssh/ssh-relay-service:2200"); err != nil {
+		return err
+	}
+	if _, err := k.Client.NetworkingV1().IngressClasses().Create(ctx, &class, metaAPI.CreateOptions{}); err != nil {
+		return err
+	}
 	_, err := k.Client.NetworkingV1().Ingresses(namespace).Create(ctx, &ing, metaAPI.CreateOptions{})
 	return err
 }

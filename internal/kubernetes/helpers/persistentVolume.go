@@ -13,7 +13,7 @@ import (
 )
 
 // CreatePersistentVolume creates a persistent volume.
-func (k *Client) CreatePersistentVolume(ctx context.Context, name string) error {
+func (k *Client) CreatePersistentVolume(ctx context.Context, name, accessMode string) error {
 	pVolume := coreAPI.PersistentVolume{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "PersistentVolume",
@@ -24,11 +24,11 @@ func (k *Client) CreatePersistentVolume(ctx context.Context, name string) error 
 		},
 		Spec: coreAPI.PersistentVolumeSpec{
 			Capacity: coreAPI.ResourceList{
-				coreAPI.ResourceStorage: resource.MustParse("5Gi"),
+				coreAPI.ResourceStorage: resource.MustParse("10Gi"),
 			},
 			StorageClassName: "nfs",
 			AccessModes: []coreAPI.PersistentVolumeAccessMode{
-				coreAPI.ReadWriteMany,
+				coreAPI.PersistentVolumeAccessMode(accessMode),
 			},
 			PersistentVolumeReclaimPolicy: coreAPI.PersistentVolumeReclaimPolicy("Retain"),
 			PersistentVolumeSource: coreAPI.PersistentVolumeSource{

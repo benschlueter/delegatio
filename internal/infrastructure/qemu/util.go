@@ -1,12 +1,16 @@
 /* SPDX-License-Identifier: AGPL-3.0-only
 * Copyright (c) Edgeless Systems GmbH
- * Copyright (c) Benedict Schlueter
-*/
+* Copyright (c) Benedict Schlueter
+ */
 
 package qemu
 
 import (
 	"context"
+	"crypto/rand"
+	"crypto/rsa"
+	"crypto/x509"
+	"encoding/pem"
 	"errors"
 	"flag"
 	"fmt"
@@ -40,35 +44,68 @@ func (l *LibvirtInstance) GetEtcdCredentials(ctx context.Context) (*utils.EtcdCr
 	}
 	defer conn.Close()
 	client := vmproto.NewAPIClient(conn)
-	var etcdData utils.EtcdCredentials
 	// Get the peer cert
 	resp, err := client.ReadFile(ctx, &vmproto.ReadFileRequest{
 		Filepath: "/etc/kubernetes/pki/etcd/",
-		Filename: "peer.crt",
+		Filename: "ca.key",
 	})
 	if err != nil {
 		return nil, nil
 	}
-	etcdData.PeerCertData = resp.Content
-	// get the peer key
-	resp, err = client.ReadFile(ctx, &vmproto.ReadFileRequest{
-		Filepath: "/etc/kubernetes/pki/etcd/",
-		Filename: "peer.key",
-	})
-	if err != nil {
-		return nil, nil
-	}
-	etcdData.KeyData = resp.Content
+	caKey := resp.Content
 	// get the CA cert
 	resp, err = client.ReadFile(ctx, &vmproto.ReadFileRequest{
 		Filepath: "/etc/kubernetes/pki/etcd/",
-		Filename: "server.crt",
+		Filename: "ca.crt",
 	})
 	if err != nil {
 		return nil, nil
 	}
-	etcdData.CaCertData = resp.Content
-	return &etcdData, nil
+	caCert := resp.Content
+	return l.generateEtcdCertificate(caCert, caKey)
+}
+
+func (l *LibvirtInstance) generateEtcdCertificate(caCert, caKey []byte) (*utils.EtcdCredentials, error) {
+	pemBlock, _ := pem.Decode(caCert)
+	if pemBlock == nil {
+		return nil, errors.New("no PEM data found in CA cert")
+	}
+	caCertX509, err := x509.ParseCertificate(pemBlock.Bytes)
+	if err != nil {
+		return nil, err
+	}
+	pemBlock, _ = pem.Decode(caKey)
+	if pemBlock == nil {
+		return nil, errors.New("no PEM data found in CA key")
+	}
+	caPrivateKey, err := x509.ParsePKCS1PrivateKey(pemBlock.Bytes)
+	if err != nil {
+		return nil, errors.New("cannot parse pkcs1 CA key pem block")
+	}
+
+	key, err := rsa.GenerateKey(rand.Reader, 4096)
+	if err != nil {
+		return nil, err
+	}
+	// Generate a pem block with the private key
+	keyPem := pem.EncodeToMemory(&pem.Block{
+		Type:  "RSA PRIVATE KEY",
+		Bytes: x509.MarshalPKCS1PrivateKey(key),
+	})
+	l.Log.Info("encode to mem")
+	cert, err := x509.CreateCertificate(rand.Reader, caCertX509, caCertX509, &key.PublicKey, caPrivateKey)
+	if err != nil {
+		return nil, err
+	}
+	certPem := pem.EncodeToMemory(&pem.Block{
+		Type:  "CERTIFICATE",
+		Bytes: cert,
+	})
+	return &utils.EtcdCredentials{
+		PeerCertData: certPem,
+		KeyData:      keyPem,
+		CaCertData:   caCert,
+	}, nil
 }
 
 func (l *LibvirtInstance) uploadBaseImage(ctx context.Context, baseVolume *libvirt.StorageVol) (err error) {

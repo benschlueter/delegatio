@@ -54,6 +54,11 @@ func InitConfiguration() KubeadmInitYAML {
 					"configure-cloud-routes": "false",
 				},
 			},
+			Etcd: kubeadm.Etcd{
+				Local: &kubeadm.LocalEtcd{
+					ExtraArgs: map[string]string{},
+				},
+			},
 		},
 		KubeletConfiguration: kubeletconf.KubeletConfiguration{
 			TypeMeta: v1.TypeMeta{

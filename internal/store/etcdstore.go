@@ -37,13 +37,12 @@ func NewEtcdStore(endpoints []string, logger *zap.Logger, caCert, cert, key []by
 	if caCert != nil && cert != nil && key != nil {
 		caCertPool := x509.NewCertPool()
 		caCertPool.AppendCertsFromPEM(caCert)
-
-		cert, err := tls.X509KeyPair(cert, key)
+		tlsCert, err := tls.X509KeyPair(cert, key)
 		if err != nil {
 			return nil, err
 		}
 		tlsConfig = &tls.Config{
-			Certificates: []tls.Certificate{cert},
+			Certificates: []tls.Certificate{tlsCert},
 			RootCAs:      caCertPool,
 			MinVersion:   tls.VersionTLS12,
 		}
