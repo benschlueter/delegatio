@@ -44,15 +44,13 @@ func NewSSHConnectionHandler(parent *sshServer, connection *ssh.ServerConn, chan
 
 func (s *sshConnectionHandler) handleGlobalConnection(ctx context.Context) {
 	// if the connection is dead terminate it.
-	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
-		cancel()
 		if err := s.connection.Close(); err != nil {
 			s.log.Error("failed to close connection", zap.Error(err))
 		}
 	}()
 
-	go s.keepAlive(ctx, cancel, s.connection)
+	ctx, closeAndWaitForKeepAlive := s.keepAlive(ctx, s.connection)
 
 	s.log.Info("starting ssh session")
 
@@ -81,6 +79,7 @@ func (s *sshConnectionHandler) handleGlobalConnection(ctx context.Context) {
 	// handle channel requests
 	s.handleChannels(ctx)
 	s.log.Info("closing session")
+	closeAndWaitForKeepAlive()
 }
 
 func (s *sshConnectionHandler) handleChannels(ctx context.Context) {
@@ -177,28 +176,39 @@ func (s *sshConnectionHandler) handleChannelTypeDirectTCPIP(ctx context.Context,
 }
 
 // keepAlive sends keep alive requests to the client, if the client is not respong 4 times, deallocate all server ressources.
-func (s *sshConnectionHandler) keepAlive(ctx context.Context, cancel context.CancelFunc, sshConn *ssh.ServerConn) {
-	t := time.NewTicker(10 * time.Second)
-	defer t.Stop()
+func (s *sshConnectionHandler) keepAlive(ctx context.Context, sshConn *ssh.ServerConn) (context.Context, context.CancelFunc) {
+	ctx, cancel := context.WithCancel(ctx)
+	done := make(chan struct{})
 	s.log.Debug("starting keepAlive")
-	retries := 0
-	for {
-		select {
-		case <-t.C:
-			if _, _, err := sshConn.SendRequest("keepalive@golang.org", true, nil); err != nil {
-				s.log.Info("keepAlive did not received a response", zap.Error(err))
-				retries++
-			} else {
-				retries = 0
-			}
+	go func() {
+		t := time.NewTicker(10 * time.Second)
+		defer func() {
+			t.Stop()
+			done <- struct{}{}
+		}()
+		retries := 0
+		for {
+			select {
+			case <-t.C:
+				if _, _, err := sshConn.SendRequest("keepalive@golang.org", true, nil); err != nil {
+					s.log.Info("keepAlive did not received a response", zap.Error(err))
+					retries++
+				} else {
+					retries = 0
+				}
 
-			if retries > 3 {
-				s.log.Info("keepAlive failed 4 times, closing connection")
-				cancel()
+				if retries > 3 {
+					s.log.Info("keepAlive failed 4 times, closing connection")
+					cancel()
+				}
+			case <-ctx.Done():
+				s.log.Debug("stopping keepAlive")
+				return
 			}
-		case <-ctx.Done():
-			s.log.Debug("stopping keepAlive")
-			return
 		}
+	}()
+	return ctx, func() {
+		cancel()
+		<-done
 	}
 }
