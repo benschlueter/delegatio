@@ -20,7 +20,7 @@ func TestMain(m *testing.M) {
 
 var newStore func() (Store, error)
 
-func TestStore(t *testing.T, storeFactory func() (Store, error)) {
+func testStore(t *testing.T, storeFactory func() (Store, error)) {
 	newStore = storeFactory
 	t.Run("basic", TestBasic)
 	t.Run("iterator", TestIterator)

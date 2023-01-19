@@ -3,15 +3,17 @@
  */
 
 // code based on https://gist.github.com/protosam/53cf7970e17e06135f1622fa9955415f#file-basic-sshd-go
-package main
+package connection
 
 import (
 	"context"
-	"encoding/base64"
 	"fmt"
 	"sync"
 	"time"
 
+	"github.com/benschlueter/delegatio/internal/config"
+	"github.com/benschlueter/delegatio/ssh/connection/channels"
+	"github.com/benschlueter/delegatio/ssh/connection/payload"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
@@ -21,28 +23,16 @@ type sshConnectionHandler struct {
 	channel             <-chan ssh.NewChannel
 	connection          *ssh.ServerConn
 	log                 *zap.Logger
-	parent              *sshServer
+	forwardFunc         func(context.Context, *config.KubeForwardConfig) error
+	execFunc            func(context.Context, *config.KubeExecConfig) error
+	createWaitFunc      func(context.Context, *config.KubeRessourceIdentifier) error
 	namespace           string
 	authenticatedUserID string
 	maxKeepAliveRetries int
 }
 
-// NewSSHConnectionHandler returns a sshConnection.
-func NewSSHConnectionHandler(parent *sshServer, connection *ssh.ServerConn, channel <-chan ssh.NewChannel, reqs <-chan *ssh.Request) *sshConnectionHandler {
-	logIdentifier := base64.StdEncoding.EncodeToString(connection.SessionID())
-	return &sshConnectionHandler{
-		connection:          connection,
-		channel:             channel,
-		globalRequests:      reqs,
-		log:                 parent.log.Named(logIdentifier),
-		parent:              parent,
-		namespace:           connection.User(),
-		authenticatedUserID: connection.Permissions.Extensions[authenticatedUserID],
-		maxKeepAliveRetries: 3,
-	}
-}
-
-func (s *sshConnectionHandler) handleGlobalConnection(ctx context.Context) {
+// HandleGlobalConnection handles the global connection and is the entry point for this handler.
+func (s *sshConnectionHandler) HandleGlobalConnection(ctx context.Context) {
 	// if the connection is dead terminate it.
 	defer func() {
 		if err := s.connection.Close(); err != nil {
@@ -68,7 +58,7 @@ func (s *sshConnectionHandler) handleGlobalConnection(ctx context.Context) {
 	}()
 
 	// Check that all kubernetes ressources are ready and usable for future use.
-	if err := s.parent.client.CreateAndWaitForRessources(ctx, s.connection.User(), s.authenticatedUserID); err != nil {
+	if err := s.createWaitFunc(ctx, &config.KubeRessourceIdentifier{Namespace: s.namespace, UserIdentifier: s.authenticatedUserID}); err != nil {
 		s.log.Error("creating/waiting for kubernetes ressources",
 			zap.Error(err),
 			zap.String("userID", s.authenticatedUserID),
@@ -134,17 +124,21 @@ func (s *sshConnectionHandler) handleChannelTypeSession(ctx context.Context, new
 		return
 	}
 
-	channelStruct := NewSSHChannelHandler(s, channel, requests)
-	channelStruct.Serve(ctx)
-	channelStruct.Close()
+	handler, err := channels.NewSessionHandler(s.log.Named("session"), channel, requests, s.namespace, s.authenticatedUserID, s.execFunc)
+	if err != nil {
+		s.log.Error("could not create session handler", zap.Error(err))
+		return
+	}
+	go handler.Serve(ctx)
+	handler.Wait()
 }
 
 // handleChannelTypeDirectTCPIP handles the DirectTCPIP request from the client. We get a channel and should connect it to the
 // Address and Port requested in the ExtraData from the channel.
 // Note that the lifetime of the portForwarding is bound to the channel.
 func (s *sshConnectionHandler) handleChannelTypeDirectTCPIP(ctx context.Context, newChannel ssh.NewChannel) {
-	var payload ForwardTCPChannelOpenPayload
-	err := ssh.Unmarshal(newChannel.ExtraData(), &payload)
+	var tcpipData payload.ForwardTCPChannelOpen
+	err := ssh.Unmarshal(newChannel.ExtraData(), &tcpipData)
 	if err != nil {
 		s.log.Error("could not unmarshal payload", zap.Error(err))
 		err := newChannel.Reject(ssh.ConnectionFailed, fmt.Sprintf("could not unmarshel extradata in channel: %s", newChannel.ChannelType()))
@@ -153,26 +147,19 @@ func (s *sshConnectionHandler) handleChannelTypeDirectTCPIP(ctx context.Context,
 		}
 		return
 	}
-	s.log.Debug("payload", zap.Any("payload", payload))
-
-	channel, _, err := newChannel.Accept()
+	s.log.Debug("payload", zap.Any("payload", tcpipData))
+	channel, requests, err := newChannel.Accept()
 	if err != nil {
 		s.log.Error("could not accept the channel", zap.Error(err))
 		return
 	}
-	// this call will block until the context is cancelled, the channel is closed from the client side, or kubeapi is closing the channel (most likely an error).
-	err = s.parent.client.CreatePodPortForward(ctx, s.namespace, fmt.Sprintf("%s-statefulset-0", s.authenticatedUserID), fmt.Sprint(payload.PortToConnect), channel)
+	handler, err := channels.NewDirectTCPIPHandler(s.log.Named("directtcpip"), channel, requests, s.namespace, s.authenticatedUserID, s.forwardFunc, &tcpipData)
 	if err != nil {
-		s.log.Error("createPodPortForward exited", zap.Error(err))
+		s.log.Error("could not create directtcpip handler", zap.Error(err))
 		return
 	}
-	defer func(log *zap.Logger) {
-		err := channel.Close()
-		if err != nil {
-			log.Error("closing direct TCPIP channel", zap.Error(err))
-		}
-		log.Debug("closed \"DirectTCPIP\" channel")
-	}(s.log)
+	go handler.Serve(ctx)
+	handler.Wait()
 }
 
 // keepAlive sends keep alive requests to the client, if the client is not respong 4 times, deallocate all server ressources.

@@ -10,12 +10,11 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/kubernetes/helm"
 	"github.com/benschlueter/delegatio/internal/kubernetes/helpers"
 	"go.uber.org/zap"
-	"golang.org/x/crypto/ssh"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/client-go/tools/remotecommand"
 )
 
 // Client is the struct used to access kubernetes helpers.
@@ -53,8 +52,8 @@ func (k *Client) InstallCilium(ctx context.Context) error {
 }
 
 // CreateAndWaitForRessources creates the ressources for a user in a namespace.
-func (k *Client) CreateAndWaitForRessources(ctx context.Context, namespace, userID string) error {
-	exists, err := k.Client.StatefulSetExists(ctx, namespace, userID)
+func (k *Client) CreateAndWaitForRessources(ctx context.Context, conf *config.KubeRessourceIdentifier) error {
+	exists, err := k.Client.StatefulSetExists(ctx, conf.Namespace, conf.UserIdentifier)
 	if err != nil {
 		return err
 	}
@@ -68,29 +67,24 @@ func (k *Client) CreateAndWaitForRessources(ctx context.Context, namespace, user
 		/* 		if err := k.Client.CreateSecret(ctx, "development"); err != nil {
 			return err
 		} */
-		if err := k.Client.CreateStatefulSetForUser(ctx, namespace, userID); err != nil {
+		if err := k.Client.CreateStatefulSetForUser(ctx, conf.Namespace, conf.UserIdentifier); err != nil {
 			return err
 		}
 	}
-	if err := k.Client.WaitForPodRunning(ctx, namespace, userID, 1*time.Minute); err != nil {
+	if err := k.Client.WaitForPodRunning(ctx, conf.Namespace, conf.UserIdentifier, 1*time.Minute); err != nil {
 		return err
 	}
 	return nil
 }
 
-// CreatePodShell creates a shell on the specified pod.
-func (k *Client) CreatePodShell(ctx context.Context, namespace, podName string, channel ssh.Channel, resizeQueue remotecommand.TerminalSizeQueue, tty bool) error {
-	return k.Client.CreateExecInPod(ctx, namespace, podName, "bash", channel, channel, channel, resizeQueue, tty)
-}
-
 // ExecuteCommandInPod executes a command in the specified pod.
-func (k *Client) ExecuteCommandInPod(ctx context.Context, namespace, podName, command string, channel ssh.Channel, resizeQueue remotecommand.TerminalSizeQueue, tty bool) error {
-	return k.Client.CreateExecInPod(ctx, namespace, podName, command, channel, channel, channel, resizeQueue, tty)
+func (k *Client) ExecuteCommandInPod(ctx context.Context, conf *config.KubeExecConfig) error {
+	return k.Client.CreateExecInPod(ctx, conf.Namespace, conf.PodName, conf.Command, conf.Communication, conf.Communication, conf.Communication, conf.WinQueue, conf.Tty)
 }
 
 // CreatePodPortForward creates a port forward on the specified pod.
-func (k *Client) CreatePodPortForward(ctx context.Context, namespace, podName, port string, channel ssh.Channel) error {
-	return k.Client.CreatePodPortForward(ctx, namespace, podName, port, channel)
+func (k *Client) CreatePodPortForward(ctx context.Context, conf *config.KubeForwardConfig) error {
+	return k.Client.CreatePodPortForward(ctx, conf.Namespace, conf.PodName, conf.Port, conf.Communication)
 }
 
 // CreatePersistentVolume creates a shell on the specified pod.

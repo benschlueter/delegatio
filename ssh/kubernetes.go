@@ -48,7 +48,7 @@ func etcdConnector(logger *zap.Logger, client *kubernetes.Client) (store.Store, 
 
 // waitForNamespaceMount waits for the namespace file to be mounted and filled.
 func waitForNamespaceMount(ctx context.Context) (string, error) {
-	t := time.NewTicker(500 * time.Millisecond)
+	t := time.NewTicker(100 * time.Millisecond)
 	defer t.Stop()
 	for {
 		select {

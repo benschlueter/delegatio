@@ -4,6 +4,11 @@
 
 package config
 
+import (
+	"golang.org/x/crypto/ssh"
+	"k8s.io/client-go/tools/remotecommand"
+)
+
 // ClusterConfig is the configuration for the cluster.
 type ClusterConfig struct {
 	NumberOfWorkers int
@@ -23,3 +28,27 @@ type UserInformation struct {
 
 // ChallengeInformation holds the data for a challenge.
 type ChallengeInformation struct{}
+
+// KubeExecConfig holds the configuration parsed to the execCommand function.
+type KubeExecConfig struct {
+	Namespace     string
+	PodName       string
+	Command       string
+	Communication ssh.Channel
+	WinQueue      remotecommand.TerminalSizeQueue
+	Tty           bool
+}
+
+// KubeForwardConfig holds the configuration parsed to the forwardCommand function.
+type KubeForwardConfig struct {
+	Namespace     string
+	PodName       string
+	Port          string
+	Communication ssh.Channel
+}
+
+// KubeRessourceIdentifier holds the information to identify a kubernetes ressource.
+type KubeRessourceIdentifier struct {
+	Namespace      string
+	UserIdentifier string
+}
