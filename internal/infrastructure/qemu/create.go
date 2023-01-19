@@ -9,9 +9,24 @@ import (
 	"fmt"
 	"path"
 
+	deepcopy "github.com/barkimedes/go-deepcopy"
 	"github.com/benschlueter/delegatio/internal/infrastructure/qemu/definitions"
+	"go.uber.org/zap"
 	"libvirt.org/go/libvirt"
+	"libvirt.org/go/libvirtxml"
 )
+
+// CreateInstance creates a new instance. The instance consists of a boot image and a domain.
+func (l *LibvirtInstance) CreateInstance(id string) (err error) {
+	l.Log.Debug("creating instance", zap.String("id", id))
+	if err := l.createBootImage("delegatio-" + id); err != nil {
+		return err
+	}
+	if err := l.createDomain("delegatio-" + id); err != nil {
+		return err
+	}
+	return nil
+}
 
 func (l *LibvirtInstance) createStoragePool() error {
 	// Might be needed for renaming in the future
@@ -20,7 +35,6 @@ func (l *LibvirtInstance) createStoragePool() error {
 	if err != nil {
 		return err
 	}
-
 	l.Log.Info("creating storage pool")
 	poolObject, err := l.Conn.StoragePoolDefineXML(poolXMLString, libvirt.STORAGE_POOL_DEFINE_VALIDATE)
 	if err != nil {
@@ -73,7 +87,7 @@ func (l *LibvirtInstance) createBootImage(id string) error {
 		return err
 	}
 	defer func() { _ = storagePool.Free() }()
-	l.Log.Info("creating storage volume 'boot'")
+	l.Log.Info("creating storage volume 'boot'", zap.String("id", id))
 	bootVol, err := storagePool.StorageVolCreateXML(volumeBootXMLString, 0)
 	if err != nil {
 		return fmt.Errorf("error creating libvirt storage volume 'boot': %s", err)
@@ -98,7 +112,11 @@ func (l *LibvirtInstance) createNetwork() error {
 }
 
 func (l *LibvirtInstance) createDomain(id string) error {
-	domainCpy := definitions.DomainXMLConfig
+	domainCpyIface, err := deepcopy.Anything(&definitions.DomainXMLConfig)
+	if err != nil {
+		return err
+	}
+	domainCpy := domainCpyIface.(*libvirtxml.Domain)
 	domainCpy.Name = id
 	domainCpy.Devices.Disks[0].Source.Volume.Volume = id
 	/* 	domainCpy.Devices.Serials[0].Log = &libvirtxml.DomainChardevLog{
@@ -109,7 +127,7 @@ func (l *LibvirtInstance) createDomain(id string) error {
 	if err != nil {
 		return err
 	}
-	l.Log.Info("creating domain")
+	l.Log.Info("creating domain", zap.String("id", id))
 	domain, err := l.Conn.DomainCreateXML(domainXMLString, libvirt.DOMAIN_NONE)
 	if err != nil {
 		return fmt.Errorf("error creating libvirt domain: %s", err)
