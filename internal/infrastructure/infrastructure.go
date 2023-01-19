@@ -25,9 +25,8 @@ type Infrastructure interface {
 // NewQemu creates a new Qemu Infrastructure.
 func NewQemu(log *zap.Logger, imagePath string) Infrastructure {
 	return &qemu.LibvirtInstance{
-		Log:               log,
-		ImagePath:         imagePath,
-		RegisteredDomains: make(map[string]*qemu.DomainInfo),
+		Log:       log,
+		ImagePath: imagePath,
 	}
 }
 

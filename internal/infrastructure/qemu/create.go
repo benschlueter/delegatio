@@ -133,8 +133,5 @@ func (l *LibvirtInstance) createDomain(id string) error {
 		return fmt.Errorf("error creating libvirt domain: %s", err)
 	}
 	defer func() { _ = domain.Free() }()
-	l.ConnMux.Lock()
-	l.RegisteredDomains[id] = &DomainInfo{guestAgentReady: false}
-	l.ConnMux.Unlock()
 	return nil
 }

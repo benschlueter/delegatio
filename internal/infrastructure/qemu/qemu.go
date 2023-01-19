@@ -21,17 +21,11 @@ type LibvirtInstance struct {
 	Conn               *libvirt.Connect
 	Log                *zap.Logger
 	ImagePath          string
-	RegisteredDomains  map[string]*DomainInfo
 	RegisteredNetworks []string
 	RegisteredPools    []string
 	RegisteredDisks    []string
 	CancelMux          sync.Mutex
 	CanelChannels      []chan struct{}
-}
-
-// DomainInfo contains information about a domain.
-type DomainInfo struct {
-	guestAgentReady bool
 }
 
 // ConnectWithInfrastructureService connects to the libvirt instance.
