@@ -2,10 +2,10 @@
  * Copyright (c) Benedict Schlueter
  */
 
-package main
+package payload
 
-// PtyRequestPayload is the payload for a pty request.
-type PtyRequestPayload struct {
+// PtyRequest is the payload for a pty request.
+type PtyRequest struct {
 	Term         string
 	WidthColumns uint32
 	HeightRows   uint32
@@ -14,22 +14,22 @@ type PtyRequestPayload struct {
 	ModeList     []byte
 }
 
-// WindowChangeRequestPayload is the payload for a window-change request.
-type WindowChangeRequestPayload struct {
+// WindowChangeRequest is the payload for a window-change request.
+type WindowChangeRequest struct {
 	WidthColumns uint32
 	HeightRows   uint32
 	WidthPixels  uint32
 	HeightPixels uint32
 }
 
-// SubsystemRequestPayload is the payload for a subsystem request.
-type SubsystemRequestPayload struct {
+// SubsystemRequest is the payload for a subsystem request.
+type SubsystemRequest struct {
 	Subsystem string
 }
 
-// ForwardTCPChannelOpenPayload is the payload for a forward-tcpip channel open request.
+// ForwardTCPChannelOpen is the payload for a forward-tcpip channel open request.
 // RFC 4254 Section 7.2.
-type ForwardTCPChannelOpenPayload struct {
+type ForwardTCPChannelOpen struct {
 	HostToConnect     string
 	PortToConnect     uint32
 	OriginatorAddress string

@@ -98,7 +98,7 @@ func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context, k8sConfig []
 	}
 
 	g, ctxGo := errgroup.WithContext(ctx)
-	for i := config.ClusterConfiguration.NumberOfMasters; i < config.ClusterConfiguration.NumberOfWorkers; i++ {
+	for i := config.ClusterConfiguration.NumberOfMasters; i < config.ClusterConfiguration.NumberOfWorkers+config.ClusterConfiguration.NumberOfMasters; i++ {
 		func(id int) {
 			g.Go(func() error {
 				return l.JoinClustergRPC(ctxGo, "delegatio-"+strconv.Itoa(id), kubeadmJoinToken)

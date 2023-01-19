@@ -23,6 +23,7 @@ import (
 	"github.com/benschlueter/delegatio/internal/kubernetes"
 	"github.com/benschlueter/delegatio/internal/store"
 	"github.com/benschlueter/delegatio/internal/storewrapper"
+	"github.com/benschlueter/delegatio/ssh/connection"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
@@ -39,48 +40,6 @@ type sshServer struct {
 	handleConnWG       *sync.WaitGroup
 	currentConnections int64
 	backingStore       store.Store
-}
-
-func main() {
-	var client *kubernetes.Client
-	var err error
-	zapconf := zap.NewDevelopmentConfig()
-	zapconf.Level.SetLevel(zap.DebugLevel)
-	zapconf.DisableStacktrace = true
-	logger, err := zapconf.Build()
-	if err != nil {
-		logger.With(zap.Error(err)).DPanic("Failed to create logger")
-	}
-	defer func() { _ = logger.Sync() }()
-	_, err = os.Stat("./admin.conf")
-	if errors.Is(err, os.ErrNotExist) {
-		client, err = kubernetes.NewK8sClient(logger.Named("k8sAPI"), "")
-		if err != nil {
-			logger.With(zap.Error(err)).DPanic("failed to create k8s client")
-		}
-	} else {
-		client, err = kubernetes.NewK8sClient(logger.Named("k8sAPI"), "./admin.conf")
-		if err != nil {
-			logger.With(zap.Error(err)).DPanic("failed to create k8s client")
-		}
-	}
-	store, err := etcdConnector(logger, client)
-	if err != nil {
-		logger.With(zap.Error(err)).DPanic("connecting to etcd")
-	}
-	keys, err := storewrapper.StoreWrapper{Store: store}.GetAllKeys()
-	if err != nil {
-		logger.With(zap.Error(err)).DPanic("getting all keys from etcd")
-	}
-	logger.Debug("data in store", zap.Strings("keys", keys))
-
-	server := NewSSHServer(client, logger, store)
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
-
-	done := make(chan struct{})
-	go registerSignalHandler(cancel, done, logger)
-	server.StartServer(ctx)
 }
 
 // NewSSHServer returns a sshServer.
@@ -133,7 +92,6 @@ func (s *sshServer) StartServer(ctx context.Context) {
 	}
 
 	config.AddHostKey(private)
-
 	listener, err := net.Listen("tcp", "0.0.0.0:2200")
 	if err != nil {
 		log.Fatalf("Failed to listen on 2200 (%s)", err)
@@ -184,8 +142,20 @@ func (s *sshServer) validateAndProcessConnection(ctx context.Context, tcpConn ne
 		return
 	}
 	s.log.Info("authentication of connection successful", zap.Binary("session", sshConn.SessionID()))
-	sshConnection := NewSSHConnectionHandler(s, sshConn, chans, reqs)
-	sshConnection.handleGlobalConnection(ctx)
+	builder := connection.NewSSHConnectionHandlerBuilder(s.log, sshConn, chans, reqs)
+	builder.SetExecFunc(s.client.ExecuteCommandInPod)
+	builder.SetForwardFunc(s.client.CreatePodPortForward)
+	builder.SetRessourceFunc(s.client.CreateAndWaitForRessources)
+	builder.SetChannel(chans)
+	builder.SetGlobalRequests(reqs)
+	builder.SetConnection(sshConn)
+	builder.SetLogger(s.log)
+	sshConnHandler, err := builder.Build()
+	if err != nil {
+		s.log.Info("failed to build sshConnHandler", zap.Error(err))
+		return
+	}
+	sshConnHandler.HandleGlobalConnection(ctx)
 }
 
 func (s *sshServer) periodicLogs(done <-chan struct{}) {

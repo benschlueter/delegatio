@@ -74,7 +74,7 @@ func (k *Client) CreatePodPortForward(ctx context.Context, namespace, podName, p
 			errorChan <- fmt.Errorf("error reading from error stream for %s:%s : %v", podName, podPort, err)
 			k.logger.Error("error reading from error stream", zap.Error(err), zap.String("pod", podName), zap.String("port", podPort))
 		case len(message) > 0:
-			errorChan <- fmt.Errorf("error during forward request to kubeapi %%s:%s : %s", podName, podPort, string(message))
+			errorChan <- fmt.Errorf("error during forward request to kubeapi %s:%s : %s", podName, podPort, string(message))
 			k.logger.Error("error during forwarding", zap.String("pod", podName), zap.String("port", podPort), zap.String("message", string(message)))
 		}
 		k.logger.Info("closing errorStream go routine")

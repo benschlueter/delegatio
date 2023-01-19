@@ -76,7 +76,7 @@ func TestEtcdStore(t *testing.T) {
 	defer store.Close()
 
 	// TODO: since the etcd store does network, it should be canceled with a timeout.
-	TestStore(t, func() (Store, error) {
+	testStore(t, func() (Store, error) {
 		return store, nil
 	})
 
