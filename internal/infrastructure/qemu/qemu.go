@@ -59,23 +59,7 @@ func (l *LibvirtInstance) InitializeInfrastructure(ctx context.Context) (err err
 	if err := l.createNetwork(); err != nil {
 		return err
 	}
-	return err
-}
-
-// CreateInstance creates a new instance. The instance consists of a boot image and a domain.
-func (l *LibvirtInstance) CreateInstance(id string) (err error) {
-	if err := l.createBootImage("delegatio-" + id); err != nil {
-		return err
-	}
-	if err := l.createDomain("delegatio-" + id); err != nil {
-		return err
-	}
-	return nil
-}
-
-// InitializeKubernetes initializes kubernetes on the infrastructure.
-func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context, k8sConfig []byte) (err error) {
-	g, ctxGo := errgroup.WithContext(ctx)
+	g, _ := errgroup.WithContext(ctx)
 	for i := 0; i < config.ClusterConfiguration.NumberOfWorkers+config.ClusterConfiguration.NumberOfMasters; i++ {
 		// the wrapper is necessary to prevent an update of the loop variable.
 		// without it, it would race and have the same value all the time.
@@ -88,7 +72,11 @@ func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context, k8sConfig []
 	if err := g.Wait(); err != nil {
 		return err
 	}
+	return err
+}
 
+// InitializeKubernetes initializes kubernetes on the infrastructure.
+func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context, k8sConfig []byte) (err error) {
 	if err := l.blockUntilNetworkIsReady(ctx); err != nil {
 		return err
 	}
@@ -115,8 +103,8 @@ func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context, k8sConfig []
 		return err
 	}
 
-	g, ctxGo = errgroup.WithContext(ctx)
-	for i := 1; i < config.ClusterConfiguration.NumberOfWorkers+config.ClusterConfiguration.NumberOfMasters; i++ {
+	g, ctxGo := errgroup.WithContext(ctx)
+	for i := config.ClusterConfiguration.NumberOfMasters; i < config.ClusterConfiguration.NumberOfWorkers; i++ {
 		func(id int) {
 			g.Go(func() error {
 				return l.JoinClustergRPC(ctxGo, "delegatio-"+strconv.Itoa(id), kubeadmJoinToken)

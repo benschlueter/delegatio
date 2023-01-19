@@ -30,7 +30,7 @@ func createInfrastructure(ctx context.Context, log *zap.Logger, infra infrastruc
 	}
 
 	if err := infra.InitializeKubernetes(ctx, kubeConf); err != nil {
-		log.Error("failed to run Kubernetes", zap.Error(err))
+		log.Error("failed to initialize Kubernetes", zap.Error(err))
 		return nil, err
 	}
 	creds, err := infra.GetEtcdCredentials(ctx)
