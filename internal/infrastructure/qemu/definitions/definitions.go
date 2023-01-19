@@ -247,21 +247,6 @@ var (
 					},
 				},
 			},
-			// Needed for qemu guest agent
-			Channels: []libvirtxml.DomainChannel{
-				{
-					Source: &libvirtxml.DomainChardevSource{
-						UNIX: &libvirtxml.DomainChardevSourceUNIX{
-							Mode: "bind",
-						},
-					},
-					Target: &libvirtxml.DomainChannelTarget{
-						VirtIO: &libvirtxml.DomainChannelTargetVirtIO{
-							Name: "org.qemu.guest_agent.0",
-						},
-					},
-				},
-			},
 			RNGs: []libvirtxml.DomainRNG{
 				{
 					Model: "virtio",
