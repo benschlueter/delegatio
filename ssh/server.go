@@ -32,14 +32,13 @@ const (
 )
 
 // TODO: Add support for multiple users
-// TODO: Add support for vscode ssh extension
 
 type sshServer struct {
 	log                *zap.Logger
 	client             *kubernetes.Client
 	handleConnWG       *sync.WaitGroup
 	currentConnections int64
-	sshStore           store.Store
+	backingStore       store.Store
 }
 
 func main() {
@@ -91,7 +90,7 @@ func NewSSHServer(client *kubernetes.Client, log *zap.Logger, storage store.Stor
 		log:                log,
 		handleConnWG:       &sync.WaitGroup{},
 		currentConnections: 0,
-		sshStore:           storage,
+		backingStore:       storage,
 	}
 }
 
@@ -205,7 +204,7 @@ func (s *sshServer) periodicLogs(done <-chan struct{}) {
 }
 
 func (s *sshServer) data() storewrapper.StoreWrapper {
-	return storewrapper.StoreWrapper{Store: s.sshStore}
+	return storewrapper.StoreWrapper{Store: s.backingStore}
 }
 
 func registerSignalHandler(cancelContext context.CancelFunc, done chan<- struct{}, log *zap.Logger) {
