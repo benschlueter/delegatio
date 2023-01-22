@@ -128,6 +128,7 @@ func (b *ChannelHandlerBuilder) Build() (*ChannelHandler, error) {
 		requests:       b.requests,
 		serveCloseDone: make(chan struct{}),
 		reqData: &callbackData{
+			// TerminalSize handler is not closed at the moment (will be garbage collected anyways)
 			terminalResizer:     NewTerminalSizeHandler(10),
 			log:                 b.logger.Named("channel"),
 			channel:             b.channel,
