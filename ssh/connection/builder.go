@@ -9,6 +9,7 @@ import (
 	"context"
 	"encoding/base64"
 	"errors"
+	"sync"
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"go.uber.org/zap"
@@ -83,6 +84,8 @@ func (s *sshConnectionBuilder) Build() (*sshConnectionHandler, error) {
 	}
 
 	return &sshConnectionHandler{
+		wg:                  &sync.WaitGroup{},
+		maxKeepAliveRetries: 3,
 		connection:          s.connection,
 		channel:             s.channel,
 		globalRequests:      s.globalRequests,
@@ -92,6 +95,5 @@ func (s *sshConnectionBuilder) Build() (*sshConnectionHandler, error) {
 		createWaitFunc:      s.createWaitFunc,
 		namespace:           s.connection.User(),
 		authenticatedUserID: userID,
-		maxKeepAliveRetries: 3,
 	}, nil
 }

@@ -14,10 +14,9 @@ import (
 
 // Infrastructure Interface to create Cluster.
 type Infrastructure interface {
-	BootstrapKubernetes(ctx context.Context, initConfigK8s []byte) error
+	BootstrapKubernetes(ctx context.Context, initConfigK8s []byte) (*config.EtcdCredentials, error)
 	InitializeInfrastructure(ctx context.Context) error
 	ConnectWithInfrastructureService(ctx context.Context, url string) error
-	GetEtcdCredentials(ctx context.Context) (*config.EtcdCredentials, error)
 	TerminateInfrastructure() error
 	TerminateConnection() error
 }

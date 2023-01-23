@@ -17,21 +17,23 @@ import (
 	"libvirt.org/go/libvirt"
 )
 
-func (l *LibvirtInstance) blockUntilNetworkIsReady(ctx context.Context) error {
-	domain, err := l.Conn.LookupDomainByName("delegatio-0")
+func (l *LibvirtInstance) blockUntilNetworkIsReady(ctx context.Context, id string) (string, error) {
+	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	defer cancel()
+	domain, err := l.Conn.LookupDomainByName(id)
 	if err != nil {
-		return err
+		return "", err
 	}
 	defer func() { _ = domain.Free() }()
 	for {
 		select {
 		case <-ctx.Done():
 			l.Log.Info("context cancel during waiting for vm init")
-			return ctx.Err()
+			return "", ctx.Err()
 		default:
 			iface, err := domain.ListAllInterfaceAddresses(libvirt.DOMAIN_INTERFACE_ADDRESSES_SRC_LEASE)
 			if err != nil {
-				return err
+				return "", err
 			}
 			var ip string
 			for _, netInterface := range iface {
@@ -45,7 +47,7 @@ func (l *LibvirtInstance) blockUntilNetworkIsReady(ctx context.Context) error {
 				}
 			}
 			if len(ip) > 0 {
-				return nil
+				return ip, nil
 			}
 		}
 	}
