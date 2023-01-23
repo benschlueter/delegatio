@@ -7,10 +7,8 @@ package qemu
 import (
 	"context"
 	"strconv"
-	"sync"
 
 	"github.com/benschlueter/delegatio/internal/config"
-	"github.com/benschlueter/delegatio/internal/infrastructure/configurer"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 
@@ -20,14 +18,12 @@ import (
 
 // LibvirtInstance is a wrapper around libvirt.
 type LibvirtInstance struct {
-	ConnMux            sync.Mutex
 	Conn               *libvirt.Connect
 	Log                *zap.Logger
 	ImagePath          string
 	RegisteredNetworks []string
 	RegisteredPools    []string
 	RegisteredDisks    []string
-	vmAgent            *configurer.Configurer
 }
 
 // NewQemu creates a new Qemu Infrastructure.
@@ -63,6 +59,7 @@ func (l *LibvirtInstance) InitializeInfrastructure(ctx context.Context) (err err
 	if err := l.createNetwork(); err != nil {
 		return err
 	}
+	l.Log.Info("waiting for instances to be created")
 	g, _ := errgroup.WithContext(ctx)
 	for i := 0; i < config.ClusterConfiguration.NumberOfWorkers+config.ClusterConfiguration.NumberOfMasters; i++ {
 		// the wrapper is necessary to prevent an update of the loop variable.
@@ -76,45 +73,37 @@ func (l *LibvirtInstance) InitializeInfrastructure(ctx context.Context) (err err
 	if err := g.Wait(); err != nil {
 		return err
 	}
+	l.Log.Info("waiting for instances to become ready")
 	return err
 }
 
 // BootstrapKubernetes initializes kubernetes on the infrastructure.
-func (l *LibvirtInstance) BootstrapKubernetes(ctx context.Context, k8sConfig []byte) (err error) {
-	if err := l.blockUntilNetworkIsReady(ctx); err != nil {
-		return err
+func (l *LibvirtInstance) BootstrapKubernetes(ctx context.Context, k8sConfig []byte) (*config.EtcdCredentials, error) {
+	if _, err := l.blockUntilNetworkIsReady(ctx, "delegatio-0"); err != nil {
+		return nil, err
 	}
 	l.Log.Info("network is ready")
 	if err := l.blockUntilDelegatioAgentIsReady(ctx); err != nil {
-		return err
+		return nil, err
 	}
 	l.Log.Info("delegatio-agent is ready")
-	if err := l.InstallKubernetes(ctx, k8sConfig); err != nil {
-		return err
+	agent, err := l.createAgent(ctx)
+	if err != nil {
+		return nil, err
 	}
-	if err := l.createAgent(); err != nil {
-		return err
+	if err := agent.InstallKubernetes(ctx, k8sConfig); err != nil {
+		return nil, err
 	}
 	l.Log.Info("kubernetes init successful")
-	joinToken, err := l.vmAgent.ConfigureKubernetes(ctx)
+	joinToken, err := agent.ConfigureKubernetes(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
 	l.Log.Info("join token generated")
-	// TODO: check if all nodes are ready
-	g, ctxGo := errgroup.WithContext(ctx)
-	for i := config.ClusterConfiguration.NumberOfMasters; i < config.ClusterConfiguration.NumberOfWorkers+config.ClusterConfiguration.NumberOfMasters; i++ {
-		func(id int) {
-			g.Go(func() error {
-				return l.JoinClustergRPC(ctxGo, "delegatio-"+strconv.Itoa(id), joinToken)
-			})
-		}(i)
+	if err := agent.JoinClusterCoordinator(ctx, joinToken); err != nil {
+		return nil, err
 	}
-	if err := g.Wait(); err != nil {
-		return err
-	}
-
-	return err
+	return agent.GetEtcdCredentials(ctx)
 }
 
 // TerminateInfrastructure deletes all resources created by the infrastructure.
@@ -130,9 +119,4 @@ func (l *LibvirtInstance) TerminateInfrastructure() error {
 func (l *LibvirtInstance) TerminateConnection() error {
 	_, err := l.Conn.Close()
 	return err
-}
-
-// GetEtcdCredentials returns the etcd credentials for the instance.
-func (l *LibvirtInstance) GetEtcdCredentials(ctx context.Context) (*config.EtcdCredentials, error) {
-	return l.vmAgent.GetEtcdCredentials(ctx)
 }

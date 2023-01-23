@@ -22,6 +22,7 @@ type sshConnectionHandler struct {
 	globalRequests      <-chan *ssh.Request
 	channel             <-chan ssh.NewChannel
 	connection          *ssh.ServerConn
+	wg                  *sync.WaitGroup
 	log                 *zap.Logger
 	forwardFunc         func(context.Context, *config.KubeForwardConfig) error
 	execFunc            func(context.Context, *config.KubeExecConfig) error
@@ -75,11 +76,10 @@ func (s *sshConnectionHandler) HandleGlobalConnection(ctx context.Context) {
 func (s *sshConnectionHandler) handleChannels(ctx context.Context) {
 	// Service the incoming Channel channel in go routine
 	ctx, cancel := context.WithCancel(ctx)
-	handleChannelWg := &sync.WaitGroup{}
 	defer func() {
 		cancel()
 		s.log.Info("waiting for channels to shutdown gracefully")
-		handleChannelWg.Wait()
+		s.wg.Wait()
 		s.log.Info("channels shutdown gracefully")
 	}()
 	for {
@@ -91,15 +91,15 @@ func (s *sshConnectionHandler) handleChannels(ctx context.Context) {
 				s.log.Debug("global channel closed")
 				return
 			}
-			handleChannelWg.Add(1)
+			s.wg.Add(1)
 			s.log.Debug("handling new global channel request")
-			go s.handleChannel(ctx, handleChannelWg, newChannel)
+			go s.handleChannel(ctx, newChannel)
 		}
 	}
 }
 
-func (s *sshConnectionHandler) handleChannel(ctx context.Context, wg *sync.WaitGroup, newChannel ssh.NewChannel) {
-	defer wg.Done()
+func (s *sshConnectionHandler) handleChannel(ctx context.Context, newChannel ssh.NewChannel) {
+	defer s.wg.Done()
 	// Currently unsupported channel types: "x11", and "forwarded-tcpip".
 	switch newChannel.ChannelType() {
 	case "session":

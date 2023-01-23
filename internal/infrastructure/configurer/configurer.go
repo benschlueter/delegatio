@@ -24,14 +24,16 @@ type Configurer struct {
 	client         *helpers.Client
 	adminConf      []byte
 	controlPlaneIP string
+	workerIPs      map[string]string
 }
 
 // NewConfigurer creates a new agent object.
-func NewConfigurer(log *zap.Logger, controlPlaneIP string) (*Configurer, error) {
+func NewConfigurer(log *zap.Logger, controlPlaneIP string, workerIPs map[string]string) (*Configurer, error) {
 	agentLog := log.Named("kube")
 	return &Configurer{
 		Log:            agentLog,
 		controlPlaneIP: controlPlaneIP,
+		workerIPs:      workerIPs,
 	}, nil
 }
 
@@ -40,7 +42,7 @@ func (a *Configurer) ConfigureKubernetes(ctx context.Context) (*v1beta3.Bootstra
 	if err := a.writeKubeconfigToDisk(ctx); err != nil {
 		return nil, err
 	}
-	if err := a.configureClientGoConnection(); err != nil {
+	if err := a.establishClientGoConnection(); err != nil {
 		return nil, err
 	}
 	a.Log.Info("admin.conf written to disk")
@@ -81,8 +83,8 @@ func (a *Configurer) GetEtcdCredentials(ctx context.Context) (*config.EtcdCreden
 	return a.generateEtcdCertificate(caCert, caKey)
 }
 
-// configureClientGoConnection configures the client-go connection.
-func (a *Configurer) configureClientGoConnection() error {
+// establishClientGoConnection configures the client-go connection.
+func (a *Configurer) establishClientGoConnection() error {
 	kubeHelper, err := helpers.NewClient(a.Log.Named("kube"), "./admin.conf")
 	if err != nil {
 		return err

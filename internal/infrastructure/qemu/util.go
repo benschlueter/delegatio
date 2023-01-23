@@ -10,7 +10,9 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 
+	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/infrastructure/configurer"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
@@ -76,17 +78,20 @@ loop:
 	return nil
 }
 
-func (l *LibvirtInstance) createAgent() error {
+func (l *LibvirtInstance) createAgent(ctx context.Context) (*configurer.Configurer, error) {
 	controlPlaneIP, err := l.getControlPlaneIP()
 	if err != nil {
-		return err
+		return nil, err
 	}
-	vmAgent, err := configurer.NewConfigurer(l.Log, controlPlaneIP)
+	workerInstance, err := l.getWorkerInstanceIPs(ctx)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	l.vmAgent = vmAgent
-	return nil
+	vmAgent, err := configurer.NewConfigurer(l.Log, controlPlaneIP, workerInstance)
+	if err != nil {
+		return nil, err
+	}
+	return vmAgent, nil
 }
 
 func (l *LibvirtInstance) getControlPlaneIP() (ip string, err error) {
@@ -113,4 +118,17 @@ func (l *LibvirtInstance) getControlPlaneIP() (ip string, err error) {
 		return "", fmt.Errorf("could not find ip addr of domain")
 	}
 	return
+}
+
+func (l *LibvirtInstance) getWorkerInstanceIPs(ctx context.Context) (map[string]string, error) {
+	nameToIP := make(map[string]string)
+	for id := config.ClusterConfiguration.NumberOfMasters; id < config.ClusterConfiguration.NumberOfWorkers+config.ClusterConfiguration.NumberOfMasters; id++ {
+		node := "delegatio-" + strconv.Itoa(id)
+		ip, err := l.blockUntilNetworkIsReady(ctx, node)
+		if err != nil {
+			return nil, err
+		}
+		nameToIP[node] = ip
+	}
+	return nameToIP, nil
 }

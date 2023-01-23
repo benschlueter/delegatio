@@ -29,14 +29,9 @@ func createInfrastructure(ctx context.Context, log *zap.Logger, infra infrastruc
 	if err != nil {
 		log.With(zap.Error(err)).DPanic("failed to get kubeConfig")
 	}
-
-	if err := infra.BootstrapKubernetes(ctx, kubeConf); err != nil {
-		log.Error("failed to initialize Kubernetes", zap.Error(err))
-		return nil, err
-	}
-	creds, err := infra.GetEtcdCredentials(ctx)
+	creds, err := infra.BootstrapKubernetes(ctx, kubeConf)
 	if err != nil {
-		log.Error("failed to obtain etcd credentials", zap.Error(err))
+		log.Error("failed to initialize Kubernetes", zap.Error(err))
 		return nil, err
 	}
 
