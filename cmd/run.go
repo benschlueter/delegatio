@@ -13,6 +13,7 @@ import (
 	"github.com/benschlueter/delegatio/client/core"
 	"github.com/benschlueter/delegatio/client/vmapi"
 	"github.com/benschlueter/delegatio/client/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/internal/config"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
@@ -26,14 +27,14 @@ var version = "0.0.0"
 func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger,
 ) {
 	defer func() { _ = zapLoggerCore.Sync() }()
-	zapLoggerCore.Info("starting coordinator", zap.String("version", version))
+	zapLoggerCore.Info("starting delegatio agent", zap.String("version", version), zap.String("commit", config.Commit))
 
 	core, err := core.NewCore(zapLoggerCore)
 	if err != nil {
 		zapLoggerCore.Fatal("failed to create core", zap.Error(err))
 	}
 
-	vapi := vmapi.New(zapLoggerCore.Named("pubapi"), core, dialer)
+	vapi := vmapi.New(zapLoggerCore.Named("vmapi"), core, dialer)
 
 	zapLoggergRPC := zapLoggerCore.Named("gRPC")
 	grpcServer := grpc.NewServer(

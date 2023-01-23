@@ -53,8 +53,7 @@ func main() {
 		log.With(zap.Error(err)).DPanic("Failed to create logger")
 	}
 	defer func() { _ = log.Sync() }()
-	log.Info("starting delegatio cli", zap.String("version", version))
-
+	log.Info("starting delegatio cli", zap.String("version", version), zap.String("commit", config.Commit))
 	ctx, cancel := registerSignalHandler(context.Background(), log)
 	defer cancel()
 

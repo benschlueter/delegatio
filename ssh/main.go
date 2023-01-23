@@ -9,24 +9,12 @@ import (
 	"context"
 	"errors"
 	"os"
-	"runtime/debug"
 
+	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/kubernetes"
 	"github.com/benschlueter/delegatio/internal/storewrapper"
 	"go.uber.org/zap"
 )
-
-// commit is the git commit hash of the build.
-var commit = func() string {
-	if info, ok := debug.ReadBuildInfo(); ok {
-		for _, setting := range info.Settings {
-			if setting.Key == "vcs.revision" {
-				return setting.Value
-			}
-		}
-	}
-	return ""
-}()
 
 func main() {
 	var client *kubernetes.Client
@@ -38,7 +26,7 @@ func main() {
 	if err != nil {
 		logger.With(zap.Error(err)).DPanic("Failed to create logger")
 	}
-	logger.Info("Starting delegatio ssh server", zap.String("commit", commit))
+	logger.Info("Starting delegatio ssh server", zap.String("commit", config.Commit))
 	defer func() { _ = logger.Sync() }()
 	_, err = os.Stat("./admin.conf")
 	if errors.Is(err, os.ErrNotExist) {
