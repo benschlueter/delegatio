@@ -1,10 +1,32 @@
 # Delegatio
 
-Delegatio is a framework that can be used to manage homework of, i.e., system security classes. The aim is to provide an infrastructure to let students work on problems independent of their hardware. The current architecture consists of three parts. 
-1. Infrastructure is used to initialize the infrastructure and spawn a Kubernetes cluster. Currently, only local VMs with libvirt are supported. However, depending on the use case, we might add support to initialize a cluster in a public cloud.
-2. Kubernetes is used to set up Kubernetes and deploy the necessary extensions. The extensions include storage (currently under development) and the CNI plugin. 
-3. ssh (plan is to merge it into Kubernetes) let users connect to cluster pods using their ssh keys. Each key is assigned a unique identity to be able to grade the solutions in the future. 
+Delegatio is a framework that can be used to manage homework of system security classes. The aim is to provide a infrastructure to let students work on problems independent of their hardware. 
 
+# Installation
+```bash
+pacman -S libvirt qemu-full go mkosi make cmake 
+```
+`systemd 253` or newer is required to build the images, otherwise a local systemd tree is needed [mkosi issue](https://github.com/systemd/mkosi/issues/1290)
+
+# Build
+```bash
+mkdir build
+cd build
+cmake ..
+make
+```
+
+# Run
+```bash
+./cli --path=../images/image.qcow2
+```
+By default the ssh image will be pulled from Github, and deployed in Kubernetes. For testing you can also start the ssh binary locally with an exported kubeconfig `export KUBECONFIG=/path/to/admin.conf`.
+
+Connecting is possible by sshing into the daemon, either on the kubernetes nodes or on localhost.
+```bash
+ssh testchallenge2@localhost -p 2200 -i ~/.ssh/id_rsa
+```
+You must provide your public keys in `./internal/config/global.go` (will be changed to read a config file soon) 
 
 ## TODO
 * Unittests
