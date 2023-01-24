@@ -83,7 +83,7 @@ func (a *Configurer) getJoinToken(ctx context.Context, ttl time.Duration) (*kube
 	}
 	// create the token in Kubernetes
 	a.Log.Info("creating bootstrap token in Kubernetes")
-	if err := tokenphase.CreateNewTokens(a.client.Client, []tokenv1.BootstrapToken{token}); err != nil {
+	if err := tokenphase.CreateNewTokens(a.client, []tokenv1.BootstrapToken{token}); err != nil {
 		return nil, fmt.Errorf("creating bootstrap token: %w", err)
 	}
 	// parse Kubernetes CA certs
