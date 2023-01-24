@@ -20,8 +20,8 @@ import (
 	"strings"
 	"time"
 
-	"github.com/benschlueter/delegatio/client/config"
-	"github.com/benschlueter/delegatio/client/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/agent/config"
+	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
 	"github.com/benschlueter/delegatio/internal/infrastructure/utils"
 	"github.com/google/shlex"
 	"go.uber.org/multierr"

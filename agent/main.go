@@ -9,7 +9,7 @@ import (
 	"log"
 	"net"
 
-	"github.com/benschlueter/delegatio/client/config"
+	"github.com/benschlueter/delegatio/agent/config"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"go.uber.org/zap"
 )

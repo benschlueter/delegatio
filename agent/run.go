@@ -10,9 +10,9 @@ import (
 	"net"
 	"sync"
 
-	"github.com/benschlueter/delegatio/client/core"
-	"github.com/benschlueter/delegatio/client/vmapi"
-	"github.com/benschlueter/delegatio/client/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/agent/core"
+	"github.com/benschlueter/delegatio/agent/vmapi"
+	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
 	"github.com/benschlueter/delegatio/internal/config"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
