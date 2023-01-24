@@ -43,8 +43,8 @@ func Install(ctx context.Context, logger *zap.Logger, name, apiServerAddr string
 	sha256 := sha256.Sum256(chartFile)
 	sha256String := fmt.Sprintf("%x", sha256)
 	logger.Info("sha256", zap.String("hash", sha256String))
-	if sha256String != config.CiliumHash {
-		return fmt.Errorf("sha256 mismatch: got %s, expected %s", sha256String, config.CiliumHash)
+	if sha256String != config.Cilium256Hash {
+		return fmt.Errorf("sha256 mismatch: got %s, expected %s", sha256String, config.Cilium256Hash)
 	}
 	chart, err := loader.Load(path)
 	if err != nil {

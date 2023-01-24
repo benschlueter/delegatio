@@ -17,14 +17,21 @@ var (
 		NumberOfWorkers: 2,
 		NumberOfMasters: 1,
 	}
+	// CleanUpTimeout is the timeout after which the save-state function is canceled when ctrl+c is pressed in the cli.
 	CleanUpTimeout = 10 * time.Second
-	CiliumPath     = "https://github.com/cilium/charts/raw/master/cilium-1.12.5.tgz"
-	CiliumHash     = "a9211be3d0d43b91aaaece1191a69c1c676a6226194bec7d806111086e620ab8"
+	// CiliumPath is the path to the cilium helm chart.
+	CiliumPath = "https://github.com/cilium/charts/raw/master/cilium-1.12.5.tgz"
+	// Cilium256Hash is the sha256 hash of the cilium helm chart.
+	Cilium256Hash = "a9211be3d0d43b91aaaece1191a69c1c676a6226194bec7d806111086e620ab8"
 )
 
 const (
 	// AuthenticatedUserID key for a hash map, where the sha256 fingerprint of the public key is saved.
 	AuthenticatedUserID = "sha256Fingerprint"
+	// UserContainerImage is the image used for the challenge containers.
+	UserContainerImage = "ghcr.io/benschlueter/delegatio/archimage:0.1"
+	// SSHContainerImage is the image used for the ssh containers.
+	SSHContainerImage = "ghcr.io/benschlueter/delegatio/ssh:0.1"
 )
 
 // GetExampleConfig writes an example config to config.json.

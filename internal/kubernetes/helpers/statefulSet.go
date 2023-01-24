@@ -9,6 +9,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/benschlueter/delegatio/internal/config"
 	appsAPI "k8s.io/api/apps/v1"
 	coreAPI "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
@@ -52,7 +53,7 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 					Containers: []coreAPI.Container{
 						{
 							Name:  "archlinux-container-ssh",
-							Image: "ghcr.io/benschlueter/delegatio/archimage:0.1",
+							Image: config.UserContainerImage,
 							TTY:   true,
 							LivenessProbe: &coreAPI.Probe{
 								ProbeHandler: coreAPI.ProbeHandler{

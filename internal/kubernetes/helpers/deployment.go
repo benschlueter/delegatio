@@ -7,6 +7,7 @@ package helpers
 import (
 	"context"
 
+	"github.com/benschlueter/delegatio/internal/config"
 	appsAPI "k8s.io/api/apps/v1"
 	coreAPI "k8s.io/api/core/v1"
 	metaAPI "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -51,7 +52,7 @@ func (k *Client) CreateDeployment(ctx context.Context, namespace, deploymentName
 					Containers: []coreAPI.Container{
 						{
 							Name:  "ssh-relay",
-							Image: "ghcr.io/benschlueter/delegatio/ssh:0.1",
+							Image: config.SSHContainerImage,
 							TTY:   true,
 							LivenessProbe: &coreAPI.Probe{
 								ProbeHandler: coreAPI.ProbeHandler{
