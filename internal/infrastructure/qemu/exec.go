@@ -8,11 +8,9 @@ import (
 	"context"
 	"fmt"
 	"net"
-	"os"
 
-	"github.com/benschlueter/delegatio/agent/config"
 	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
-	"go.uber.org/multierr"
+	"github.com/benschlueter/delegatio/internal/config"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -20,6 +18,25 @@ import (
 
 	kubeadm "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 )
+
+// InstallKubernetes initializes a kubernetes cluster using the gRPC API.
+func (l *LibvirtInstance) InstallKubernetes(ctx context.Context, kubernetesInitConfiguration []byte) (err error) {
+	ip, err := l.getControlPlaneIP()
+	if err != nil {
+		return err
+	}
+	conn, err := grpc.DialContext(ctx, net.JoinHostPort(ip, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	client := vmproto.NewAPIClient(conn)
+	if err := l.executeWriteInitConfiguration(ctx, client, kubernetesInitConfiguration); err != nil {
+		return err
+	}
+	_, err = l.executeKubeadm(ctx, client)
+	return err
+}
 
 // JoinClustergRPC joins a cluster using the gRPC API.
 func (l *LibvirtInstance) JoinClustergRPC(ctx context.Context, id string, joinToken *kubeadm.BootstrapTokenDiscovery) (err error) {
@@ -60,6 +77,7 @@ func (l *LibvirtInstance) JoinClustergRPC(ctx context.Context, id string, joinTo
 			"join", joinToken.APIServerEndpoint,
 			"--token", joinToken.Token,
 			"--discovery-token-ca-cert-hash", joinToken.CACertHashes[0],
+			"--node-name", id,
 		},
 	})
 	for {
@@ -89,7 +107,9 @@ func (l *LibvirtInstance) executeKubeadm(ctx context.Context, client vmproto.API
 		Args: []string{
 			"init",
 			"--config", "/tmp/kubeadmconf.yaml",
-			"--v=9",
+			"--node-name", "delegatio-0",
+			"--v=1",
+			"--skip-certificate-key-print",
 		},
 	})
 	if err != nil {
@@ -123,63 +143,4 @@ func (l *LibvirtInstance) executeWriteInitConfiguration(ctx context.Context, cli
 		Content:  initConfigKubernetes,
 	})
 	return err
-}
-
-// InitializeKubernetesgRPC initializes a kubernetes cluster using the gRPC API.
-func (l *LibvirtInstance) InitializeKubernetesgRPC(ctx context.Context, initConfigK8s []byte) (output []byte, err error) {
-	ip, err := l.getControlPlaneIP()
-	if err != nil {
-		return nil, err
-	}
-	conn, err := grpc.DialContext(ctx, net.JoinHostPort(ip, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-	client := vmproto.NewAPIClient(conn)
-	if err := l.executeWriteInitConfiguration(ctx, client, initConfigK8s); err != nil {
-		return nil, err
-	}
-	return l.executeKubeadm(ctx, client)
-}
-
-func (l *LibvirtInstance) getKubeconfgRPC(ctx context.Context) (output []byte, err error) {
-	ip, err := l.getControlPlaneIP()
-	if err != nil {
-		return nil, err
-	}
-	conn, err := grpc.DialContext(ctx, net.JoinHostPort(ip, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-	client := vmproto.NewAPIClient(conn)
-	resp, err := client.ReadFile(ctx, &vmproto.ReadFileRequest{
-		Filepath: "/etc/kubernetes",
-		Filename: "/admin.conf",
-	})
-	if err != nil {
-		return
-	}
-	return resp.GetContent(), nil
-}
-
-// WriteKubeconfigToDisk writes the kubeconfig to disk.
-func (l *LibvirtInstance) WriteKubeconfigToDisk(ctx context.Context) (err error) {
-	file, err := l.getKubeconfgRPC(ctx)
-	if err != nil {
-		return err
-	}
-	adminConfigFile, err := os.Create("admin.conf")
-	defer func() {
-		err = multierr.Append(err, adminConfigFile.Close())
-	}()
-	if err != nil {
-		return fmt.Errorf("failed to create admin config file %v: %w", adminConfigFile.Name(), err)
-	}
-
-	if _, err := adminConfigFile.Write(file); err != nil {
-		return fmt.Errorf("writing kubeadm init yaml config %v failed: %w", adminConfigFile.Name(), err)
-	}
-	return
 }

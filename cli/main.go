@@ -62,7 +62,10 @@ func main() {
 		os.Exit(1)
 	}
 
-	lInstance := infrastructure.NewQemu(log.Named("infra"), imageLocation)
+	lInstance, err := infrastructure.NewQemu(log.Named("infra"), imageLocation)
+	if err != nil {
+		log.With(zap.Error(err)).DPanic("error creating infrastructure")
+	}
 
 	defer func(logger *zap.Logger, l infrastructure.Infrastructure) {
 		if err := l.TerminateInfrastructure(); err != nil {

@@ -52,3 +52,10 @@ type KubeRessourceIdentifier struct {
 	Namespace      string
 	UserIdentifier string
 }
+
+// EtcdCredentials contains the credentials for etcd.
+type EtcdCredentials struct {
+	PeerCertData []byte // self generated
+	KeyData      []byte // self generated
+	CaCertData   []byte // "/etc/kubernetes/pki/etcd/ca.crt"
+}

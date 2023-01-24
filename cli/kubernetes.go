@@ -11,7 +11,6 @@ import (
 
 	"github.com/benschlueter/delegatio/cli/apps"
 	"github.com/benschlueter/delegatio/internal/config"
-	"github.com/benschlueter/delegatio/internal/infrastructure/utils"
 	"github.com/benschlueter/delegatio/internal/kubernetes"
 	v1 "k8s.io/api/core/v1"
 
@@ -34,7 +33,7 @@ func NewKubeWrapper(logger *zap.Logger, adminConfPath string) (*kubeWrapper, err
 	return &kubeWrapper{kubeClient: kubeClient, logger: logger}, nil
 }
 
-func (kW *kubeWrapper) createKubernetes(ctx context.Context, creds *utils.EtcdCredentials, config *config.UserConfiguration) error {
+func (kW *kubeWrapper) createKubernetes(ctx context.Context, creds *config.EtcdCredentials, config *config.UserConfiguration) error {
 	if err := kW.kubeClient.InstallCilium(ctx); err != nil {
 		kW.logger.With(zap.Error(err)).Error("failed to install helm charts")
 		return err

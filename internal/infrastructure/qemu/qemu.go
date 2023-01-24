@@ -10,7 +10,10 @@ import (
 	"sync"
 
 	"github.com/benschlueter/delegatio/internal/config"
+	"github.com/benschlueter/delegatio/internal/infrastructure/configurer"
+	"go.uber.org/multierr"
 	"go.uber.org/zap"
+
 	"golang.org/x/sync/errgroup"
 	"libvirt.org/go/libvirt"
 )
@@ -24,8 +27,15 @@ type LibvirtInstance struct {
 	RegisteredNetworks []string
 	RegisteredPools    []string
 	RegisteredDisks    []string
-	CancelMux          sync.Mutex
-	CanelChannels      []chan struct{}
+	vmAgent            *configurer.Configurer
+}
+
+// NewQemu creates a new Qemu Infrastructure.
+func NewQemu(log *zap.Logger, imagePath string) (*LibvirtInstance, error) {
+	return &LibvirtInstance{
+		Log:       log,
+		ImagePath: imagePath,
+	}, nil
 }
 
 // ConnectWithInfrastructureService connects to the libvirt instance.
@@ -69,8 +79,8 @@ func (l *LibvirtInstance) InitializeInfrastructure(ctx context.Context) (err err
 	return err
 }
 
-// InitializeKubernetes initializes kubernetes on the infrastructure.
-func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context, k8sConfig []byte) (err error) {
+// BootstrapKubernetes initializes kubernetes on the infrastructure.
+func (l *LibvirtInstance) BootstrapKubernetes(ctx context.Context, k8sConfig []byte) (err error) {
 	if err := l.blockUntilNetworkIsReady(ctx); err != nil {
 		return err
 	}
@@ -79,29 +89,24 @@ func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context, k8sConfig []
 		return err
 	}
 	l.Log.Info("delegatio-agent is ready")
-	output, err := l.InitializeKubernetesgRPC(ctx, k8sConfig)
-	if err != nil {
+	if err := l.InstallKubernetes(ctx, k8sConfig); err != nil {
+		return err
+	}
+	if err := l.createAgent(); err != nil {
 		return err
 	}
 	l.Log.Info("kubernetes init successful")
-	if err := l.WriteKubeconfigToDisk(ctx); err != nil {
-		return err
-	}
-	l.Log.Info("admin.conf written to disk")
-	joinToken, err := l.parseKubeadmOutput(output)
+	joinToken, err := l.vmAgent.ConfigureKubernetes(ctx)
 	if err != nil {
 		return err
 	}
-	kubeadmJoinToken, err := l.parseJoinCommand(joinToken)
-	if err != nil {
-		return err
-	}
-
+	l.Log.Info("join token generated")
+	// TODO: check if all nodes are ready
 	g, ctxGo := errgroup.WithContext(ctx)
 	for i := config.ClusterConfiguration.NumberOfMasters; i < config.ClusterConfiguration.NumberOfWorkers+config.ClusterConfiguration.NumberOfMasters; i++ {
 		func(id int) {
 			g.Go(func() error {
-				return l.JoinClustergRPC(ctxGo, "delegatio-"+strconv.Itoa(id), kubeadmJoinToken)
+				return l.JoinClustergRPC(ctxGo, "delegatio-"+strconv.Itoa(id), joinToken)
 			})
 		}(i)
 	}
@@ -110,4 +115,24 @@ func (l *LibvirtInstance) InitializeKubernetes(ctx context.Context, k8sConfig []
 	}
 
 	return err
+}
+
+// TerminateInfrastructure deletes all resources created by the infrastructure.
+func (l *LibvirtInstance) TerminateInfrastructure() error {
+	var err error
+	err = multierr.Append(err, l.deleteNetwork())
+	err = multierr.Append(err, l.deleteDomain())
+	err = multierr.Append(err, l.deletePool())
+	return err
+}
+
+// TerminateConnection closes the libvirt connection.
+func (l *LibvirtInstance) TerminateConnection() error {
+	_, err := l.Conn.Close()
+	return err
+}
+
+// GetEtcdCredentials returns the etcd credentials for the instance.
+func (l *LibvirtInstance) GetEtcdCredentials(ctx context.Context) (*config.EtcdCredentials, error) {
+	return l.vmAgent.GetEtcdCredentials(ctx)
 }

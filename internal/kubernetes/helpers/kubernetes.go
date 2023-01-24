@@ -9,7 +9,6 @@ import (
 	"sync"
 
 	"github.com/benschlueter/delegatio/internal/config"
-	"github.com/benschlueter/delegatio/internal/infrastructure/utils"
 	"github.com/benschlueter/delegatio/internal/store"
 	"github.com/benschlueter/delegatio/internal/storewrapper"
 	"go.uber.org/zap"
@@ -44,7 +43,7 @@ func NewClient(logger *zap.Logger, kubeconfigPath string) (kubeClient *Client, e
 			return nil, err
 		}
 	}
-	logger.Debug("Using kubeconfig", zap.Any("config", config))
+	logger.Info("generating kubernetes client")
 	// create the clientset
 	client, err := kubernetes.NewForConfig(config)
 	if err != nil {
@@ -56,13 +55,12 @@ func NewClient(logger *zap.Logger, kubeconfigPath string) (kubeClient *Client, e
 		RestConfig: config,
 		requestID:  1,
 		mux:        sync.Mutex{},
-		// etcdClient: cli,
 	}
 	return
 }
 
 // ConnectToStore connects to the etcd store.
-func (k *Client) ConnectToStore(creds *utils.EtcdCredentials, endpoints []string) error {
+func (k *Client) ConnectToStore(creds *config.EtcdCredentials, endpoints []string) error {
 	if k.SharedStore != nil {
 		k.logger.Info("client is already connected to store, reconnecting")
 	}

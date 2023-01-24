@@ -7,25 +7,9 @@ package qemu
 import (
 	"fmt"
 
-	"github.com/benschlueter/delegatio/internal/infrastructure/qemu/definitions"
-	"go.uber.org/multierr"
+	"github.com/benschlueter/delegatio/internal/config/definitions"
 	"libvirt.org/go/libvirt"
 )
-
-// TerminateInfrastructure deletes all resources created by the infrastructure.
-func (l *LibvirtInstance) TerminateInfrastructure() error {
-	var err error
-	err = multierr.Append(err, l.deleteNetwork())
-	err = multierr.Append(err, l.deleteDomain())
-	err = multierr.Append(err, l.deletePool())
-	return err
-}
-
-// TerminateConnection closes the libvirt connection.
-func (l *LibvirtInstance) TerminateConnection() error {
-	_, err := l.Conn.Close()
-	return err
-}
 
 func (l *LibvirtInstance) deleteNetwork() error {
 	nets, err := l.Conn.ListAllNetworks(libvirt.CONNECT_LIST_NETWORKS_ACTIVE)
