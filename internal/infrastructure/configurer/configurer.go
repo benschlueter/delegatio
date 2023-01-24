@@ -6,8 +6,8 @@ package configurer
 
 import (
 	"context"
+	"fmt"
 	"net"
-	"time"
 
 	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
 	"github.com/benschlueter/delegatio/internal/config"
@@ -47,7 +47,11 @@ func (a *Configurer) ConfigureKubernetes(ctx context.Context) (*v1beta3.Bootstra
 		return nil, err
 	}
 	a.Log.Info("admin.conf written to disk")
-	joinToken, err := a.getJoinToken(ctx, 2*time.Minute)
+	caFileContentPem, err := a.getKubernetesRootCert(ctx)
+	if err != nil {
+		return nil, fmt.Errorf("loading ca.crt file: %w", err)
+	}
+	joinToken, err := a.getJoinToken(config.DefaultTimeout, caFileContentPem)
 	if err != nil {
 		return nil, err
 	}

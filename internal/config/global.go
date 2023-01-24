@@ -31,6 +31,8 @@ const (
 	DefaultIP = "0.0.0.0"
 	// PublicAPIport is the port where we can access the public API.
 	PublicAPIport = "9000"
+	// DefaultTimeout for the API.
+	DefaultTimeout = 2 * time.Minute
 	// AuthenticatedUserID key for a hash map, where the sha256 fingerprint of the public key is saved.
 	AuthenticatedUserID = "sha256Fingerprint"
 	// UserContainerImage is the image used for the challenge containers.
