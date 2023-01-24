@@ -10,8 +10,8 @@ import (
 	"net"
 	"os"
 
-	"github.com/benschlueter/delegatio/client/config"
-	"github.com/benschlueter/delegatio/client/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/agent/config"
+	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"

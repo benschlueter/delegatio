@@ -10,7 +10,7 @@ import (
 	"io"
 	"os/exec"
 
-	"github.com/benschlueter/delegatio/client/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
