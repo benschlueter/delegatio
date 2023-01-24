@@ -11,17 +11,18 @@ import (
 
 	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
 	"github.com/benschlueter/delegatio/internal/config"
-	"github.com/benschlueter/delegatio/internal/kubernetes/helpers"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
+	"k8s.io/client-go/kubernetes"
+	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 )
 
 // Configurer communicates with the agent inside the control-plane VM after Kubernetes was initialized.
 type Configurer struct {
 	Log            *zap.Logger
-	client         *helpers.Client
+	client         kubernetes.Interface
 	adminConf      []byte
 	controlPlaneIP string
 	workerIPs      map[string]string
@@ -85,10 +86,15 @@ func (a *Configurer) GetEtcdCredentials(ctx context.Context) (*config.EtcdCreden
 
 // establishClientGoConnection configures the client-go connection.
 func (a *Configurer) establishClientGoConnection() error {
-	kubeHelper, err := helpers.NewClient(a.Log.Named("kube"), "./admin.conf")
+	config, err := clientcmd.BuildConfigFromFlags("", "./admin.conf")
 	if err != nil {
 		return err
 	}
-	a.client = kubeHelper
+	// create the clientset
+	client, err := kubernetes.NewForConfig(config)
+	if err != nil {
+		return err
+	}
+	a.client = client
 	return nil
 }
