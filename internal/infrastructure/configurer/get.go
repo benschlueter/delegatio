@@ -64,7 +64,7 @@ func (a *Configurer) getKubernetesRootCert(ctx context.Context) (output []byte, 
 }
 
 // getJoinToken creates a new bootstrap (join) token, which a node can use to join the cluster.
-func (a *Configurer) getJoinToken(ctx context.Context, ttl time.Duration) (*kubeadmv1beta3.BootstrapTokenDiscovery, error) {
+func (a *Configurer) getJoinToken(ttl time.Duration, caFileContentPem []byte) (*kubeadmv1beta3.BootstrapTokenDiscovery, error) {
 	a.Log.Info("generating new random bootstrap token")
 	rawToken, err := bootstraputil.GenerateBootstrapToken()
 	if err != nil {
@@ -88,10 +88,7 @@ func (a *Configurer) getJoinToken(ctx context.Context, ttl time.Duration) (*kube
 	}
 	// parse Kubernetes CA certs
 	a.Log.Info("Preparing join token for new node")
-	caFileContentPem, err := a.getKubernetesRootCert(ctx)
-	if err != nil {
-		return nil, fmt.Errorf("loading ca.crt file: %w", err)
-	}
+
 	caFileContent, _ := pem.Decode(caFileContentPem)
 	if caFileContent == nil {
 		return nil, errors.New("no PEM data found in CA cert")
