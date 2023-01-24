@@ -11,16 +11,22 @@ import (
 	kubeadm "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 )
 
-// KubeadmInitYAML groups multiple kubernetes config files into one struct.
-type KubeadmInitYAML struct {
+// GetKubeInitConfig returns the init config for kubernetes.
+func GetKubeInitConfig() ([]byte, error) {
+	k8sConfig := initConfiguration()
+	return marshalK8SResources(&k8sConfig)
+}
+
+// kubeadmInitYAML groups multiple kubernetes config files into one struct.
+type kubeadmInitYAML struct {
 	InitConfiguration    kubeadm.InitConfiguration
 	ClusterConfiguration kubeadm.ClusterConfiguration
 	KubeletConfiguration kubeletconf.KubeletConfiguration
 }
 
-// InitConfiguration sets the pre-defined values for kubernetes.
-func InitConfiguration() KubeadmInitYAML {
-	return KubeadmInitYAML{
+// initConfiguration sets the pre-defined values for kubernetes.
+func initConfiguration() kubeadmInitYAML {
+	return kubeadmInitYAML{
 		InitConfiguration: kubeadm.InitConfiguration{
 			TypeMeta: v1.TypeMeta{
 				APIVersion: kubeadm.SchemeGroupVersion.String(),
@@ -36,7 +42,10 @@ func InitConfiguration() KubeadmInitYAML {
 				BindPort: 6443,
 			},
 			// kube-proxy will be replaced by cilium.
-			SkipPhases: []string{"addon/kube-proxy"},
+			SkipPhases: []string{
+				"addon/kube-proxy",
+				"show-join-command",
+			},
 		},
 		ClusterConfiguration: kubeadm.ClusterConfiguration{
 			TypeMeta: v1.TypeMeta{

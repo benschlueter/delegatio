@@ -10,7 +10,7 @@ import (
 	"path"
 
 	deepcopy "github.com/barkimedes/go-deepcopy"
-	"github.com/benschlueter/delegatio/internal/infrastructure/qemu/definitions"
+	"github.com/benschlueter/delegatio/internal/config/definitions"
 	"go.uber.org/zap"
 	"libvirt.org/go/libvirt"
 	"libvirt.org/go/libvirtxml"

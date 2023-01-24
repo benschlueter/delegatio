@@ -13,8 +13,8 @@ import (
 	"k8s.io/apimachinery/pkg/runtime/serializer/json"
 )
 
-// MarshalK8SResources marshals every field of a struct into a k8s resource YAML.
-func MarshalK8SResources(resources interface{}) ([]byte, error) {
+// marshalK8SResources marshals every field of a struct into a k8s resource YAML.
+func marshalK8SResources(resources interface{}) ([]byte, error) {
 	serializer := json.NewYAMLSerializer(json.DefaultMetaFactory, nil, nil)
 	var buf bytes.Buffer
 
