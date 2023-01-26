@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.11)
-project(Delegatio LANGUAGES C VERSION 2.0.0)
+project(Delegatio LANGUAGES C VERSION 0.0.1)
 
 enable_testing()
 
@@ -33,7 +33,7 @@ add_custom_target(images ALL
 #
 add_custom_target(delegatio-agent ALL
   go build -o ${CMAKE_BINARY_DIR}/delegatio-agent
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/cmd
+  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/agent
   BYPRODUCTS delegatio-agent
 )
 

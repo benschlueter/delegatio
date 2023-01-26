@@ -17,18 +17,24 @@ import (
 )
 
 // CreateInstance creates a new instance. The instance consists of a boot image and a domain.
-func (l *LibvirtInstance) CreateInstance(id string) (err error) {
-	l.Log.Debug("creating instance", zap.String("id", id))
-	if err := l.createBootImage("delegatio-" + id); err != nil {
+func (l *libvirtInstance) CreateInstance(number string, controlPlane bool) (err error) {
+	var prefix string
+	if controlPlane {
+		prefix = definitions.DomainPrefixMaster
+	} else {
+		prefix = definitions.DomainPrefixWorker
+	}
+	l.Log.Debug("creating instance", zap.String("num", number), zap.Bool("controlplane", controlPlane))
+	if err := l.createBootImage(prefix + number); err != nil {
 		return err
 	}
-	if err := l.createDomain("delegatio-" + id); err != nil {
+	if err := l.createDomain(prefix + number); err != nil {
 		return err
 	}
 	return nil
 }
 
-func (l *LibvirtInstance) createStoragePool() error {
+func (l *libvirtInstance) createStoragePool() error {
 	// Might be needed for renaming in the future
 	poolXMLCopy := definitions.PoolXMLConfig
 	poolXMLString, err := poolXMLCopy.Marshal()
@@ -51,7 +57,7 @@ func (l *LibvirtInstance) createStoragePool() error {
 	return nil
 }
 
-func (l *LibvirtInstance) createBaseImage(ctx context.Context) error {
+func (l *libvirtInstance) createBaseImage(ctx context.Context) error {
 	volumeBaseXMLString, err := definitions.VolumeBaseXMLConfig.Marshal()
 	if err != nil {
 		return err
@@ -73,7 +79,7 @@ func (l *LibvirtInstance) createBaseImage(ctx context.Context) error {
 	return l.uploadBaseImage(ctx, volumeBaseObject)
 }
 
-func (l *LibvirtInstance) createBootImage(id string) error {
+func (l *libvirtInstance) createBootImage(id string) error {
 	volumeBootXMLCopy := definitions.VolumeBootXMLConfig
 	volumeBootXMLCopy.Name = id
 	volumeBootXMLCopy.Target.Path = path.Join(definitions.LibvirtStoragePoolPath, id)
@@ -97,7 +103,7 @@ func (l *LibvirtInstance) createBootImage(id string) error {
 	return nil
 }
 
-func (l *LibvirtInstance) createNetwork() error {
+func (l *libvirtInstance) createNetwork() error {
 	networkXMLString, err := definitions.NetworkXMLConfig.Marshal()
 	if err != nil {
 		return err
@@ -111,7 +117,7 @@ func (l *LibvirtInstance) createNetwork() error {
 	return nil
 }
 
-func (l *LibvirtInstance) createDomain(id string) error {
+func (l *libvirtInstance) createDomain(id string) error {
 	domainCpyIface, err := deepcopy.Anything(&definitions.DomainXMLConfig)
 	if err != nil {
 		return err

@@ -99,7 +99,7 @@ func (a *Configurer) executeKubeadm(ctx context.Context, client vmproto.APIClien
 		Args: []string{
 			"init",
 			"--config", "/tmp/kubeadmconf.yaml",
-			"--node-name", "delegatio-0",
+			"--node-name", "delegatio-master-0",
 			"--v=1",
 			"--skip-certificate-key-print",
 		},

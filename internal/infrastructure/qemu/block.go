@@ -12,12 +12,13 @@ import (
 
 	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
 	"github.com/benschlueter/delegatio/internal/config"
+	"github.com/benschlueter/delegatio/internal/config/definitions"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"libvirt.org/go/libvirt"
 )
 
-func (l *LibvirtInstance) blockUntilNetworkIsReady(ctx context.Context, id string) (string, error) {
+func (l *libvirtInstance) blockUntilNetworkIsReady(ctx context.Context, id string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	domain, err := l.Conn.LookupDomainByName(id)
@@ -53,10 +54,10 @@ func (l *LibvirtInstance) blockUntilNetworkIsReady(ctx context.Context, id strin
 	}
 }
 
-func (l *LibvirtInstance) blockUntilDelegatioAgentIsReady(ctx context.Context) error {
+func (l *libvirtInstance) blockUntilDelegatioAgentIsReady(ctx context.Context) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
-	domain, err := l.Conn.LookupDomainByName("delegatio-0")
+	domain, err := l.Conn.LookupDomainByName(definitions.DomainPrefixMaster + "0")
 	if err != nil {
 		return err
 	}
@@ -77,7 +78,7 @@ func (l *LibvirtInstance) blockUntilDelegatioAgentIsReady(ctx context.Context) e
 		}
 	}
 	if len(ip) == 0 {
-		return fmt.Errorf("could not get ip addr of VM %s", "delegatio-0")
+		return fmt.Errorf("could not get ip addr of VM %s", definitions.DomainPrefixMaster+"0")
 	}
 	conn, err := grpc.DialContext(ctx, net.JoinHostPort(ip, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
