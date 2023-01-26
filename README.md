@@ -1,6 +1,6 @@
 # Delegatio
 
-Delegatio is a framework that can be used to manage homework of system security classes. The aim is to provide a infrastructure to let students work on problems independent of their hardware. 
+Delegatio is a framework that can be used to manage homework of classes (i.e. system security). The aim is to provide a infrastructure to let students work on problems independent of their hardware. 
 
 # Installation
 ```bash
