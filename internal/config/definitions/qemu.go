@@ -14,6 +14,10 @@ var (
 	LibvirtStoragePoolPath = "/var/lib/libvirt/images/"
 	// BaseDiskName is the name for the immutable base disk, which the VMs use as COW backend.
 	BaseDiskName = "delegatio"
+	// DomainPrefixMaster is the prefix for the controlPlanes.
+	DomainPrefixMaster = "delegatio-master-"
+	// DomainPrefixWorker is the prefix for the workers.
+	DomainPrefixWorker = "delegatio-worker-"
 	// BootDiskName is the name of the boot drive for the VMs, the number of each VM is appended.
 	BootDiskName = "delegatio-boot"
 	// DiskPoolName is the name of the storage pool in which the drives are organized.

@@ -9,23 +9,22 @@ import (
 	"context"
 	"fmt"
 	"io"
-	"os"
 	"strconv"
 
-	"github.com/benschlueter/delegatio/internal/config"
+	"github.com/benschlueter/delegatio/internal/config/definitions"
 	"github.com/benschlueter/delegatio/internal/infrastructure/configurer"
 	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"libvirt.org/go/libvirt"
 )
 
-func (l *LibvirtInstance) uploadBaseImage(ctx context.Context, baseVolume *libvirt.StorageVol) (err error) {
+func (l *libvirtInstance) uploadBaseImage(ctx context.Context, baseVolume storageVolume) (err error) {
 	stream, err := l.Conn.NewStream(libvirt.STREAM_NONBLOCK)
 	if err != nil {
 		return err
 	}
 	defer func() { _ = stream.Free() }()
-	file, err := os.Open(l.ImagePath)
+	file, err := l.fs.Open(l.ImagePath)
 	if err != nil {
 		return fmt.Errorf("error while opening %s: %s", l.ImagePath, err)
 	}
@@ -78,7 +77,26 @@ loop:
 	return nil
 }
 
-func (l *LibvirtInstance) createAgent(ctx context.Context) (*configurer.Configurer, error) {
+func deleteVolumesFromPool(pool storagePool) error {
+	volumes, err := pool.ListAllStorageVolumes(0)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		for _, volume := range volumes {
+			_ = volume.Free()
+		}
+	}()
+	// We own the pool, so we can simply delete all volumes in it.
+	for _, volume := range volumes {
+		if err := volume.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL); err != nil {
+			return fmt.Errorf("volume delete %w", err)
+		}
+	}
+	return nil
+}
+
+func (l *libvirtInstance) createAgent(ctx context.Context) (*configurer.Configurer, error) {
 	controlPlaneIP, err := l.getControlPlaneIP()
 	if err != nil {
 		return nil, err
@@ -94,8 +112,8 @@ func (l *LibvirtInstance) createAgent(ctx context.Context) (*configurer.Configur
 	return vmAgent, nil
 }
 
-func (l *LibvirtInstance) getControlPlaneIP() (ip string, err error) {
-	domain, err := l.Conn.LookupDomainByName("delegatio-0")
+func (l *libvirtInstance) getControlPlaneIP() (ip string, err error) {
+	domain, err := l.Conn.LookupDomainByName(definitions.DomainPrefixMaster + "0")
 	if err != nil {
 		return
 	}
@@ -120,10 +138,10 @@ func (l *LibvirtInstance) getControlPlaneIP() (ip string, err error) {
 	return
 }
 
-func (l *LibvirtInstance) getWorkerInstanceIPs(ctx context.Context) (map[string]string, error) {
+func (l *libvirtInstance) getWorkerInstanceIPs(ctx context.Context) (map[string]string, error) {
 	nameToIP := make(map[string]string)
-	for id := config.ClusterConfiguration.NumberOfMasters; id < config.ClusterConfiguration.NumberOfWorkers+config.ClusterConfiguration.NumberOfMasters; id++ {
-		node := "delegatio-" + strconv.Itoa(id)
+	for id := 0; id < l.workerNodeNum; id++ {
+		node := definitions.DomainPrefixWorker + strconv.Itoa(id)
 		ip, err := l.blockUntilNetworkIsReady(ctx, node)
 		if err != nil {
 			return nil, err

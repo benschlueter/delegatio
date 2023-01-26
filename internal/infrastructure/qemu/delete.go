@@ -5,13 +5,13 @@
 package qemu
 
 import (
-	"fmt"
+	"strings"
 
 	"github.com/benschlueter/delegatio/internal/config/definitions"
 	"libvirt.org/go/libvirt"
 )
 
-func (l *LibvirtInstance) deleteNetwork() error {
+func (l *libvirtInstance) deleteNetwork() error {
 	nets, err := l.Conn.ListAllNetworks(libvirt.CONNECT_LIST_NETWORKS_ACTIVE)
 	if err != nil {
 		return err
@@ -36,7 +36,7 @@ func (l *LibvirtInstance) deleteNetwork() error {
 	return nil
 }
 
-func (l *LibvirtInstance) deleteDomain() error {
+func (l *libvirtInstance) deleteDomains() error {
 	doms, err := l.Conn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE)
 	if err != nil {
 		return err
@@ -47,13 +47,13 @@ func (l *LibvirtInstance) deleteDomain() error {
 		}
 	}()
 	for _, dom := range doms {
-		/* 		name, err := dom.GetName()
-		   		if err != nil {
-		   			return err
-		   		}
-		   		if name != definitions.DomainName {
-		   			continue
-		   		} */
+		name, err := dom.GetName()
+		if err != nil {
+			return err
+		}
+		if !strings.HasPrefix(name, definitions.DomainPrefixMaster) && !strings.HasPrefix(name, definitions.DomainPrefixWorker) {
+			continue
+		}
 		if err := dom.Destroy(); err != nil {
 			return err
 		}
@@ -61,32 +61,7 @@ func (l *LibvirtInstance) deleteDomain() error {
 	return nil
 }
 
-func (l *LibvirtInstance) deleteVolumesFromPool(pool *libvirt.StoragePool) error {
-	volumes, err := pool.ListAllStorageVolumes(0)
-	if err != nil {
-		return err
-	}
-	defer func() {
-		for _, volume := range volumes {
-			_ = volume.Free()
-		}
-	}()
-	for _, volume := range volumes {
-		/* 		name, err := volume.GetName()
-		   		if err != nil {
-		   			return err
-		   		}
-		   		if !strings.Contains(name, definitions.BaseDiskName) && name != definitions.BaseDiskName {
-		   			continue
-		   		} */
-		if err := volume.Delete(libvirt.STORAGE_VOL_DELETE_NORMAL); err != nil {
-			return fmt.Errorf("test %w", err)
-		}
-	}
-	return nil
-}
-
-func (l *LibvirtInstance) deletePool() error {
+func (l *libvirtInstance) deletePool() error {
 	pools, err := l.Conn.ListAllStoragePools(libvirt.CONNECT_LIST_STORAGE_POOLS_DIR)
 	if err != nil {
 		return err
@@ -109,7 +84,7 @@ func (l *LibvirtInstance) deletePool() error {
 			return err
 		}
 		if active {
-			if err := l.deleteVolumesFromPool(&pool); err != nil {
+			if err := deleteVolumesFromPool(pool); err != nil {
 				return err
 			}
 			if err := pool.Destroy(); err != nil {
