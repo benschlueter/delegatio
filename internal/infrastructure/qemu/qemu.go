@@ -19,6 +19,8 @@ import (
 )
 
 // libvirtInstance is a wrapper around libvirt.
+
+// Probably a better way to test the package is trough the test:///default connection.
 type libvirtInstance struct {
 	Conn               libvirtInterface
 	fs                 *afero.Afero
