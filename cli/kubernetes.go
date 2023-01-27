@@ -24,8 +24,8 @@ type kubeWrapper struct {
 }
 
 // NewKubeWrapper returns a new kubeWrapper.
-func NewKubeWrapper(logger *zap.Logger, adminConfPath string) (*kubeWrapper, error) {
-	kubeClient, err := kubernetes.NewK8sClient(logger.Named("k8sAPI"), adminConfPath)
+func NewKubeWrapper(logger *zap.Logger) (*kubeWrapper, error) {
+	kubeClient, err := kubernetes.NewK8sClient(logger.Named("k8sAPI"))
 	if err != nil {
 		logger.With(zap.Error(err)).Error("failed to connect to Kubernetes")
 		return nil, err

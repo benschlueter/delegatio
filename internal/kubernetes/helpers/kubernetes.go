@@ -6,6 +6,7 @@ package helpers
 
 import (
 	"errors"
+	"os"
 	"sync"
 
 	"github.com/benschlueter/delegatio/internal/config"
@@ -29,16 +30,17 @@ type Client struct {
 
 // NewClient returns a new kuberenetes client-go wrapper.
 // if no kubeconfig path is given we use the service account token.
-func NewClient(logger *zap.Logger, kubeconfigPath string) (kubeClient *Client, err error) {
+func NewClient(logger *zap.Logger) (kubeClient *Client, err error) {
 	// use the current context in kubeconfig
 	var config *rest.Config
-	if len(kubeconfigPath) == 0 {
+	val, present := os.LookupEnv("KUBECONFIG")
+	if !present {
 		config, err = rest.InClusterConfig()
 		if err != nil {
 			return nil, err
 		}
 	} else {
-		config, err = clientcmd.BuildConfigFromFlags("", kubeconfigPath)
+		config, err = clientcmd.BuildConfigFromFlags("", val)
 		if err != nil {
 			return nil, err
 		}

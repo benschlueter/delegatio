@@ -83,7 +83,7 @@ func main() {
 		log.With(zap.Error(err)).DPanic("create infrastructure")
 	}
 	log.Info("finished infrastructure initialization")
-	kubewrapper, err := NewKubeWrapper(log.Named("kubeWrapper"), "./admin.conf")
+	kubewrapper, err := NewKubeWrapper(log.Named("kubeWrapper"))
 	if err != nil {
 		log.With(zap.Error(err)).DPanic("new kubeWrapper")
 	}

@@ -29,5 +29,5 @@ func (a *Configurer) writeKubeconfigToDisk(ctx context.Context) (err error) {
 	if _, err := adminConfigFile.Write(file); err != nil {
 		return fmt.Errorf("writing kubeadm init yaml config %v failed: %w", adminConfigFile.Name(), err)
 	}
-	return
+	return os.Setenv("KUBECONFIG", "admin.conf")
 }

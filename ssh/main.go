@@ -7,8 +7,6 @@ package main
 
 import (
 	"context"
-	"errors"
-	"os"
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/kubernetes"
@@ -28,18 +26,12 @@ func main() {
 	}
 	logger.Info("Starting delegatio ssh server", zap.String("commit", config.Commit))
 	defer func() { _ = logger.Sync() }()
-	_, err = os.Stat("./admin.conf")
-	if errors.Is(err, os.ErrNotExist) {
-		client, err = kubernetes.NewK8sClient(logger.Named("k8sAPI"), "")
-		if err != nil {
-			logger.With(zap.Error(err)).DPanic("failed to create k8s client")
-		}
-	} else {
-		client, err = kubernetes.NewK8sClient(logger.Named("k8sAPI"), "./admin.conf")
-		if err != nil {
-			logger.With(zap.Error(err)).DPanic("failed to create k8s client")
-		}
+
+	client, err = kubernetes.NewK8sClient(logger.Named("k8sAPI"))
+	if err != nil {
+		logger.With(zap.Error(err)).DPanic("failed to create k8s client")
 	}
+
 	store, err := etcdConnector(logger, client)
 	if err != nil {
 		logger.With(zap.Error(err)).DPanic("connecting to etcd")

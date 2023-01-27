@@ -25,9 +25,9 @@ type Client struct {
 
 // NewK8sClient returns a new kuberenetes client-go wrapper.
 // if no kubeconfig path is given we use the service account token.
-func NewK8sClient(logger *zap.Logger, kubeconfigPath string) (*Client, error) {
+func NewK8sClient(logger *zap.Logger) (*Client, error) {
 	// use the current context in kubeconfig
-	client, err := helpers.NewClient(logger, kubeconfigPath)
+	client, err := helpers.NewClient(logger)
 	if err != nil {
 		return nil, err
 	}
