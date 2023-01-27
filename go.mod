@@ -34,7 +34,7 @@ require (
 	github.com/barkimedes/go-deepcopy v0.0.0-20220514131651-17c30cfc62df
 	github.com/docker/docker v20.10.23+incompatible
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
-	github.com/spf13/afero v1.6.0
+	github.com/spf13/afero v1.9.3
 	github.com/stretchr/testify v1.8.1
 	go.etcd.io/etcd/client/v3 v3.5.7
 	go.uber.org/goleak v1.2.0
