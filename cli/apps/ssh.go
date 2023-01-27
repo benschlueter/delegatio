@@ -8,6 +8,7 @@ import (
 	"context"
 	"net"
 	"net/url"
+	"os"
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/kubernetes"
@@ -33,7 +34,7 @@ func InitializeSSH(ctx context.Context, log *zap.Logger, kubeClient *kubernetes.
 		return err
 	}
 	if err := kubeClient.Client.ConnectToStore(creds, []string{net.JoinHostPort(host, "2379")}); err != nil {
-		log.With(zap.Error(err)).Error("failed to install helm charts")
+		log.With(zap.Error(err)).Error("failed to connect to store")
 		return err
 	}
 	configMapData := map[string]string{
@@ -46,7 +47,14 @@ func InitializeSSH(ctx context.Context, log *zap.Logger, kubeClient *kubernetes.
 		log.With(zap.Error(err)).Error("failed to CreatePersistentVolumeClaim")
 		return err
 	}
-
+	privateBytes, err := os.ReadFile("./server_test")
+	if err != nil {
+		return err
+	}
+	if err := kubeClient.Client.UploadSSHServerPrivKey(privateBytes); err != nil {
+		return err
+	}
+	log.Info("uploaded ssh server private key")
 	if err := kubeClient.Client.CreateServiceAccount(ctx, sshNamespaceName, "development"); err != nil {
 		return err
 	}

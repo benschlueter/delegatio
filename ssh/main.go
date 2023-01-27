@@ -41,8 +41,12 @@ func main() {
 		logger.With(zap.Error(err)).DPanic("getting all keys from etcd")
 	}
 	logger.Debug("data in store", zap.Strings("keys", keys))
-
-	server := NewSSHServer(client, logger, store)
+	privKey, err := storewrapper.StoreWrapper{Store: store}.GetPrivKey()
+	if err != nil {
+		logger.With(zap.Error(err)).DPanic("gettign priv key for ssh server")
+	}
+	logger.Info("pulled private key from store")
+	server := NewSSHServer(client, logger, store, privKey)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

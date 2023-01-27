@@ -40,16 +40,18 @@ type sshServer struct {
 	handleConnWG       *sync.WaitGroup
 	currentConnections int64
 	backingStore       store.Store
+	privateKey         []byte
 }
 
 // NewSSHServer returns a sshServer.
-func NewSSHServer(client *kubernetes.Client, log *zap.Logger, storage store.Store) *sshServer {
+func NewSSHServer(client *kubernetes.Client, log *zap.Logger, storage store.Store, privKey []byte) *sshServer {
 	return &sshServer{
 		client:             client,
 		log:                log,
 		handleConnWG:       &sync.WaitGroup{},
 		currentConnections: 0,
 		backingStore:       storage,
+		privateKey:         privKey,
 	}
 }
 
@@ -81,12 +83,7 @@ func (s *sshServer) StartServer(ctx context.Context) {
 	done := make(chan struct{})
 	go s.periodicLogs(done)
 
-	privateBytes, err := os.ReadFile("./server_test")
-	if err != nil {
-		log.Fatal("Failed to load private key (./server_test)", err)
-	}
-
-	private, err := ssh.ParsePrivateKey(privateBytes)
+	private, err := ssh.ParsePrivateKey(s.privateKey)
 	if err != nil {
 		log.Fatal("Failed to parse private key")
 	}

@@ -16,6 +16,7 @@ import (
 const (
 	challengeLocationPrefix = "challenge-"
 	publicKeyPrefix         = "publickey-"
+	privKeyLocation         = "privkey-ssh"
 )
 
 // StoreWrapper is a wrapper for the store interface.
@@ -152,4 +153,14 @@ func (s StoreWrapper) GetAllKeys() (keys []string, err error) {
 		keys = append(keys, key)
 	}
 	return
+}
+
+// PutPrivKey puts a privKey  into the store.
+func (s StoreWrapper) PutPrivKey(privkey []byte) error {
+	return s.Store.Put(privKeyLocation, privkey)
+}
+
+// GetPrivKey gets the privKey.
+func (s StoreWrapper) GetPrivKey() ([]byte, error) {
+	return s.Store.Get(privKeyLocation)
 }

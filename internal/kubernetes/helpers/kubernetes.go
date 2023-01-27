@@ -78,7 +78,7 @@ func (k *Client) ConnectToStore(creds *config.EtcdCredentials, endpoints []strin
 func (k *Client) GetStoreUserData() (data *config.UserConfiguration, err error) {
 	if k.SharedStore == nil {
 		k.logger.Info("client is not connected to etcd")
-		return nil, errors.New("client is not connected to etcd")
+		return nil, ErrNotConnected
 	}
 	stWrapper := storewrapper.StoreWrapper{Store: k.SharedStore}
 	challenges, err := stWrapper.GetAllChallenges()
@@ -92,3 +92,26 @@ func (k *Client) GetStoreUserData() (data *config.UserConfiguration, err error) 
 	data = &config.UserConfiguration{PubKeyToUser: userData, Challenges: challenges}
 	return data, nil
 }
+
+// UploadSSHServerPrivKey uploads the ssh server private key to the store.
+func (k *Client) UploadSSHServerPrivKey(privKey []byte) (err error) {
+	if k.SharedStore == nil {
+		k.logger.Info("client is not connected to etcd")
+		return ErrNotConnected
+	}
+	stWrapper := storewrapper.StoreWrapper{Store: k.SharedStore}
+	return stWrapper.PutPrivKey(privKey)
+}
+
+// DownloadSSHServerPrivKey downloads the ssh server private key from the store.
+func (k *Client) DownloadSSHServerPrivKey(privKey []byte) (err error) {
+	if k.SharedStore == nil {
+		k.logger.Info("client is not connected to etcd")
+		return ErrNotConnected
+	}
+	stWrapper := storewrapper.StoreWrapper{Store: k.SharedStore}
+	return stWrapper.PutPrivKey(privKey)
+}
+
+// ErrNotConnected is returned when the client is not connected to etcd.
+var ErrNotConnected = errors.New("client is not connected to etcd")
