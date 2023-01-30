@@ -17,6 +17,19 @@ make
 ```
 
 # Run
+Before we start the program we have create a kubernetes persistent storage. The easiest way to do that is through NFS. 
+First create a shared dir and make is user accessible.
+```bash
+sudo mkdir /mnt/myshareddir
+sudo chmod 777 /mnt/myshareddir
+```
+Secondly configure the shared folder in `/etc/exports` start the `nfs.service` and update the exported foler list
+```bash
+sudo echo "/mnt/myshareddir *(rw,sync,no_subtree_check,no_root_squash,fsid=0)" >> /etc/exports
+sudo systemctl enable --now nfsv4-server.service
+sudo exportfs -arv
+```
+Lastly, you can run the cli
 ```bash
 ./cli --path=../images/image.qcow2
 ```
