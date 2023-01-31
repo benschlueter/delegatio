@@ -25,7 +25,7 @@ sudo chmod 777 /mnt/myshareddir
 ```
 Secondly configure the shared folder in `/etc/exports` start the `nfs.service` and update the exported foler list
 ```bash
-sudo echo "/mnt/myshareddir *(rw,sync,no_subtree_check,no_root_squash,fsid=0)" >> /etc/exports
+echo "/mnt/myshareddir *(rw,sync,no_subtree_check,no_root_squash,fsid=0)" | sudo tee -a /etc/exports
 sudo systemctl enable --now nfsv4-server.service
 sudo exportfs -arv
 ```
