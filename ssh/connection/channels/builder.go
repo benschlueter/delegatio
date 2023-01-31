@@ -8,8 +8,8 @@ import (
 	"context"
 	"sync"
 
-	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
+	"github.com/benschlueter/delegatio/ssh/local"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
@@ -20,12 +20,8 @@ type ChannelHandlerBuilder struct {
 	channel         ssh.Channel
 	requests        <-chan *ssh.Request
 	logger          *zap.Logger
-	namespace       string
-	userID          string
 	directTCPIPData *payload.ForwardTCPChannelOpen
-
-	onKubeExec    func(context.Context, *config.KubeExecConfig) error
-	onKubeForward func(context.Context, *config.KubeForwardConfig) error
+	sharedData      *local.Shared
 
 	onStartup    []func(context.Context, *callbackData)
 	onRequest    []func(context.Context, *ssh.Request, *callbackData)
@@ -97,24 +93,9 @@ func (b *ChannelHandlerBuilder) SetLog(logger *zap.Logger) {
 	b.logger = logger
 }
 
-// SetUserID sets the userID.
-func (b *ChannelHandlerBuilder) SetUserID(uid string) {
-	b.userID = uid
-}
-
-// SetNamespace sets the namespace.
-func (b *ChannelHandlerBuilder) SetNamespace(namespace string) {
-	b.namespace = namespace
-}
-
-// SetOnKubeExec sets the onKubeExec callback.
-func (b *ChannelHandlerBuilder) SetOnKubeExec(onKubeExec func(context.Context, *config.KubeExecConfig) error) {
-	b.onKubeExec = onKubeExec
-}
-
-// SetOnKubeForward sets the onKubeForward callback.
-func (b *ChannelHandlerBuilder) SetOnKubeForward(onKubeForward func(context.Context, *config.KubeForwardConfig) error) {
-	b.onKubeForward = onKubeForward
+// SetSharedData sets the sharedData.
+func (b *ChannelHandlerBuilder) SetSharedData(shared *local.Shared) {
+	b.sharedData = shared
 }
 
 // SetDirectTCPIPData sets the directTCPIPData.
@@ -123,21 +104,18 @@ func (b *ChannelHandlerBuilder) SetDirectTCPIPData(directTCPIPData *payload.Forw
 }
 
 // Build builds the channel.
-func (b *ChannelHandlerBuilder) Build() (*ChannelHandler, error) {
-	handler := &ChannelHandler{
+func (b *ChannelHandlerBuilder) Build() (*channelHandler, error) {
+	handler := &channelHandler{
 		requests:       b.requests,
 		serveCloseDone: make(chan struct{}),
 		reqData: &callbackData{
 			// TerminalSize handler is not closed at the moment (will be garbage collected anyways)
-			terminalResizer:     NewTerminalSizeHandler(10),
-			log:                 b.logger.Named("channel"),
-			channel:             b.channel,
-			wg:                  &sync.WaitGroup{},
-			namespace:           b.namespace,
-			authenticatedUserID: b.userID,
-			onExec:              b.onKubeExec,
-			onForward:           b.onKubeForward,
-			directTCPIPData:     b.directTCPIPData,
+			terminalResizer: NewTerminalSizeHandler(10),
+			log:             b.logger.Named("channel"),
+			channel:         b.channel,
+			wg:              &sync.WaitGroup{},
+			directTCPIPData: b.directTCPIPData,
+			Shared:          b.sharedData,
 		},
 		log:                b.logger.Named("channel"),
 		onStartupCallback:  b.onStartup,

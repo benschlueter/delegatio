@@ -10,13 +10,17 @@ import (
 	"encoding/base64"
 	"errors"
 	"sync"
+	"time"
 
 	"github.com/benschlueter/delegatio/internal/config"
+	"github.com/benschlueter/delegatio/ssh/connection/channels"
+	"github.com/benschlueter/delegatio/ssh/connection/payload"
+	"github.com/benschlueter/delegatio/ssh/local"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
 
-type sshConnectionBuilder struct {
+type builder struct {
 	globalRequests <-chan *ssh.Request
 	channel        <-chan ssh.NewChannel
 	connection     *ssh.ServerConn
@@ -26,48 +30,48 @@ type sshConnectionBuilder struct {
 	createWaitFunc func(context.Context, *config.KubeRessourceIdentifier) error
 }
 
-// NewSSHConnectionHandlerBuilder returns a sshConnection.
-func NewSSHConnectionHandlerBuilder(logger *zap.Logger, connection *ssh.ServerConn, channel <-chan ssh.NewChannel, reqs <-chan *ssh.Request) *sshConnectionBuilder {
-	return &sshConnectionBuilder{}
+// NewBuilder returns a sshConnection.
+func NewBuilder(logger *zap.Logger, connection *ssh.ServerConn, channel <-chan ssh.NewChannel, reqs <-chan *ssh.Request) *builder {
+	return &builder{}
 }
 
 // SetExecFunc sets the exec function.
-func (s *sshConnectionBuilder) SetExecFunc(execFunc func(context.Context, *config.KubeExecConfig) error) {
+func (s *builder) SetExecFunc(execFunc func(context.Context, *config.KubeExecConfig) error) {
 	s.execFunc = execFunc
 }
 
 // SetForwardFunc sets the forward function.
-func (s *sshConnectionBuilder) SetForwardFunc(forwardFunc func(context.Context, *config.KubeForwardConfig) error) {
+func (s *builder) SetForwardFunc(forwardFunc func(context.Context, *config.KubeForwardConfig) error) {
 	s.forwardFunc = forwardFunc
 }
 
 // SetRessourceFunc sets the ressource function.
-func (s *sshConnectionBuilder) SetRessourceFunc(createWaitFunc func(context.Context, *config.KubeRessourceIdentifier) error) {
+func (s *builder) SetRessourceFunc(createWaitFunc func(context.Context, *config.KubeRessourceIdentifier) error) {
 	s.createWaitFunc = createWaitFunc
 }
 
 // SetConnection sets the connection.
-func (s *sshConnectionBuilder) SetConnection(connection *ssh.ServerConn) {
+func (s *builder) SetConnection(connection *ssh.ServerConn) {
 	s.connection = connection
 }
 
 // SetChannel sets the channel.
-func (s *sshConnectionBuilder) SetChannel(channel <-chan ssh.NewChannel) {
+func (s *builder) SetChannel(channel <-chan ssh.NewChannel) {
 	s.channel = channel
 }
 
 // SetGlobalRequests sets the global requests.
-func (s *sshConnectionBuilder) SetGlobalRequests(reqs <-chan *ssh.Request) {
+func (s *builder) SetGlobalRequests(reqs <-chan *ssh.Request) {
 	s.globalRequests = reqs
 }
 
 // SetLogger sets the logger.
-func (s *sshConnectionBuilder) SetLogger(log *zap.Logger) {
+func (s *builder) SetLogger(log *zap.Logger) {
 	s.log = log
 }
 
 // Build builds the sshConnection. All fields must be set otherwise an error is returned.
-func (s *sshConnectionBuilder) Build() (*sshConnectionHandler, error) {
+func (s *builder) Build() (*connection, error) {
 	userID, ok := s.connection.Permissions.Extensions[config.AuthenticatedUserID]
 	if !ok {
 		return nil, errors.New("no authenticated user id found")
@@ -83,17 +87,42 @@ func (s *sshConnectionBuilder) Build() (*sshConnectionHandler, error) {
 		return nil, errors.New("no logger provided")
 	}
 
-	return &sshConnectionHandler{
+	return &connection{
 		wg:                  &sync.WaitGroup{},
 		maxKeepAliveRetries: 3,
+		keepAliveInterval:   10 * time.Second,
 		connection:          s.connection,
 		channel:             s.channel,
 		globalRequests:      s.globalRequests,
-		log:                 s.log.Named(logIdentifier),
-		forwardFunc:         s.forwardFunc,
-		execFunc:            s.execFunc,
 		createWaitFunc:      s.createWaitFunc,
-		namespace:           s.connection.User(),
-		authenticatedUserID: userID,
+		log:                 s.log.Named("connection").Named(logIdentifier),
+		Shared: &local.Shared{
+			ForwardFunc:         s.forwardFunc,
+			ExecFunc:            s.execFunc,
+			Namespace:           s.connection.User(),
+			AuthenticatedUserID: userID,
+		},
+
+		newSessionHandler:     newSession,
+		newDirectTCPIPHandler: newDirectTCPIP,
 	}, nil
+}
+
+func newSession(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.Request, shared *local.Shared) (channels.Channel, error) {
+	builder := channels.SessionBuilderSkeleton()
+	builder.SetRequests(requests)
+	builder.SetChannel(channel)
+	builder.SetLog(log.Named("channels").Named("session"))
+	builder.SetSharedData(shared)
+	return builder.Build()
+}
+
+func newDirectTCPIP(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.Request, shared *local.Shared, data *payload.ForwardTCPChannelOpen) (channels.Channel, error) {
+	builder := channels.DirectTCPIPBuilderSkeleton()
+	builder.SetRequests(requests)
+	builder.SetChannel(channel)
+	builder.SetLog(log.Named("channels").Named("direct-tcpip"))
+	builder.SetSharedData(shared)
+	builder.SetDirectTCPIPData(data)
+	return builder.Build()
 }

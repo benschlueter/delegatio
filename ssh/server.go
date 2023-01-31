@@ -80,8 +80,8 @@ func (s *sshServer) StartServer(ctx context.Context) {
 			}, nil
 		},
 	}
-	done := make(chan struct{})
-	go s.periodicLogs(done)
+	// routine currently leaks
+	go s.periodicLogs(ctx)
 
 	private, err := ssh.ParsePrivateKey(s.privateKey)
 	if err != nil {
@@ -117,7 +117,6 @@ func (s *sshServer) StartServer(ctx context.Context) {
 	if err := listener.Close(); err != nil {
 		s.log.Error("failed to close listener", zap.Error(err))
 	}
-	done <- struct{}{}
 	s.log.Info("waiting for all connections to terminate gracefully")
 	s.handleConnWG.Wait()
 	s.log.Info("closing program")
@@ -139,7 +138,7 @@ func (s *sshServer) validateAndProcessConnection(ctx context.Context, tcpConn ne
 		return
 	}
 	s.log.Info("authentication of connection successful", zap.Binary("session", sshConn.SessionID()))
-	builder := connection.NewSSHConnectionHandlerBuilder(s.log, sshConn, chans, reqs)
+	builder := connection.NewBuilder(s.log, sshConn, chans, reqs)
 	builder.SetExecFunc(s.client.ExecuteCommandInPod)
 	builder.SetForwardFunc(s.client.CreatePodPortForward)
 	builder.SetRessourceFunc(s.client.CreateAndWaitForRessources)
@@ -155,7 +154,7 @@ func (s *sshServer) validateAndProcessConnection(ctx context.Context, tcpConn ne
 	sshConnHandler.HandleGlobalConnection(ctx)
 }
 
-func (s *sshServer) periodicLogs(done <-chan struct{}) {
+func (s *sshServer) periodicLogs(ctx context.Context) {
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
 	s.log.Debug("starting periodicLogs")
@@ -163,7 +162,7 @@ func (s *sshServer) periodicLogs(done <-chan struct{}) {
 		select {
 		case <-t.C:
 			s.log.Info("current active connections", zap.Int64("conn", s.currentConnections))
-		case <-done:
+		case <-ctx.Done():
 			s.log.Debug("stopping periodicLogs")
 			return
 		}

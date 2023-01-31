@@ -14,6 +14,7 @@ import (
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
+	"github.com/benschlueter/delegatio/ssh/local"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
@@ -105,7 +106,15 @@ func TestSession(t *testing.T) {
 			requests := make(chan *ssh.Request, len(tc.requests)+1)
 			stubChannel := &ChannelStub{reqChan: requests}
 			log := zap.NewNop()
-			builder := NewSessionBuilder(log, stubChannel, requests, "ns-test", "pod-test", func(ctx context.Context, kec *config.KubeExecConfig) error { return nil })
+			builder := SessionBuilderSkeleton()
+			builder.SetRequests(requests)
+			builder.SetChannel(stubChannel)
+			builder.SetLog(log)
+			builder.SetSharedData(&local.Shared{
+				ExecFunc:            func(ctx context.Context, kec *config.KubeExecConfig) error { return nil },
+				Namespace:           "ns-test",
+				AuthenticatedUserID: "pod-test",
+			})
 
 			for _, v := range tc.requests {
 				requests <- v
@@ -239,8 +248,14 @@ func TestSessionBlockingExec(t *testing.T) {
 			requests := make(chan *ssh.Request, len(tc.requests)+1)
 			stubChannel := &ChannelStub{reqChan: requests}
 			log := zap.NewNop()
-			builder := NewSessionBuilder(log, stubChannel, requests, "ns-test", "pod-test",
-				func(ctx context.Context, kec *config.KubeExecConfig) error {
+			builder := SessionBuilderSkeleton()
+			builder.SetRequests(requests)
+			builder.SetChannel(stubChannel)
+			builder.SetLog(log)
+			builder.SetSharedData(&local.Shared{
+				Namespace:           "ns-test",
+				AuthenticatedUserID: "pod-test",
+				ExecFunc: func(ctx context.Context, kec *config.KubeExecConfig) error {
 					select {
 					case <-ctx.Done():
 						return ctx.Err()
@@ -250,7 +265,8 @@ func TestSessionBlockingExec(t *testing.T) {
 						}
 					}
 					return nil
-				})
+				},
+			})
 
 			for _, v := range tc.requests {
 				requests <- v

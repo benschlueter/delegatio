@@ -12,6 +12,7 @@ import (
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
+	"github.com/benschlueter/delegatio/ssh/local"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 	"go.uber.org/zap"
@@ -70,13 +71,15 @@ func TestHandleShell(t *testing.T) {
 			requests := make(chan *ssh.Request, len(tc.requests)+1)
 			stubChannel := &ChannelStub{reqChan: requests}
 			rd := &callbackData{
-				channel:             stubChannel,
-				wg:                  &sync.WaitGroup{},
-				log:                 zap.NewNop(),
-				terminalResizer:     NewTerminalSizeHandler(10),
-				namespace:           "ns-test",
-				authenticatedUserID: "user-test",
-				onExec:              execFunc,
+				channel:         stubChannel,
+				wg:              &sync.WaitGroup{},
+				log:             zap.NewNop(),
+				terminalResizer: NewTerminalSizeHandler(10),
+				Shared: &local.Shared{
+					Namespace:           "ns-test",
+					AuthenticatedUserID: "user-test",
+					ExecFunc:            execFunc,
+				},
 			}
 			ctx, cancel := context.WithCancel(context.Background())
 			rd.wg.Add(1)
@@ -153,13 +156,15 @@ func TestHandleSubsystem(t *testing.T) {
 			requests := make(chan *ssh.Request, len(tc.requests)+1)
 			stubChannel := &ChannelStub{reqChan: requests}
 			rd := &callbackData{
-				channel:             stubChannel,
-				wg:                  &sync.WaitGroup{},
-				log:                 zap.NewNop(),
-				terminalResizer:     NewTerminalSizeHandler(10),
-				namespace:           "ns-test",
-				authenticatedUserID: "user-test",
-				onExec:              execFunc,
+				channel:         stubChannel,
+				wg:              &sync.WaitGroup{},
+				log:             zap.NewNop(),
+				terminalResizer: NewTerminalSizeHandler(10),
+				Shared: &local.Shared{
+					Namespace:           "ns-test",
+					AuthenticatedUserID: "user-test",
+					ExecFunc:            execFunc,
+				},
 			}
 			ctx, cancel := context.WithCancel(context.Background())
 			rd.wg.Add(1)
@@ -236,13 +241,15 @@ func TestHandlePortForward(t *testing.T) {
 			requests := make(chan *ssh.Request, len(tc.requests)+1)
 			stubChannel := &ChannelStub{reqChan: requests}
 			rd := &callbackData{
-				channel:             stubChannel,
-				wg:                  &sync.WaitGroup{},
-				log:                 zap.NewNop(),
-				namespace:           "ns-test",
-				authenticatedUserID: "user-test",
-				onForward:           forwardFunc,
-				directTCPIPData:     &payload.ForwardTCPChannelOpen{},
+				channel:         stubChannel,
+				wg:              &sync.WaitGroup{},
+				log:             zap.NewNop(),
+				directTCPIPData: &payload.ForwardTCPChannelOpen{},
+				Shared: &local.Shared{
+					Namespace:           "ns-test",
+					AuthenticatedUserID: "user-test",
+					ForwardFunc:         forwardFunc,
+				},
 			}
 			ctx, cancel := context.WithCancel(context.Background())
 			rd.wg.Add(1)
