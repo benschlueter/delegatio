@@ -15,8 +15,10 @@ import (
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/channels"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
+	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest/observer"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -40,9 +42,11 @@ func TestKeepAlive(t *testing.T) {
 	defer goleak.VerifyNone(t)
 	testErr := errors.New("test errr")
 	testCases := map[string]struct {
-		closeByCtx bool
-		interval   time.Duration
-		serverConn *ssh.ServerConn
+		closeByCtx     bool
+		interval       time.Duration
+		serverConn     *ssh.ServerConn
+		logMessages    []string
+		nonLogMessages []string
 	}{
 		"close by context ": {
 			closeByCtx: true,
@@ -50,6 +54,15 @@ func TestKeepAlive(t *testing.T) {
 				Conn: &stubConn{},
 			},
 			interval: time.Second,
+			logMessages: []string{
+				"stopping keepAlive",
+				"starting keepAlive",
+				"keepAlive context canceled",
+			},
+			nonLogMessages: []string{
+				"keepAlive failed; closing connection",
+				"keepAlive did not received a response",
+			},
 		},
 		"close by timeout ": {
 			serverConn: &ssh.ServerConn{
@@ -58,12 +71,24 @@ func TestKeepAlive(t *testing.T) {
 				},
 			},
 			interval: time.Nanosecond,
+			logMessages: []string{
+				"keepAlive failed; closing connection",
+				"stopping keepAlive",
+				"starting keepAlive",
+				"keepAlive did not received a response",
+			},
+			nonLogMessages: []string{
+				"keepAlive context canceled",
+			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			handler := connection{keepAliveInterval: tc.interval, log: zap.NewNop()}
+			assert := assert.New(t)
+			observedZapCore, observedLogs := observer.New(zap.DebugLevel)
+			observedLogger := zap.New(observedZapCore)
+			handler := connection{keepAliveInterval: tc.interval, log: observedLogger}
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -75,6 +100,14 @@ func TestKeepAlive(t *testing.T) {
 				cancelHandler()
 			} else {
 				<-done
+			}
+			for _, v := range tc.logMessages {
+				logs := observedLogs.FilterMessage(v).TakeAll()
+				assert.GreaterOrEqual(len(logs), 1)
+			}
+			for _, v := range tc.nonLogMessages {
+				logs := observedLogs.FilterMessage(v).TakeAll()
+				assert.Zero(len(logs))
 			}
 		})
 	}
@@ -88,6 +121,8 @@ func TestHandleChannel(t *testing.T) {
 		expectFinish           bool
 		sessionHandlerFunc     func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared) (channels.Channel, error)
 		directtcpIPHandlerFunc func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared, *payload.ForwardTCPChannelOpen) (channels.Channel, error)
+		logMessages            []string
+		nonLogMessages         []string
 	}{
 		"session accept error": {
 			channel: &stubNewChannel{
@@ -95,6 +130,9 @@ func TestHandleChannel(t *testing.T) {
 				acceptErr:   testErr,
 			},
 			expectFinish: true,
+			logMessages: []string{
+				"could not accept the channel",
+			},
 		},
 		"new session handler error": {
 			channel: &stubNewChannel{
@@ -103,6 +141,9 @@ func TestHandleChannel(t *testing.T) {
 			expectFinish: true,
 			sessionHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared) (channels.Channel, error) {
 				return nil, testErr
+			},
+			logMessages: []string{
+				"could not create session handler",
 			},
 		},
 		"session cancelled by context": {
@@ -113,12 +154,19 @@ func TestHandleChannel(t *testing.T) {
 			sessionHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared) (channels.Channel, error) {
 				return &stubHandler{done: make(chan struct{})}, nil
 			},
+			nonLogMessages: []string{
+				"could not create session handler",
+				"could not accept the channel",
+			},
 		},
 		"unknows channel type": {
 			channel: &stubNewChannel{
 				channelType: "unknown stuff",
 			},
 			expectFinish: true,
+			logMessages: []string{
+				"unknown channel type",
+			},
 		},
 		"unknows channel type and reject error": {
 			channel: &stubNewChannel{
@@ -126,6 +174,10 @@ func TestHandleChannel(t *testing.T) {
 				rejectErr:   testErr,
 			},
 			expectFinish: true,
+			logMessages: []string{
+				"unknown channel type",
+				"failed to reject channel",
+			},
 		},
 		"direct-tcpip unmarshal error": {
 			channel: &stubNewChannel{
@@ -133,6 +185,9 @@ func TestHandleChannel(t *testing.T) {
 				data:        []byte("invalid data"),
 			},
 			expectFinish: true,
+			logMessages: []string{
+				"could not unmarshal payload",
+			},
 		},
 		"direct-tcpip unmarshal and reject error": {
 			channel: &stubNewChannel{
@@ -141,6 +196,10 @@ func TestHandleChannel(t *testing.T) {
 				rejectErr:   testErr,
 			},
 			expectFinish: true,
+			logMessages: []string{
+				"could not unmarshal payload",
+				"failed to reject channel",
+			},
 		},
 		"direct-tcpip accept error": {
 			channel: &stubNewChannel{
@@ -149,6 +208,13 @@ func TestHandleChannel(t *testing.T) {
 				data:        ssh.Marshal(payload.ForwardTCPChannelOpen{}),
 			},
 			expectFinish: true,
+			logMessages: []string{
+				"could not accept the channel",
+			},
+			nonLogMessages: []string{
+				"could not unmarshal payload",
+				"failed to reject channel",
+			},
 		},
 		"new direct-tcpip handler error": {
 			channel: &stubNewChannel{
@@ -159,6 +225,14 @@ func TestHandleChannel(t *testing.T) {
 				return nil, testErr
 			},
 			expectFinish: true,
+			logMessages: []string{
+				"could not create directtcpip handler",
+			},
+			nonLogMessages: []string{
+				"could not unmarshal payload",
+				"failed to reject channel",
+				"could not accept the channel",
+			},
 		},
 		"direct-tcpip closed by ctx": {
 			channel: &stubNewChannel{
@@ -169,16 +243,23 @@ func TestHandleChannel(t *testing.T) {
 				return &stubHandler{done: make(chan struct{})}, nil
 			},
 			expectFinish: false,
+			nonLogMessages: []string{
+				"could not unmarshal payload",
+				"failed to reject channel",
+				"could not accept the channel",
+				"could not create directtcpip handler",
+			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// assert := assert.New(t)
-			// require := require.New(t)
+			assert := assert.New(t)
+			observedZapCore, observedLogs := observer.New(zap.DebugLevel)
+			observedLogger := zap.New(observedZapCore)
 
 			handler := connection{
-				log:                   zap.NewNop(),
+				log:                   observedLogger,
 				newSessionHandler:     tc.sessionHandlerFunc,
 				newDirectTCPIPHandler: tc.directtcpIPHandlerFunc,
 				wg:                    &sync.WaitGroup{},
@@ -192,6 +273,14 @@ func TestHandleChannel(t *testing.T) {
 				cancel()
 			}
 			handler.wg.Wait()
+			for _, v := range tc.logMessages {
+				logs := observedLogs.FilterMessage(v).TakeAll()
+				assert.GreaterOrEqual(len(logs), 1)
+			}
+			for _, v := range tc.nonLogMessages {
+				logs := observedLogs.FilterMessage(v).TakeAll()
+				assert.Zero(len(logs))
+			}
 		})
 	}
 }

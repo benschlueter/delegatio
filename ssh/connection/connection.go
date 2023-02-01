@@ -161,6 +161,7 @@ func (c *connection) keepAlive(ctx context.Context, sshConn *ssh.ServerConn, don
 	go func() {
 		t := time.NewTicker(c.keepAliveInterval)
 		defer func() {
+			c.log.Debug("stopping keepAlive")
 			t.Stop()
 			done <- struct{}{}
 		}()
@@ -178,9 +179,10 @@ func (c *connection) keepAlive(ctx context.Context, sshConn *ssh.ServerConn, don
 				if retries > c.maxKeepAliveRetries {
 					c.log.Info("keepAlive failed; closing connection", zap.Int("retries", retries))
 					cancel()
+					return
 				}
 			case <-ctx.Done():
-				c.log.Debug("stopping keepAlive")
+				c.log.Info("keepAlive context canceled")
 				return
 			}
 		}
