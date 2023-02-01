@@ -14,7 +14,6 @@ import (
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
-	"github.com/benschlueter/delegatio/ssh/local"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
@@ -110,7 +109,7 @@ func TestSession(t *testing.T) {
 			builder.SetRequests(requests)
 			builder.SetChannel(stubChannel)
 			builder.SetLog(log)
-			builder.SetSharedData(&local.Shared{
+			builder.SetSharedData(&Shared{
 				ExecFunc:            func(ctx context.Context, kec *config.KubeExecConfig) error { return nil },
 				Namespace:           "ns-test",
 				AuthenticatedUserID: "pod-test",
@@ -252,7 +251,7 @@ func TestSessionBlockingExec(t *testing.T) {
 			builder.SetRequests(requests)
 			builder.SetChannel(stubChannel)
 			builder.SetLog(log)
-			builder.SetSharedData(&local.Shared{
+			builder.SetSharedData(&Shared{
 				Namespace:           "ns-test",
 				AuthenticatedUserID: "pod-test",
 				ExecFunc: func(ctx context.Context, kec *config.KubeExecConfig) error {

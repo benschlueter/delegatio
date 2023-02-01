@@ -10,7 +10,6 @@ import (
 	"sync"
 
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
-	"github.com/benschlueter/delegatio/ssh/local"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
@@ -22,7 +21,7 @@ type builder struct {
 	requests        <-chan *ssh.Request
 	logger          *zap.Logger
 	directTCPIPData *payload.ForwardTCPChannelOpen
-	sharedData      *local.Shared
+	sharedData      *Shared
 
 	onStartup    []func(context.Context, *callbackData)
 	onRequest    []func(context.Context, *ssh.Request, *callbackData)
@@ -95,7 +94,7 @@ func (b *builder) SetLog(logger *zap.Logger) {
 }
 
 // SetSharedData sets the sharedData.
-func (b *builder) SetSharedData(shared *local.Shared) {
+func (b *builder) SetSharedData(shared *Shared) {
 	b.sharedData = shared
 }
 

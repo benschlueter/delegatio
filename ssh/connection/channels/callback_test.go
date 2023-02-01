@@ -12,7 +12,6 @@ import (
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
-	"github.com/benschlueter/delegatio/ssh/local"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 	"go.uber.org/zap"
@@ -75,7 +74,7 @@ func TestHandleShell(t *testing.T) {
 				wg:              &sync.WaitGroup{},
 				log:             zap.NewNop(),
 				terminalResizer: NewTerminalSizeHandler(10),
-				Shared: &local.Shared{
+				Shared: &Shared{
 					Namespace:           "ns-test",
 					AuthenticatedUserID: "user-test",
 					ExecFunc:            execFunc,
@@ -160,7 +159,7 @@ func TestHandleSubsystem(t *testing.T) {
 				wg:              &sync.WaitGroup{},
 				log:             zap.NewNop(),
 				terminalResizer: NewTerminalSizeHandler(10),
-				Shared: &local.Shared{
+				Shared: &Shared{
 					Namespace:           "ns-test",
 					AuthenticatedUserID: "user-test",
 					ExecFunc:            execFunc,
@@ -245,7 +244,7 @@ func TestHandlePortForward(t *testing.T) {
 				wg:              &sync.WaitGroup{},
 				log:             zap.NewNop(),
 				directTCPIPData: &payload.ForwardTCPChannelOpen{},
-				Shared: &local.Shared{
+				Shared: &Shared{
 					Namespace:           "ns-test",
 					AuthenticatedUserID: "user-test",
 					ForwardFunc:         forwardFunc,

@@ -15,7 +15,6 @@ import (
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/channels"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
-	"github.com/benschlueter/delegatio/ssh/local"
 	"go.uber.org/goleak"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
@@ -87,8 +86,8 @@ func TestHandleChannel(t *testing.T) {
 	testCases := map[string]struct {
 		channel                ssh.NewChannel
 		expectFinish           bool
-		sessionHandlerFunc     func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *local.Shared) (channels.Channel, error)
-		directtcpIPHandlerFunc func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *local.Shared, *payload.ForwardTCPChannelOpen) (channels.Channel, error)
+		sessionHandlerFunc     func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared) (channels.Channel, error)
+		directtcpIPHandlerFunc func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared, *payload.ForwardTCPChannelOpen) (channels.Channel, error)
 	}{
 		"session accept error": {
 			channel: &stubNewChannel{
@@ -102,7 +101,7 @@ func TestHandleChannel(t *testing.T) {
 				channelType: "session",
 			},
 			expectFinish: true,
-			sessionHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *local.Shared) (channels.Channel, error) {
+			sessionHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared) (channels.Channel, error) {
 				return nil, testErr
 			},
 		},
@@ -111,7 +110,7 @@ func TestHandleChannel(t *testing.T) {
 				channelType: "session",
 			},
 			expectFinish: false,
-			sessionHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *local.Shared) (channels.Channel, error) {
+			sessionHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared) (channels.Channel, error) {
 				return &stubHandler{done: make(chan struct{})}, nil
 			},
 		},
@@ -156,7 +155,7 @@ func TestHandleChannel(t *testing.T) {
 				channelType: "direct-tcpip",
 				data:        ssh.Marshal(payload.ForwardTCPChannelOpen{}),
 			},
-			directtcpIPHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *local.Shared, *payload.ForwardTCPChannelOpen) (channels.Channel, error) {
+			directtcpIPHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared, *payload.ForwardTCPChannelOpen) (channels.Channel, error) {
 				return nil, testErr
 			},
 			expectFinish: true,
@@ -166,7 +165,7 @@ func TestHandleChannel(t *testing.T) {
 				channelType: "direct-tcpip",
 				data:        ssh.Marshal(payload.ForwardTCPChannelOpen{}),
 			},
-			directtcpIPHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *local.Shared, *payload.ForwardTCPChannelOpen) (channels.Channel, error) {
+			directtcpIPHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared, *payload.ForwardTCPChannelOpen) (channels.Channel, error) {
 				return &stubHandler{done: make(chan struct{})}, nil
 			},
 			expectFinish: false,
@@ -299,7 +298,7 @@ func TestHandleGlobalConnection(t *testing.T) {
 				wg:                &sync.WaitGroup{},
 				keepAliveInterval: time.Second,
 				channel:           channelChan,
-				Shared: &local.Shared{
+				Shared: &channels.Shared{
 					Namespace:           "test-ns",
 					AuthenticatedUserID: "test-uid",
 				},
