@@ -67,6 +67,9 @@ func TestHandleChannel(t *testing.T) {
 				"could not create session handler",
 				"could not accept the channel",
 			},
+			logMessages: []string{
+				"starting session handler goroutine",
+			},
 		},
 		"unknows channel type": {
 			channel: &stubNewChannel{
@@ -157,6 +160,9 @@ func TestHandleChannel(t *testing.T) {
 				"failed to reject channel",
 				"could not accept the channel",
 				"could not create directtcpip handler",
+			},
+			logMessages: []string{
+				"starting directtcpip handler goroutine",
 			},
 		},
 	}
@@ -291,7 +297,7 @@ func TestHandleGlobalConnection(t *testing.T) {
 				Conn: &stubConn{},
 			},
 			logMessages: []string{
-				"closing session gracefully",
+				"closed handleGlobalConnection gracefully",
 			},
 		},
 		"createWaitFunc error": {
