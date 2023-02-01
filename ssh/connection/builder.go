@@ -31,7 +31,7 @@ type builder struct {
 }
 
 // NewBuilder returns a sshConnection.
-func NewBuilder(logger *zap.Logger, connection *ssh.ServerConn, channel <-chan ssh.NewChannel, reqs <-chan *ssh.Request) *builder {
+func NewBuilder() *builder {
 	return &builder{}
 }
 
@@ -72,14 +72,17 @@ func (s *builder) SetLogger(log *zap.Logger) {
 
 // Build builds the sshConnection. All fields must be set otherwise an error is returned.
 func (s *builder) Build() (*connection, error) {
+	if s.connection == nil || s.channel == nil || s.globalRequests == nil {
+		return nil, errors.New("connection, channel or globalRequests is nil")
+	}
+	if s.connection.Permissions == nil || s.connection.Permissions.Extensions == nil {
+		return nil, errors.New("connection malformed, permissions or extensions is nil")
+	}
 	userID, ok := s.connection.Permissions.Extensions[config.AuthenticatedUserID]
 	if !ok {
 		return nil, errors.New("no authenticated user id found")
 	}
 	logIdentifier := base64.StdEncoding.EncodeToString(s.connection.SessionID())
-	if s.connection == nil || s.channel == nil || s.globalRequests == nil {
-		return nil, errors.New("connection, channel or globalRequests is nil")
-	}
 	if s.execFunc == nil || s.forwardFunc == nil || s.createWaitFunc == nil {
 		return nil, errors.New("execFunc, forwardFunc or createWaitFunc is nil")
 	}
@@ -112,7 +115,7 @@ func newSession(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.Reque
 	builder := channels.SessionBuilderSkeleton()
 	builder.SetRequests(requests)
 	builder.SetChannel(channel)
-	builder.SetLog(log.Named("channels"))
+	builder.SetLog(log)
 	builder.SetSharedData(shared)
 	return builder.Build()
 }
@@ -121,7 +124,7 @@ func newDirectTCPIP(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.R
 	builder := channels.DirectTCPIPBuilderSkeleton()
 	builder.SetRequests(requests)
 	builder.SetChannel(channel)
-	builder.SetLog(log.Named("channels"))
+	builder.SetLog(log)
 	builder.SetSharedData(shared)
 	builder.SetDirectTCPIPData(data)
 	return builder.Build()

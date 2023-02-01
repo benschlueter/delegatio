@@ -104,7 +104,7 @@ func TestSession(t *testing.T) {
 			require := require.New(t)
 
 			requests := make(chan *ssh.Request, len(tc.requests)+1)
-			stubChannel := &ChannelStub{reqChan: requests}
+			stubChannel := &stubChannel{reqChan: requests}
 			log := zap.NewNop()
 			builder := SessionBuilderSkeleton()
 			builder.SetRequests(requests)
@@ -246,7 +246,7 @@ func TestSessionBlockingExec(t *testing.T) {
 			require := require.New(t)
 
 			requests := make(chan *ssh.Request, len(tc.requests)+1)
-			stubChannel := &ChannelStub{reqChan: requests}
+			stubChannel := &stubChannel{reqChan: requests}
 			log := zap.NewNop()
 			builder := SessionBuilderSkeleton()
 			builder.SetRequests(requests)
@@ -348,17 +348,17 @@ func TestSessionBlockingExec(t *testing.T) {
 	}
 }
 
-type ChannelStub struct {
+type stubChannel struct {
 	reqChan chan *ssh.Request
 	closed  bool
 	mux     sync.Mutex
 }
 
-func (cs *ChannelStub) Read(data []byte) (int, error) {
+func (cs *stubChannel) Read(data []byte) (int, error) {
 	return 0, nil
 }
 
-func (cs *ChannelStub) Write(data []byte) (int, error) {
+func (cs *stubChannel) Write(data []byte) (int, error) {
 	cs.mux.Lock()
 	defer cs.mux.Unlock()
 	if !cs.closed {
@@ -367,7 +367,7 @@ func (cs *ChannelStub) Write(data []byte) (int, error) {
 	return 0, errors.New("already closed")
 }
 
-func (cs *ChannelStub) Close() error {
+func (cs *stubChannel) Close() error {
 	cs.mux.Lock()
 	defer cs.mux.Unlock()
 	if !cs.closed {
@@ -378,14 +378,14 @@ func (cs *ChannelStub) Close() error {
 	return errors.New("already closed")
 }
 
-func (cs *ChannelStub) CloseWrite() error {
+func (cs *stubChannel) CloseWrite() error {
 	return nil
 }
 
-func (cs *ChannelStub) SendRequest(name string, wantReply bool, payload []byte) (bool, error) {
+func (cs *stubChannel) SendRequest(name string, wantReply bool, payload []byte) (bool, error) {
 	return true, nil
 }
 
-func (cs *ChannelStub) Stderr() io.ReadWriter {
+func (cs *stubChannel) Stderr() io.ReadWriter {
 	return nil
 }

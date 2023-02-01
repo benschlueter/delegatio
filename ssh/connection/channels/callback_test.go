@@ -69,7 +69,7 @@ func TestHandleShell(t *testing.T) {
 			}
 
 			requests := make(chan *ssh.Request, len(tc.requests)+1)
-			stubChannel := &ChannelStub{reqChan: requests}
+			stubChannel := &stubChannel{reqChan: requests}
 			rd := &callbackData{
 				channel:         stubChannel,
 				wg:              &sync.WaitGroup{},
@@ -154,7 +154,7 @@ func TestHandleSubsystem(t *testing.T) {
 			}
 
 			requests := make(chan *ssh.Request, len(tc.requests)+1)
-			stubChannel := &ChannelStub{reqChan: requests}
+			stubChannel := &stubChannel{reqChan: requests}
 			rd := &callbackData{
 				channel:         stubChannel,
 				wg:              &sync.WaitGroup{},
@@ -239,7 +239,7 @@ func TestHandlePortForward(t *testing.T) {
 			}
 
 			requests := make(chan *ssh.Request, len(tc.requests)+1)
-			stubChannel := &ChannelStub{reqChan: requests}
+			stubChannel := &stubChannel{reqChan: requests}
 			rd := &callbackData{
 				channel:         stubChannel,
 				wg:              &sync.WaitGroup{},
