@@ -91,14 +91,14 @@ func TestHandleChannel(t *testing.T) {
 		directtcpIPHandlerFunc func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *local.Shared, *payload.ForwardTCPChannelOpen) (channels.Channel, error)
 	}{
 		"session accept error": {
-			channel: &stubChannel{
+			channel: &stubNewChannel{
 				channelType: "session",
 				acceptErr:   testErr,
 			},
 			expectFinish: true,
 		},
 		"new session handler error": {
-			channel: &stubChannel{
+			channel: &stubNewChannel{
 				channelType: "session",
 			},
 			expectFinish: true,
@@ -107,7 +107,7 @@ func TestHandleChannel(t *testing.T) {
 			},
 		},
 		"session cancelled by context": {
-			channel: &stubChannel{
+			channel: &stubNewChannel{
 				channelType: "session",
 			},
 			expectFinish: false,
@@ -116,27 +116,27 @@ func TestHandleChannel(t *testing.T) {
 			},
 		},
 		"unknows channel type": {
-			channel: &stubChannel{
+			channel: &stubNewChannel{
 				channelType: "unknown stuff",
 			},
 			expectFinish: true,
 		},
 		"unknows channel type and reject error": {
-			channel: &stubChannel{
+			channel: &stubNewChannel{
 				channelType: "unknown stuff",
 				rejectErr:   testErr,
 			},
 			expectFinish: true,
 		},
 		"direct-tcpip unmarshal error": {
-			channel: &stubChannel{
+			channel: &stubNewChannel{
 				channelType: "direct-tcpip",
 				data:        []byte("invalid data"),
 			},
 			expectFinish: true,
 		},
 		"direct-tcpip unmarshal and reject error": {
-			channel: &stubChannel{
+			channel: &stubNewChannel{
 				channelType: "direct-tcpip",
 				data:        []byte("invalid data"),
 				rejectErr:   testErr,
@@ -144,7 +144,7 @@ func TestHandleChannel(t *testing.T) {
 			expectFinish: true,
 		},
 		"direct-tcpip accept error": {
-			channel: &stubChannel{
+			channel: &stubNewChannel{
 				channelType: "direct-tcpip",
 				acceptErr:   testErr,
 				data:        ssh.Marshal(payload.ForwardTCPChannelOpen{}),
@@ -152,7 +152,7 @@ func TestHandleChannel(t *testing.T) {
 			expectFinish: true,
 		},
 		"new direct-tcpip handler error": {
-			channel: &stubChannel{
+			channel: &stubNewChannel{
 				channelType: "direct-tcpip",
 				data:        ssh.Marshal(payload.ForwardTCPChannelOpen{}),
 			},
@@ -162,7 +162,7 @@ func TestHandleChannel(t *testing.T) {
 			expectFinish: true,
 		},
 		"direct-tcpip closed by ctx": {
-			channel: &stubChannel{
+			channel: &stubNewChannel{
 				channelType: "direct-tcpip",
 				data:        ssh.Marshal(payload.ForwardTCPChannelOpen{}),
 			},
@@ -210,10 +210,10 @@ func TestHandleChannels(t *testing.T) {
 		"closed channel after starting at least one go routine": {
 			closeChannel: true,
 			channelElements: []ssh.NewChannel{
-				&stubChannel{
+				&stubNewChannel{
 					channelType: "non-existing",
 				},
-				&stubChannel{
+				&stubNewChannel{
 					channelType: "non-existing",
 				},
 			},
@@ -361,26 +361,26 @@ func (c *stubConn) LocalAddr() net.Addr {
 	return nil
 }
 
-type stubChannel struct {
+type stubNewChannel struct {
 	acceptErr   error
 	rejectErr   error
 	channelType string
 	data        []byte
 }
 
-func (s *stubChannel) Accept() (ssh.Channel, <-chan *ssh.Request, error) {
+func (s *stubNewChannel) Accept() (ssh.Channel, <-chan *ssh.Request, error) {
 	return nil, nil, s.acceptErr
 }
 
-func (s *stubChannel) Reject(reason ssh.RejectionReason, message string) error {
+func (s *stubNewChannel) Reject(reason ssh.RejectionReason, message string) error {
 	return s.rejectErr
 }
 
-func (s *stubChannel) ChannelType() string {
+func (s *stubNewChannel) ChannelType() string {
 	return s.channelType
 }
 
-func (s *stubChannel) ExtraData() []byte {
+func (s *stubNewChannel) ExtraData() []byte {
 	return s.data
 }
 

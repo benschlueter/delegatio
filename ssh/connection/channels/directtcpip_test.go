@@ -52,7 +52,7 @@ func TestDirectTCPIP(t *testing.T) {
 			require := require.New(t)
 
 			requests := make(chan *ssh.Request, len(tc.requests)+1)
-			stubChannel := &ChannelStub{reqChan: requests}
+			stubChannel := &stubChannel{reqChan: requests}
 			log := zap.NewNop()
 			builder := DirectTCPIPBuilderSkeleton()
 			builder.SetRequests(requests)

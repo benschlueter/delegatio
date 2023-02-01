@@ -6,6 +6,7 @@ package channels
 
 import (
 	"context"
+	"errors"
 	"sync"
 
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
@@ -105,15 +106,31 @@ func (b *builder) SetDirectTCPIPData(directTCPIPData *payload.ForwardTCPChannelO
 
 // Build builds the channel.
 func (b *builder) Build() (*channel, error) {
+	if b.channel == nil {
+		return nil, errors.New("channel is nil")
+	}
+	if b.requests == nil {
+		return nil, errors.New("requests is nil")
+	}
+	if b.logger == nil {
+		return nil, errors.New("logger is nil")
+	}
+	if b.sharedData == nil {
+		return nil, errors.New("sharedData is nil")
+	}
+	if b.channelType == "direct-tcpip" && b.directTCPIPData == nil {
+		return nil, errors.New("directTCPIPData is nil")
+	}
+
 	handler := &channel{
 		requests:       b.requests,
 		serveCloseDone: make(chan struct{}),
 		reqData: &callbackData{
 			// TerminalSize handler is not closed at the moment (will be garbage collected anyways)
 			terminalResizer: NewTerminalSizeHandler(10),
-			log:             b.logger.Named(b.channelType),
-			channel:         b.channel,
 			wg:              &sync.WaitGroup{},
+			log:             b.logger.Named("channels").Named(b.channelType),
+			channel:         b.channel,
 			directTCPIPData: b.directTCPIPData,
 			Shared:          b.sharedData,
 		},

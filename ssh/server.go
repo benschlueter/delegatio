@@ -138,7 +138,7 @@ func (s *sshServer) validateAndProcessConnection(ctx context.Context, tcpConn ne
 		return
 	}
 	s.log.Info("authentication of connection successful", zap.Binary("session", sshConn.SessionID()))
-	builder := connection.NewBuilder(s.log, sshConn, chans, reqs)
+	builder := connection.NewBuilder()
 	builder.SetExecFunc(s.client.ExecuteCommandInPod)
 	builder.SetForwardFunc(s.client.CreatePodPortForward)
 	builder.SetRessourceFunc(s.client.CreateAndWaitForRessources)
