@@ -14,8 +14,8 @@ import (
 	"testing"
 
 	"github.com/benschlueter/delegatio/internal/config"
+	"github.com/benschlueter/delegatio/ssh/connection/channels"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
-	"github.com/benschlueter/delegatio/ssh/local"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 	"go.uber.org/zap"
@@ -172,7 +172,7 @@ func TestNewSession(t *testing.T) {
 			var log *zap.Logger
 			var channel ssh.Channel
 			var request <-chan *ssh.Request
-			var shared *local.Shared
+			var shared *channels.Shared
 
 			if tc.setLog {
 				log = zap.NewNop()
@@ -184,7 +184,7 @@ func TestNewSession(t *testing.T) {
 				request = make(<-chan *ssh.Request)
 			}
 			if tc.setShared {
-				shared = &local.Shared{}
+				shared = &channels.Shared{}
 			}
 
 			_, err := newSession(log, channel, request, shared)
@@ -258,7 +258,7 @@ func TestNewDirectTCPIP(t *testing.T) {
 			var log *zap.Logger
 			var channel ssh.Channel
 			var request <-chan *ssh.Request
-			var shared *local.Shared
+			var shared *channels.Shared
 			var tcpIPData *payload.ForwardTCPChannelOpen
 
 			if tc.setLog {
@@ -271,7 +271,7 @@ func TestNewDirectTCPIP(t *testing.T) {
 				request = make(<-chan *ssh.Request)
 			}
 			if tc.setShared {
-				shared = &local.Shared{}
+				shared = &channels.Shared{}
 			}
 			if tc.setTCPIPData {
 				tcpIPData = &payload.ForwardTCPChannelOpen{}

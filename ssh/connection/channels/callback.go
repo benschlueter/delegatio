@@ -11,7 +11,6 @@ import (
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
-	"github.com/benschlueter/delegatio/ssh/local"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 	"k8s.io/client-go/tools/remotecommand"
@@ -27,7 +26,7 @@ type callbackData struct {
 	ptyReq          *payload.PtyRequest
 	directTCPIPData *payload.ForwardTCPChannelOpen
 	terminalResizer *TerminalSizeHandler
-	*local.Shared
+	*Shared
 }
 
 // handleShell handles the "shell" request. This is used for "kubectl exec".

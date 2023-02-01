@@ -13,7 +13,6 @@ import (
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/channels"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
-	"github.com/benschlueter/delegatio/ssh/local"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
@@ -27,10 +26,10 @@ type connection struct {
 	maxKeepAliveRetries   int
 	keepAliveInterval     time.Duration
 	createWaitFunc        func(context.Context, *config.KubeRessourceIdentifier) error
-	newDirectTCPIPHandler func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *local.Shared, *payload.ForwardTCPChannelOpen) (channels.Channel, error)
-	newSessionHandler     func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *local.Shared) (channels.Channel, error)
+	newDirectTCPIPHandler func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared, *payload.ForwardTCPChannelOpen) (channels.Channel, error)
+	newSessionHandler     func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared) (channels.Channel, error)
 	// Also needed by channel handlers
-	*local.Shared
+	*channels.Shared
 }
 
 // HandleGlobalConnection handles the global connection and is the entry point for this handler.

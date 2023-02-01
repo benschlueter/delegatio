@@ -15,7 +15,6 @@ import (
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/channels"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
-	"github.com/benschlueter/delegatio/ssh/local"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
@@ -99,7 +98,7 @@ func (s *builder) Build() (*connection, error) {
 		globalRequests:      s.globalRequests,
 		createWaitFunc:      s.createWaitFunc,
 		log:                 s.log.Named("connection").Named(logIdentifier),
-		Shared: &local.Shared{
+		Shared: &channels.Shared{
 			ForwardFunc:         s.forwardFunc,
 			ExecFunc:            s.execFunc,
 			Namespace:           s.connection.User(),
@@ -111,7 +110,7 @@ func (s *builder) Build() (*connection, error) {
 	}, nil
 }
 
-func newSession(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.Request, shared *local.Shared) (channels.Channel, error) {
+func newSession(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.Request, shared *channels.Shared) (channels.Channel, error) {
 	builder := channels.SessionBuilderSkeleton()
 	builder.SetRequests(requests)
 	builder.SetChannel(channel)
@@ -120,7 +119,7 @@ func newSession(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.Reque
 	return builder.Build()
 }
 
-func newDirectTCPIP(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.Request, shared *local.Shared, data *payload.ForwardTCPChannelOpen) (channels.Channel, error) {
+func newDirectTCPIP(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.Request, shared *channels.Shared, data *payload.ForwardTCPChannelOpen) (channels.Channel, error) {
 	builder := channels.DirectTCPIPBuilderSkeleton()
 	builder.SetRequests(requests)
 	builder.SetChannel(channel)
