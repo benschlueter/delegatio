@@ -73,7 +73,7 @@ func SessionBuilderSkeleton() *builder {
 			return
 		}
 		rd.log.Info("pty request", zap.Any("data", ptyReq))
-		rd.ptyReq = &ptyReq
+		rd.ptyReqData = &ptyReq
 		if err := req.Reply(true, nil); err != nil {
 			rd.log.Error("failled to respond to \"pty-req\" request", zap.Error(err))
 		}

@@ -2,7 +2,6 @@
  * Copyright (c) Benedict Schlueter
  */
 
-// code based on https://gist.github.com/protosam/53cf7970e17e06135f1622fa9955415f#file-basic-sshd-go
 package main
 
 import (
@@ -14,6 +13,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
@@ -161,7 +161,8 @@ func (s *sshServer) periodicLogs(ctx context.Context) {
 	for {
 		select {
 		case <-t.C:
-			s.log.Info("current active connections", zap.Int64("conn", s.currentConnections))
+			s.log.Info("active connections", zap.Int64("conn", s.currentConnections))
+			s.log.Info("active goroutines", zap.Int("goroutines", runtime.NumGoroutine()))
 		case <-ctx.Done():
 			s.log.Debug("stopping periodicLogs")
 			return

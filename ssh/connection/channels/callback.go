@@ -23,7 +23,7 @@ type callbackData struct {
 	channel         ssh.Channel
 	wg              *sync.WaitGroup
 	log             *zap.Logger
-	ptyReq          *payload.PtyRequest
+	ptyReqData      *payload.PtyRequest
 	directTCPIPData *payload.ForwardTCPChannelOpen
 	terminalResizer *TerminalSizeHandler
 	*Shared
@@ -31,6 +31,8 @@ type callbackData struct {
 
 // handleShell handles the "shell" request. This is used for "kubectl exec".
 func (rd *callbackData) handleShell(ctx context.Context) {
+	rd.log.Info("handleShell", zap.Any("pty", rd.ptyReqData))
+
 	defer func() {
 		if err := rd.channel.Close(); err != nil {
 			rd.log.Error("failed to close channel", zap.Error(err))
@@ -39,11 +41,11 @@ func (rd *callbackData) handleShell(ctx context.Context) {
 	}()
 	// Fire up "kubectl exec" for this session
 	tty := false
-	if rd.ptyReq != nil {
+	if rd.ptyReqData != nil {
 		if err := rd.terminalResizer.Fill(
 			&remotecommand.TerminalSize{
-				Width:  uint16(rd.ptyReq.WidthColumns),
-				Height: uint16(rd.ptyReq.HeightRows),
+				Width:  uint16(rd.ptyReqData.WidthColumns),
+				Height: uint16(rd.ptyReqData.HeightRows),
 			}); err != nil {
 			rd.log.Error("failled to fill window", zap.Error(err))
 		}
@@ -70,6 +72,7 @@ func (rd *callbackData) handleShell(ctx context.Context) {
 // handleSubsystem handles the "subsystem" request. Currently only SFTP is supported.
 // This is used by "scp" to copy files from the localhost to the pod or vice versa.
 func (rd *callbackData) handleSubsystem(ctx context.Context, cmd string) {
+	rd.log.Info("handleSubsystem callback", zap.String("subsystem", cmd))
 	defer func() {
 		if err := rd.channel.Close(); err != nil {
 			rd.log.Error("failed to close channel", zap.Error(err))
@@ -102,6 +105,8 @@ func (rd *callbackData) handleSubsystem(ctx context.Context, cmd string) {
 
 // handlePortForward handles the "direct-tcpip" request. This is used for "kubectl port-forward".
 func (rd *callbackData) handlePortForward(ctx context.Context) {
+	rd.log.Info("handlePortForward callback", zap.Any("data", rd.directTCPIPData))
+
 	defer func() {
 		if err := rd.channel.Close(); err != nil {
 			rd.log.Error("failed to close channel", zap.Error(err))

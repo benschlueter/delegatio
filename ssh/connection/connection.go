@@ -50,6 +50,7 @@ func (c *connection) HandleGlobalConnection(ctx context.Context) {
 	closeAndWaitForHandleGlobalRequests := c.handleGlobalRequests(ctx, make(chan struct{}))
 	defer closeAndWaitForHandleGlobalRequests()
 
+	c.log.Info("waiting for ressources to be ready")
 	// Check that all kubernetes ressources are ready and usable for future use.
 	if err := c.createWaitFunc(ctx, &config.KubeRessourceIdentifier{Namespace: c.Namespace, UserIdentifier: c.AuthenticatedUserID}); err != nil {
 		c.log.Error("creating/waiting for kubernetes ressources",
@@ -59,9 +60,10 @@ func (c *connection) HandleGlobalConnection(ctx context.Context) {
 		)
 		return
 	}
+	c.log.Info("ressources are ready, serving channels")
 	// handle channel requests
 	c.handleChannels(ctx)
-	c.log.Info("closing session gracefully")
+	c.log.Info("closed handleGlobalConnection gracefully")
 }
 
 // handle channel will run as log as h.channel is open and the context is not cancelled.
@@ -72,7 +74,7 @@ func (c *connection) handleChannels(ctx context.Context) {
 		cancel()
 		c.log.Info("waiting for channels to shutdown gracefully")
 		c.wg.Wait()
-		c.log.Info("handleChannels done")
+		c.log.Info("channel shutdowns done")
 	}()
 	for {
 		select {
@@ -111,6 +113,7 @@ func (c *connection) handleChannel(ctx context.Context, newChannel ssh.NewChanne
 // handleChannelTypeSession handles the channelSession, it will block until the connection is closed by the client,
 // or the ctx is cancelled.
 func (c *connection) handleChannelTypeSession(ctx context.Context, newChannel ssh.NewChannel) {
+	c.log.Debug("handling new session channel request")
 	channel, requests, err := newChannel.Accept()
 	if err != nil {
 		c.log.Error("could not accept the channel", zap.Error(err))
@@ -122,6 +125,7 @@ func (c *connection) handleChannelTypeSession(ctx context.Context, newChannel ss
 		c.log.Error("could not create session handler", zap.Error(err))
 		return
 	}
+	c.log.Debug("starting session handler goroutine")
 	go handler.Serve(ctx)
 	handler.Wait()
 }
@@ -130,6 +134,7 @@ func (c *connection) handleChannelTypeSession(ctx context.Context, newChannel ss
 // Address and Port requested in the ExtraData from the channel.
 // Note that the lifetime of the portForwarding is bound to the channel.
 func (c *connection) handleChannelTypeDirectTCPIP(ctx context.Context, newChannel ssh.NewChannel) {
+	c.log.Debug("handling new direct-tcpip channel request")
 	var tcpipData payload.ForwardTCPChannelOpen
 	err := ssh.Unmarshal(newChannel.ExtraData(), &tcpipData)
 	if err != nil {
@@ -140,7 +145,7 @@ func (c *connection) handleChannelTypeDirectTCPIP(ctx context.Context, newChanne
 		}
 		return
 	}
-	c.log.Debug("payload", zap.Any("payload", tcpipData))
+	c.log.Debug("payload unmarshal successful", zap.Any("payload", tcpipData))
 	channel, requests, err := newChannel.Accept()
 	if err != nil {
 		c.log.Error("could not accept the channel", zap.Error(err))
@@ -151,6 +156,7 @@ func (c *connection) handleChannelTypeDirectTCPIP(ctx context.Context, newChanne
 		c.log.Error("could not create directtcpip handler", zap.Error(err))
 		return
 	}
+	c.log.Debug("starting directtcpip handler goroutine")
 	go handler.Serve(ctx)
 	handler.Wait()
 }
