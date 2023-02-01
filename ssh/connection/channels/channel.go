@@ -23,9 +23,8 @@ func (h *channel) Serve(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
 		cancel()
-		h.log.Info("before wg wait")
 		h.reqData.wg.Wait()
-		h.log.Info("serverclosedone")
+		h.log.Debug("stopping channel serve")
 		h.serveCloseDone <- struct{}{}
 	}()
 
