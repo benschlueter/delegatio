@@ -6,12 +6,12 @@ package qemu
 
 import (
 	"context"
+	"errors"
 	"strconv"
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/config/definitions"
 	"github.com/spf13/afero"
-	"go.uber.org/multierr"
 	"go.uber.org/zap"
 
 	"golang.org/x/sync/errgroup"
@@ -124,11 +124,7 @@ func (l *libvirtInstance) BootstrapKubernetes(ctx context.Context, k8sConfig []b
 
 // TerminateInfrastructure deletes all resources created by the infrastructure.
 func (l *libvirtInstance) TerminateInfrastructure() error {
-	var err error
-	err = multierr.Append(err, l.deleteNetwork())
-	err = multierr.Append(err, l.deleteDomains())
-	err = multierr.Append(err, l.deletePool())
-	return err
+	return errors.Join(l.deleteNetwork(), l.deleteDomains(), l.deletePool())
 }
 
 // TerminateConnection closes the libvirt connection.

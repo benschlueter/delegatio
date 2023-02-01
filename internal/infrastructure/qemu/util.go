@@ -7,13 +7,13 @@ package qemu
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"strconv"
 
 	"github.com/benschlueter/delegatio/internal/config/definitions"
 	"github.com/benschlueter/delegatio/internal/infrastructure/configurer"
-	"go.uber.org/multierr"
 	"go.uber.org/zap"
 	"libvirt.org/go/libvirt"
 )
@@ -29,7 +29,7 @@ func (l *libvirtInstance) uploadBaseImage(ctx context.Context, baseVolume storag
 		return fmt.Errorf("error while opening %s: %s", l.ImagePath, err)
 	}
 	defer func() {
-		err = multierr.Append(err, file.Close())
+		err = errors.Join(err, file.Close())
 	}()
 
 	fi, err := file.Stat()

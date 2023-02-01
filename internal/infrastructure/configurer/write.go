@@ -6,10 +6,9 @@ package configurer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
-
-	"go.uber.org/multierr"
 )
 
 // writeKubeconfigToDisk writes the kubeconfig to disk.
@@ -20,7 +19,7 @@ func (a *Configurer) writeKubeconfigToDisk(ctx context.Context) (err error) {
 	}
 	adminConfigFile, err := os.Create("admin.conf")
 	defer func() {
-		err = multierr.Append(err, adminConfigFile.Close())
+		err = errors.Join(err, adminConfigFile.Close())
 	}()
 	if err != nil {
 		return fmt.Errorf("failed to create admin config file %v: %w", adminConfigFile.Name(), err)
