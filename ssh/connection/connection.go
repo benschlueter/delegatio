@@ -47,7 +47,7 @@ func (c *connection) HandleGlobalConnection(ctx context.Context) {
 	defer closeAndWaitForKeepAlive()
 
 	// Discard all global out-of-band Requests.
-	ctx, closeAndWaitForHandleGlobalRequests := c.handleGlobalRequests(ctx, make(chan struct{}))
+	closeAndWaitForHandleGlobalRequests := c.handleGlobalRequests(ctx, make(chan struct{}))
 	defer closeAndWaitForHandleGlobalRequests()
 
 	// Check that all kubernetes ressources are ready and usable for future use.
@@ -61,7 +61,7 @@ func (c *connection) HandleGlobalConnection(ctx context.Context) {
 	}
 	// handle channel requests
 	c.handleChannels(ctx)
-	c.log.Info("closing session")
+	c.log.Info("closing session gracefully")
 }
 
 // handle channel will run as log as h.channel is open and the context is not cancelled.
@@ -72,11 +72,12 @@ func (c *connection) handleChannels(ctx context.Context) {
 		cancel()
 		c.log.Info("waiting for channels to shutdown gracefully")
 		c.wg.Wait()
-		c.log.Info("channels shutdown gracefully")
+		c.log.Info("handleChannels done")
 	}()
 	for {
 		select {
 		case <-ctx.Done():
+			c.log.Debug("context cancelled")
 			return
 		case newChannel, ok := <-c.channel:
 			if !ok {
@@ -193,7 +194,7 @@ func (c *connection) keepAlive(ctx context.Context, sshConn *ssh.ServerConn, don
 	}
 }
 
-func (c *connection) handleGlobalRequests(ctx context.Context, done chan struct{}) (context.Context, context.CancelFunc) {
+func (c *connection) handleGlobalRequests(ctx context.Context, done chan struct{}) context.CancelFunc {
 	ctx, cancel := context.WithCancel(ctx)
 	c.log.Debug("starting handleGlobalRequests")
 	go func() {
@@ -204,7 +205,7 @@ func (c *connection) handleGlobalRequests(ctx context.Context, done chan struct{
 			select {
 			case req, ok := <-c.globalRequests:
 				if !ok {
-					c.log.Debug("global request channel closed")
+					c.log.Debug("handleGlobalRequests stopped by closed chan")
 					return
 				}
 				if req.WantReply {
@@ -215,12 +216,12 @@ func (c *connection) handleGlobalRequests(ctx context.Context, done chan struct{
 				c.log.Info("discared global request")
 
 			case <-ctx.Done():
-				c.log.Debug("stopping handleGlobalRequests")
+				c.log.Debug("handleGlobalRequests stopped by context")
 				return
 			}
 		}
 	}()
-	return ctx, func() {
+	return func() {
 		cancel()
 		<-done
 	}

@@ -22,97 +22,6 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// TODO: test for zap messages
-/*
-   observedZapCore, observedLogs := observer.New(zap.InfoLevel)
-   observedLogger := zap.New(observedZapCore)
-
-   myFunction(observedLogger)
-
-   require.Equal(t, 2, observedLogs.Len())
-   allLogs := observedLogs.All()
-   assert.Equal(t, "log myFunction", allLogs[0].Message)
-   assert.Equal(t, "log with fields", allLogs[1].Message)
-   assert.ElementsMatch(t, []zap.Field{
-       {Key: "keyOne", String: "valueOne"},
-       {Key: "keyTwo", St
-*/
-
-func TestKeepAlive(t *testing.T) {
-	defer goleak.VerifyNone(t)
-	testErr := errors.New("test errr")
-	testCases := map[string]struct {
-		closeByCtx     bool
-		interval       time.Duration
-		serverConn     *ssh.ServerConn
-		logMessages    []string
-		nonLogMessages []string
-	}{
-		"close by context ": {
-			closeByCtx: true,
-			serverConn: &ssh.ServerConn{
-				Conn: &stubConn{},
-			},
-			interval: time.Second,
-			logMessages: []string{
-				"stopping keepAlive",
-				"starting keepAlive",
-				"keepAlive context canceled",
-			},
-			nonLogMessages: []string{
-				"keepAlive failed; closing connection",
-				"keepAlive did not received a response",
-			},
-		},
-		"close by timeout ": {
-			serverConn: &ssh.ServerConn{
-				Conn: &stubConn{
-					sendRequestErr: testErr,
-				},
-			},
-			interval: time.Nanosecond,
-			logMessages: []string{
-				"keepAlive failed; closing connection",
-				"stopping keepAlive",
-				"starting keepAlive",
-				"keepAlive did not received a response",
-			},
-			nonLogMessages: []string{
-				"keepAlive context canceled",
-			},
-		},
-	}
-
-	for name, tc := range testCases {
-		t.Run(name, func(t *testing.T) {
-			assert := assert.New(t)
-			observedZapCore, observedLogs := observer.New(zap.DebugLevel)
-			observedLogger := zap.New(observedZapCore)
-			handler := connection{keepAliveInterval: tc.interval, log: observedLogger}
-
-			ctx, cancel := context.WithCancel(context.Background())
-			defer cancel()
-
-			done := make(chan struct{})
-			_, cancelHandler := handler.keepAlive(ctx, tc.serverConn, done)
-
-			if tc.closeByCtx {
-				cancelHandler()
-			} else {
-				<-done
-			}
-			for _, v := range tc.logMessages {
-				logs := observedLogs.FilterMessage(v).TakeAll()
-				assert.GreaterOrEqual(len(logs), 1)
-			}
-			for _, v := range tc.nonLogMessages {
-				logs := observedLogs.FilterMessage(v).TakeAll()
-				assert.Zero(len(logs))
-			}
-		})
-	}
-}
-
 func TestHandleChannel(t *testing.T) {
 	defer goleak.VerifyNone(t)
 	testErr := errors.New("test errr")
@@ -291,9 +200,14 @@ func TestHandleChannels(t *testing.T) {
 		closeChannel    bool
 		cancelCtx       bool
 		channelElements []ssh.NewChannel
+		logMessages     []string
+		nonLogMessages  []string
 	}{
 		"closed channel": {
 			closeChannel: true,
+			logMessages: []string{
+				"global channel closed",
+			},
 		},
 		"closed channel after starting at least one go routine": {
 			closeChannel: true,
@@ -305,20 +219,27 @@ func TestHandleChannels(t *testing.T) {
 					channelType: "non-existing",
 				},
 			},
+			logMessages: []string{
+				"handling new global channel request",
+			},
 		},
 		"cancel ctx": {
 			cancelCtx: true,
+			logMessages: []string{
+				"context cancelled",
+			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// assert := assert.New(t)
-			// require := require.New(t)
+			assert := assert.New(t)
+			observedZapCore, observedLogs := observer.New(zap.DebugLevel)
+			observedLogger := zap.New(observedZapCore)
 
 			channelChan := make(chan ssh.NewChannel)
 			handler := connection{
-				log:     zap.NewNop(),
+				log:     observedLogger,
 				wg:      &sync.WaitGroup{},
 				channel: channelChan,
 			}
@@ -343,6 +264,14 @@ func TestHandleChannels(t *testing.T) {
 
 			handler.handleChannels(ctx)
 			<-done
+			for _, v := range tc.logMessages {
+				logs := observedLogs.FilterMessage(v).TakeAll()
+				assert.GreaterOrEqual(len(logs), 1)
+			}
+			for _, v := range tc.nonLogMessages {
+				logs := observedLogs.FilterMessage(v).TakeAll()
+				assert.Zero(len(logs))
+			}
 		})
 	}
 }
@@ -351,19 +280,27 @@ func TestHandleGlobalConnection(t *testing.T) {
 	defer goleak.VerifyNone(t)
 	testErr := errors.New("test errr")
 	testCases := map[string]struct {
-		createWfunc   func(context.Context, *config.KubeRessourceIdentifier) error
-		sshConnection *ssh.ServerConn
+		createWfunc    func(context.Context, *config.KubeRessourceIdentifier) error
+		sshConnection  *ssh.ServerConn
+		logMessages    []string
+		nonLogMessages []string
 	}{
 		"works": {
 			createWfunc: func(context.Context, *config.KubeRessourceIdentifier) error { return nil },
 			sshConnection: &ssh.ServerConn{
 				Conn: &stubConn{},
 			},
+			logMessages: []string{
+				"closing session gracefully",
+			},
 		},
 		"createWaitFunc error": {
 			createWfunc: func(context.Context, *config.KubeRessourceIdentifier) error { return testErr },
 			sshConnection: &ssh.ServerConn{
 				Conn: &stubConn{},
+			},
+			logMessages: []string{
+				"creating/waiting for kubernetes ressources",
 			},
 		},
 		"close error": {
@@ -373,17 +310,21 @@ func TestHandleGlobalConnection(t *testing.T) {
 					closeErr: testErr,
 				},
 			},
+			logMessages: []string{
+				"failed to close connection",
+			},
 		},
 	}
 
 	for name, tc := range testCases {
 		t.Run(name, func(t *testing.T) {
-			// assert := assert.New(t)
-			// require := require.New(t)
+			assert := assert.New(t)
+			observedZapCore, observedLogs := observer.New(zap.DebugLevel)
+			observedLogger := zap.New(observedZapCore)
 
 			channelChan := make(chan ssh.NewChannel)
 			handler := connection{
-				log:               zap.NewNop(),
+				log:               observedLogger,
 				wg:                &sync.WaitGroup{},
 				keepAliveInterval: time.Second,
 				channel:           channelChan,
@@ -398,6 +339,145 @@ func TestHandleGlobalConnection(t *testing.T) {
 			ctx, cancel := context.WithCancel(context.Background())
 			cancel()
 			handler.HandleGlobalConnection(ctx)
+			for _, v := range tc.logMessages {
+				logs := observedLogs.FilterMessage(v).TakeAll()
+				assert.GreaterOrEqual(len(logs), 1)
+			}
+			for _, v := range tc.nonLogMessages {
+				logs := observedLogs.FilterMessage(v).TakeAll()
+				assert.Zero(len(logs))
+			}
+		})
+	}
+}
+
+func TestKeepAlive(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	testErr := errors.New("test errr")
+	testCases := map[string]struct {
+		closeByCtx     bool
+		interval       time.Duration
+		serverConn     *ssh.ServerConn
+		logMessages    []string
+		nonLogMessages []string
+	}{
+		"close by context ": {
+			closeByCtx: true,
+			serverConn: &ssh.ServerConn{
+				Conn: &stubConn{},
+			},
+			interval: time.Second,
+			logMessages: []string{
+				"stopping keepAlive",
+				"starting keepAlive",
+				"keepAlive context canceled",
+			},
+			nonLogMessages: []string{
+				"keepAlive failed; closing connection",
+				"keepAlive did not received a response",
+			},
+		},
+		"close by timeout ": {
+			serverConn: &ssh.ServerConn{
+				Conn: &stubConn{
+					sendRequestErr: testErr,
+				},
+			},
+			interval: time.Nanosecond,
+			logMessages: []string{
+				"keepAlive failed; closing connection",
+				"stopping keepAlive",
+				"starting keepAlive",
+				"keepAlive did not received a response",
+			},
+			nonLogMessages: []string{
+				"keepAlive context canceled",
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			assert := assert.New(t)
+			observedZapCore, observedLogs := observer.New(zap.DebugLevel)
+			observedLogger := zap.New(observedZapCore)
+			handler := connection{keepAliveInterval: tc.interval, log: observedLogger}
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			done := make(chan struct{})
+			_, cancelHandler := handler.keepAlive(ctx, tc.serverConn, done)
+
+			if tc.closeByCtx {
+				cancelHandler()
+			} else {
+				<-done
+			}
+			for _, v := range tc.logMessages {
+				logs := observedLogs.FilterMessage(v).TakeAll()
+				assert.GreaterOrEqual(len(logs), 1)
+			}
+			for _, v := range tc.nonLogMessages {
+				logs := observedLogs.FilterMessage(v).TakeAll()
+				assert.Zero(len(logs))
+			}
+		})
+	}
+}
+
+func TestGlobalRequests(t *testing.T) {
+	defer goleak.VerifyNone(t)
+	testCases := map[string]struct {
+		closeByCtx     bool
+		logMessages    []string
+		nonLogMessages []string
+	}{
+		"close by context ": {
+			closeByCtx: true,
+			logMessages: []string{
+				"handleGlobalRequests stopped by context",
+			},
+		},
+		"close by channelClose ": {
+			logMessages: []string{
+				"handleGlobalRequests stopped by closed chan",
+				"discared global request",
+			},
+		},
+	}
+
+	for name, tc := range testCases {
+		t.Run(name, func(t *testing.T) {
+			assert := assert.New(t)
+			observedZapCore, observedLogs := observer.New(zap.DebugLevel)
+			observedLogger := zap.New(observedZapCore)
+			requests := make(chan *ssh.Request, 1)
+			requests <- &ssh.Request{
+				WantReply: false,
+			}
+			handler := connection{log: observedLogger, globalRequests: requests}
+
+			ctx, cancel := context.WithCancel(context.Background())
+			defer cancel()
+
+			done := make(chan struct{})
+			_ = handler.handleGlobalRequests(ctx, done)
+
+			if tc.closeByCtx {
+				cancel()
+			} else {
+				close(requests)
+			}
+			<-done
+			for _, v := range tc.logMessages {
+				logs := observedLogs.FilterMessage(v).TakeAll()
+				assert.GreaterOrEqual(len(logs), 1)
+			}
+			for _, v := range tc.nonLogMessages {
+				logs := observedLogs.FilterMessage(v).TakeAll()
+				assert.Zero(len(logs))
+			}
 		})
 	}
 }
