@@ -189,7 +189,7 @@ func (c *connection) keepAlive(ctx context.Context, sshConn *ssh.ServerConn, don
 					return
 				}
 			case <-ctx.Done():
-				c.log.Info("keepAlive context canceled")
+				c.log.Info("keepAlive context canceled", zap.Error(context.Cause(ctx)))
 				return
 			}
 		}
@@ -222,7 +222,7 @@ func (c *connection) handleGlobalRequests(ctx context.Context, done chan struct{
 				c.log.Info("discared global request")
 
 			case <-ctx.Done():
-				c.log.Debug("handleGlobalRequests stopped by context")
+				c.log.Debug("handleGlobalRequests stopped by context", zap.Error(context.Cause(ctx)))
 				return
 			}
 		}
