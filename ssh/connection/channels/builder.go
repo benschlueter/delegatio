@@ -104,8 +104,8 @@ func (b *builder) SetDirectTCPIPData(directTCPIPData *payload.ForwardTCPChannelO
 }
 
 // Build builds the channel.
-func (b *builder) Build() (*channelHandler, error) {
-	handler := &channelHandler{
+func (b *builder) Build() (*channel, error) {
+	handler := &channel{
 		requests:       b.requests,
 		serveCloseDone: make(chan struct{}),
 		reqData: &callbackData{

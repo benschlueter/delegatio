@@ -18,7 +18,7 @@ type Channel interface {
 }
 
 // Serve starts the server. It will block until the context is canceled or s.requests is closed.
-func (h *channelHandler) Serve(ctx context.Context) {
+func (h *channel) Serve(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
 		cancel()
@@ -58,12 +58,12 @@ func (h *channelHandler) Serve(ctx context.Context) {
 }
 
 // Wait waits until serve has finished (including all goroutines started by it).
-func (h *channelHandler) Wait() {
+func (h *channel) Wait() {
 	<-h.serveCloseDone
 }
 
-// channelHandler handles incoming requests on a channel.
-type channelHandler struct {
+// channel handles incoming requests on a channel.
+type channel struct {
 	requests       <-chan *ssh.Request
 	log            *zap.Logger
 	serveCloseDone chan struct{}
