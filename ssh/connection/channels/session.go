@@ -7,27 +7,15 @@ package channels
 import (
 	"context"
 
-	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-// NewSessionHandler returns a new SSHChannelServer.
-func NewSessionHandler(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.Request, namespace, userID string, execFunc func(context.Context, *config.KubeExecConfig) error) (*ChannelHandler, error) {
-	return NewSessionBuilder(log, channel, requests, namespace, userID, execFunc).Build()
-}
-
-// NewSessionBuilder returns a ChannelHandlerBuilder, which has the corresponding field set to handle sessions.
-func NewSessionBuilder(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.Request, namespace, userID string, execFunc func(context.Context, *config.KubeExecConfig) error) *ChannelHandlerBuilder {
-	builder := NewChannelBuilder().WithChannelType("session")
-	builder.SetRequests(requests)
-	builder.SetChannel(channel)
-	builder.SetLog(log)
-	builder.SetNamespace(namespace)
-	builder.SetUserID(userID)
-	builder.SetOnKubeExec(execFunc)
+// SessionBuilderSkeleton returns a ChannelHandlerBuilder, which has the corresponding field set to handle sessions.
+func SessionBuilderSkeleton() *builder {
+	builder := NewBuilder().WithChannelType("session")
 
 	builder.SetOnStartup(func(ctx context.Context, rd *callbackData) {
 		rd.log.Info("starting session handler")

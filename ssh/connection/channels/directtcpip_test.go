@@ -12,6 +12,7 @@ import (
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
+	"github.com/benschlueter/delegatio/ssh/local"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
@@ -53,7 +54,17 @@ func TestDirectTCPIP(t *testing.T) {
 			requests := make(chan *ssh.Request, len(tc.requests)+1)
 			stubChannel := &ChannelStub{reqChan: requests}
 			log := zap.NewNop()
-			builder := NewDirectTCPIPBuilder(log, stubChannel, requests, "ns-test", "pod-test", func(ctx context.Context, kec *config.KubeForwardConfig) error { return nil }, &payload.ForwardTCPChannelOpen{})
+			builder := DirectTCPIPBuilderSkeleton()
+			builder.SetRequests(requests)
+			builder.SetChannel(stubChannel)
+			builder.SetLog(log)
+			builder.SetSharedData(&local.Shared{
+				ForwardFunc:         func(ctx context.Context, kec *config.KubeForwardConfig) error { return nil },
+				AuthenticatedUserID: "test-user",
+				Namespace:           "test-ns",
+			},
+			)
+			builder.SetDirectTCPIPData(&payload.ForwardTCPChannelOpen{})
 
 			for _, v := range tc.requests {
 				requests <- v

@@ -11,21 +11,14 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// ChannelHandler handles incoming requests on a channel.
-type ChannelHandler struct {
-	requests       <-chan *ssh.Request
-	log            *zap.Logger
-	serveCloseDone chan struct{}
-	reqData        *callbackData
-
-	funcMap            map[string][]func(context.Context, *ssh.Request, *callbackData)
-	onEveryReqCallback []func(context.Context, *ssh.Request, *callbackData)
-	onDefaultCallback  []func(context.Context, *ssh.Request, *callbackData)
-	onStartupCallback  []func(context.Context, *callbackData)
+// Channel is the interface that wraps the Serve and Wait methods.
+type Channel interface {
+	Serve(ctx context.Context)
+	Wait()
 }
 
 // Serve starts the server. It will block until the context is canceled or s.requests is closed.
-func (h *ChannelHandler) Serve(ctx context.Context) {
+func (h *channel) Serve(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
 		cancel()
@@ -65,6 +58,19 @@ func (h *ChannelHandler) Serve(ctx context.Context) {
 }
 
 // Wait waits until serve has finished (including all goroutines started by it).
-func (h *ChannelHandler) Wait() {
+func (h *channel) Wait() {
 	<-h.serveCloseDone
+}
+
+// channel handles incoming requests on a channel.
+type channel struct {
+	requests       <-chan *ssh.Request
+	log            *zap.Logger
+	serveCloseDone chan struct{}
+	reqData        *callbackData
+
+	funcMap            map[string][]func(context.Context, *ssh.Request, *callbackData)
+	onEveryReqCallback []func(context.Context, *ssh.Request, *callbackData)
+	onDefaultCallback  []func(context.Context, *ssh.Request, *callbackData)
+	onStartupCallback  []func(context.Context, *callbackData)
 }
