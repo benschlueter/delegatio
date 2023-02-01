@@ -112,7 +112,7 @@ func newSession(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.Reque
 	builder := channels.SessionBuilderSkeleton()
 	builder.SetRequests(requests)
 	builder.SetChannel(channel)
-	builder.SetLog(log.Named("channels").Named("session"))
+	builder.SetLog(log.Named("channels"))
 	builder.SetSharedData(shared)
 	return builder.Build()
 }
@@ -121,7 +121,7 @@ func newDirectTCPIP(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.R
 	builder := channels.DirectTCPIPBuilderSkeleton()
 	builder.SetRequests(requests)
 	builder.SetChannel(channel)
-	builder.SetLog(log.Named("channels").Named("direct-tcpip"))
+	builder.SetLog(log.Named("channels"))
 	builder.SetSharedData(shared)
 	builder.SetDirectTCPIPData(data)
 	return builder.Build()

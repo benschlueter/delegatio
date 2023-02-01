@@ -14,8 +14,8 @@ import (
 )
 
 // SessionBuilderSkeleton returns a ChannelHandlerBuilder, which has the corresponding field set to handle sessions.
-func SessionBuilderSkeleton() *ChannelHandlerBuilder {
-	builder := NewChannelBuilder().WithChannelType("session")
+func SessionBuilderSkeleton() *builder {
+	builder := NewBuilder().WithChannelType("session")
 
 	builder.SetOnStartup(func(ctx context.Context, rd *callbackData) {
 		rd.log.Info("starting session handler")
