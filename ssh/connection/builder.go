@@ -6,7 +6,6 @@
 package connection
 
 import (
-	"context"
 	"encoding/base64"
 	"errors"
 	"sync"
@@ -15,6 +14,7 @@ import (
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/channels"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
+	"github.com/benschlueter/delegatio/ssh/kubernetes"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
@@ -26,9 +26,7 @@ type Builder struct {
 	channel        <-chan ssh.NewChannel
 	connection     *ssh.ServerConn
 	log            *zap.Logger
-	forwardFunc    func(context.Context, *config.KubeForwardConfig) error
-	execFunc       func(context.Context, *config.KubeExecConfig) error
-	createWaitFunc func(context.Context, *config.KubeRessourceIdentifier) error
+	k8sHelper      kubernetes.K8sAPI
 }
 
 // NewBuilder returns a sshConnection.
@@ -36,19 +34,9 @@ func NewBuilder() *Builder {
 	return &Builder{}
 }
 
-// SetExecFunc sets the exec function.
-func (s *Builder) SetExecFunc(execFunc func(context.Context, *config.KubeExecConfig) error) {
-	s.execFunc = execFunc
-}
-
-// SetForwardFunc sets the forward function.
-func (s *Builder) SetForwardFunc(forwardFunc func(context.Context, *config.KubeForwardConfig) error) {
-	s.forwardFunc = forwardFunc
-}
-
-// SetRessourceFunc sets the ressource function.
-func (s *Builder) SetRessourceFunc(createWaitFunc func(context.Context, *config.KubeRessourceIdentifier) error) {
-	s.createWaitFunc = createWaitFunc
+// SetK8sHelper sets the k8shelper interface.
+func (s *Builder) SetK8sHelper(helper kubernetes.K8sAPI) {
+	s.k8sHelper = helper
 }
 
 // SetConnection sets the connection.
@@ -84,8 +72,8 @@ func (s *Builder) Build() (*Handler, error) {
 		return nil, errors.New("no authenticated user id found")
 	}
 	logIdentifier := base64.StdEncoding.EncodeToString(s.connection.SessionID())
-	if s.execFunc == nil || s.forwardFunc == nil || s.createWaitFunc == nil {
-		return nil, errors.New("execFunc, forwardFunc or createWaitFunc is nil")
+	if s.k8sHelper == nil {
+		return nil, errors.New("no k8s helper provided is nil")
 	}
 	if s.log == nil {
 		return nil, errors.New("no logger provided")
@@ -98,11 +86,11 @@ func (s *Builder) Build() (*Handler, error) {
 		connection:          s.connection,
 		channel:             s.channel,
 		globalRequests:      s.globalRequests,
-		createWaitFunc:      s.createWaitFunc,
+		createWaitFunc:      s.k8sHelper.CreateAndWaitForRessources,
 		log:                 s.log.Named("connection").Named(logIdentifier),
 		Shared: &channels.Shared{
-			ForwardFunc:         s.forwardFunc,
-			ExecFunc:            s.execFunc,
+			ForwardFunc:         s.k8sHelper.CreatePodPortForward,
+			ExecFunc:            s.k8sHelper.ExecuteCommandInPod,
 			Namespace:           s.connection.User(),
 			AuthenticatedUserID: userID,
 		},

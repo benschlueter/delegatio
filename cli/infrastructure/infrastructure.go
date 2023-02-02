@@ -7,8 +7,8 @@ package infrastructure
 import (
 	"context"
 
+	"github.com/benschlueter/delegatio/cli/infrastructure/qemu"
 	"github.com/benschlueter/delegatio/internal/config"
-	"github.com/benschlueter/delegatio/internal/infrastructure/qemu"
 	"go.uber.org/zap"
 )
 

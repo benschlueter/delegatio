@@ -9,13 +9,13 @@ import (
 	"context"
 
 	"github.com/benschlueter/delegatio/internal/config"
-	"github.com/benschlueter/delegatio/internal/installer"
 	"github.com/benschlueter/delegatio/internal/storewrapper"
+	"github.com/benschlueter/delegatio/ssh/kubernetes"
 	"go.uber.org/zap"
 )
 
 func main() {
-	var client *installer.Client
+	var client *kubernetes.K8sapiWrapper
 	var err error
 	zapconf := zap.NewDevelopmentConfig()
 	zapconf.Level.SetLevel(zap.DebugLevel)
@@ -27,7 +27,7 @@ func main() {
 	logger.Info("Starting delegatio ssh server", zap.String("commit", config.Commit))
 	defer func() { _ = logger.Sync() }()
 
-	client, err = installer.NewK8sClient(logger.Named("k8sAPI"))
+	client, err = kubernetes.NewK8sClient(logger.Named("k8sAPI"))
 	if err != nil {
 		logger.With(zap.Error(err)).DPanic("failed to create k8s client")
 	}
