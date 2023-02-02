@@ -19,7 +19,7 @@ type Channel interface {
 }
 
 // Serve starts the server. It will block until the context is canceled or s.requests is closed.
-func (h *channel) Serve(ctx context.Context) {
+func (h *Handler) Serve(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
 		cancel()
@@ -58,7 +58,7 @@ func (h *channel) Serve(ctx context.Context) {
 }
 
 // Wait waits until serve has finished (including all goroutines started by it).
-func (h *channel) Wait() {
+func (h *Handler) Wait() {
 	<-h.serveCloseDone
 }
 
@@ -70,8 +70,8 @@ type Shared struct {
 	ExecFunc            func(context.Context, *config.KubeExecConfig) error
 }
 
-// channel handles incoming requests on a channel.
-type channel struct {
+// Handler handles incoming requests on a Handler.
+type Handler struct {
 	requests       <-chan *ssh.Request
 	log            *zap.Logger
 	serveCloseDone chan struct{}

@@ -19,7 +19,9 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type builder struct {
+// Builder is a builder for ssh connections.
+// After the server handshake is complete, the server builds a connection handler with this builder.
+type Builder struct {
 	globalRequests <-chan *ssh.Request
 	channel        <-chan ssh.NewChannel
 	connection     *ssh.ServerConn
@@ -30,47 +32,47 @@ type builder struct {
 }
 
 // NewBuilder returns a sshConnection.
-func NewBuilder() *builder {
-	return &builder{}
+func NewBuilder() *Builder {
+	return &Builder{}
 }
 
 // SetExecFunc sets the exec function.
-func (s *builder) SetExecFunc(execFunc func(context.Context, *config.KubeExecConfig) error) {
+func (s *Builder) SetExecFunc(execFunc func(context.Context, *config.KubeExecConfig) error) {
 	s.execFunc = execFunc
 }
 
 // SetForwardFunc sets the forward function.
-func (s *builder) SetForwardFunc(forwardFunc func(context.Context, *config.KubeForwardConfig) error) {
+func (s *Builder) SetForwardFunc(forwardFunc func(context.Context, *config.KubeForwardConfig) error) {
 	s.forwardFunc = forwardFunc
 }
 
 // SetRessourceFunc sets the ressource function.
-func (s *builder) SetRessourceFunc(createWaitFunc func(context.Context, *config.KubeRessourceIdentifier) error) {
+func (s *Builder) SetRessourceFunc(createWaitFunc func(context.Context, *config.KubeRessourceIdentifier) error) {
 	s.createWaitFunc = createWaitFunc
 }
 
 // SetConnection sets the connection.
-func (s *builder) SetConnection(connection *ssh.ServerConn) {
+func (s *Builder) SetConnection(connection *ssh.ServerConn) {
 	s.connection = connection
 }
 
 // SetChannel sets the channel.
-func (s *builder) SetChannel(channel <-chan ssh.NewChannel) {
+func (s *Builder) SetChannel(channel <-chan ssh.NewChannel) {
 	s.channel = channel
 }
 
 // SetGlobalRequests sets the global requests.
-func (s *builder) SetGlobalRequests(reqs <-chan *ssh.Request) {
+func (s *Builder) SetGlobalRequests(reqs <-chan *ssh.Request) {
 	s.globalRequests = reqs
 }
 
 // SetLogger sets the logger.
-func (s *builder) SetLogger(log *zap.Logger) {
+func (s *Builder) SetLogger(log *zap.Logger) {
 	s.log = log
 }
 
 // Build builds the sshConnection. All fields must be set otherwise an error is returned.
-func (s *builder) Build() (*connection, error) {
+func (s *Builder) Build() (*Handler, error) {
 	if s.connection == nil || s.channel == nil || s.globalRequests == nil {
 		return nil, errors.New("connection, channel or globalRequests is nil")
 	}
@@ -89,7 +91,7 @@ func (s *builder) Build() (*connection, error) {
 		return nil, errors.New("no logger provided")
 	}
 
-	return &connection{
+	return &Handler{
 		wg:                  &sync.WaitGroup{},
 		maxKeepAliveRetries: 3,
 		keepAliveInterval:   10 * time.Second,

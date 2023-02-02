@@ -17,7 +17,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-type connection struct {
+// Handler is the connection handler. It handles the global connection and the channels.
+type Handler struct {
 	log                   *zap.Logger
 	wg                    *sync.WaitGroup
 	connection            *ssh.ServerConn
@@ -33,7 +34,7 @@ type connection struct {
 }
 
 // HandleGlobalConnection handles the global connection and is the entry point for this handler.
-func (c *connection) HandleGlobalConnection(ctx context.Context) {
+func (c *Handler) HandleGlobalConnection(ctx context.Context) {
 	// if the connection is dead terminate it.
 	defer func() {
 		if err := c.connection.Close(); err != nil {
@@ -67,7 +68,7 @@ func (c *connection) HandleGlobalConnection(ctx context.Context) {
 }
 
 // handle channel will run as log as h.channel is open and the context is not cancelled.
-func (c *connection) handleChannels(ctx context.Context) {
+func (c *Handler) handleChannels(ctx context.Context) {
 	// Service the incoming Channel channel in go routine
 	ctx, cancel := context.WithCancel(ctx)
 	defer func() {
@@ -93,7 +94,7 @@ func (c *connection) handleChannels(ctx context.Context) {
 	}
 }
 
-func (c *connection) handleChannel(ctx context.Context, newChannel ssh.NewChannel) {
+func (c *Handler) handleChannel(ctx context.Context, newChannel ssh.NewChannel) {
 	defer c.wg.Done()
 	// Currently unsupported channel types: "x11", and "forwarded-tcpip".
 	switch newChannel.ChannelType() {
@@ -112,7 +113,7 @@ func (c *connection) handleChannel(ctx context.Context, newChannel ssh.NewChanne
 
 // handleChannelTypeSession handles the channelSession, it will block until the connection is closed by the client,
 // or the ctx is cancelled.
-func (c *connection) handleChannelTypeSession(ctx context.Context, newChannel ssh.NewChannel) {
+func (c *Handler) handleChannelTypeSession(ctx context.Context, newChannel ssh.NewChannel) {
 	c.log.Debug("handling new session channel request")
 	channel, requests, err := newChannel.Accept()
 	if err != nil {
@@ -133,7 +134,7 @@ func (c *connection) handleChannelTypeSession(ctx context.Context, newChannel ss
 // handleChannelTypeDirectTCPIP handles the DirectTCPIP request from the client. We get a channel and should connect it to the
 // Address and Port requested in the ExtraData from the channel.
 // Note that the lifetime of the portForwarding is bound to the channel.
-func (c *connection) handleChannelTypeDirectTCPIP(ctx context.Context, newChannel ssh.NewChannel) {
+func (c *Handler) handleChannelTypeDirectTCPIP(ctx context.Context, newChannel ssh.NewChannel) {
 	c.log.Debug("handling new direct-tcpip channel request")
 	var tcpipData payload.ForwardTCPChannelOpen
 	err := ssh.Unmarshal(newChannel.ExtraData(), &tcpipData)
@@ -162,7 +163,7 @@ func (c *connection) handleChannelTypeDirectTCPIP(ctx context.Context, newChanne
 }
 
 // keepAlive sends keep alive requests to the client, if the client is not respong 4 times, deallocate all server ressources.
-func (c *connection) keepAlive(ctx context.Context, sshConn *ssh.ServerConn, done chan struct{}) (context.Context, context.CancelFunc) {
+func (c *Handler) keepAlive(ctx context.Context, sshConn *ssh.ServerConn, done chan struct{}) (context.Context, context.CancelFunc) {
 	ctx, cancel := context.WithCancel(ctx)
 	c.log.Debug("starting keepAlive")
 	go func() {
@@ -200,7 +201,7 @@ func (c *connection) keepAlive(ctx context.Context, sshConn *ssh.ServerConn, don
 	}
 }
 
-func (c *connection) handleGlobalRequests(ctx context.Context, done chan struct{}) context.CancelFunc {
+func (c *Handler) handleGlobalRequests(ctx context.Context, done chan struct{}) context.CancelFunc {
 	ctx, cancel := context.WithCancel(ctx)
 	c.log.Debug("starting handleGlobalRequests")
 	go func() {

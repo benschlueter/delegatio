@@ -92,7 +92,7 @@ func TestDeleteNetwork(t *testing.T) {
 			assert := assert.New(t)
 			// require := require.New(t)
 
-			l := &libvirtInstance{Conn: tc.connection}
+			l := &LibvirtInstance{Conn: tc.connection}
 
 			if tc.expectErr {
 				assert.Error(l.deleteNetwork())
@@ -185,7 +185,7 @@ func TestDeleteDomain(t *testing.T) {
 			assert := assert.New(t)
 			// require := require.New(t)
 
-			l := &libvirtInstance{Conn: tc.connection}
+			l := &LibvirtInstance{Conn: tc.connection}
 
 			if tc.expectErr {
 				assert.Error(l.deleteDomains())
@@ -347,7 +347,7 @@ func TestDeletePool(t *testing.T) {
 			assert := assert.New(t)
 			// require := require.New(t)
 
-			l := &libvirtInstance{Conn: tc.connection}
+			l := &LibvirtInstance{Conn: tc.connection}
 
 			if tc.expectErr {
 				assert.Error(l.deletePool())

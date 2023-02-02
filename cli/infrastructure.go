@@ -30,6 +30,10 @@ func createInfrastructure(ctx context.Context, log *zap.Logger, infra infrastruc
 		log.With(zap.Error(err)).DPanic("failed to get kubeConfig")
 	}
 	agent, err := bootstrapper.NewBootstrapper(log, nodes, kubeConf)
+	if err != nil {
+		log.Error("failed to initialize bootstrapper", zap.Error(err))
+		return nil, err
+	}
 	creds, err := agent.BootstrapKubernetes(ctx)
 	if err != nil {
 		log.Error("failed to initialize Kubernetes", zap.Error(err))

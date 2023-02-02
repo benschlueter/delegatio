@@ -61,7 +61,7 @@ func TestCreateStoragePool(t *testing.T) {
 			assert := assert.New(t)
 			// require := require.New(t)
 
-			l := &libvirtInstance{Conn: tc.connection, Log: zap.NewNop()}
+			l := &LibvirtInstance{Conn: tc.connection, Log: zap.NewNop()}
 
 			if tc.expectErr {
 				assert.Error(l.createStoragePool())
@@ -121,7 +121,7 @@ func TestCreateBaseImage(t *testing.T) {
 			fs := afero.NewMemMapFs()
 			file, err := fs.Create(imagePath)
 			require.NoError(err)
-			l := &libvirtInstance{Conn: tc.connection, Log: zap.NewNop(), ImagePath: imagePath, fs: &afero.Afero{Fs: fs}}
+			l := &LibvirtInstance{Conn: tc.connection, Log: zap.NewNop(), ImagePath: imagePath, fs: &afero.Afero{Fs: fs}}
 			_, err = file.Write([]byte("test"))
 			require.NoError(err)
 			require.NoError(file.Close())
@@ -180,7 +180,7 @@ func TestCreateBootImage(t *testing.T) {
 			assert := assert.New(t)
 			// require := require.New(t)
 
-			l := &libvirtInstance{Conn: tc.connection, Log: zap.NewNop()}
+			l := &LibvirtInstance{Conn: tc.connection, Log: zap.NewNop()}
 
 			if tc.expectErr {
 				assert.Error(l.createBootImage(tc.id))
@@ -218,7 +218,7 @@ func TestCreateNetwork(t *testing.T) {
 			assert := assert.New(t)
 			// require := require.New(t)
 
-			l := &libvirtInstance{Conn: tc.connection, Log: zap.NewNop()}
+			l := &LibvirtInstance{Conn: tc.connection, Log: zap.NewNop()}
 
 			if tc.expectErr {
 				assert.Error(l.createNetwork())
@@ -256,7 +256,7 @@ func TestCreateDomain(t *testing.T) {
 			assert := assert.New(t)
 			// require := require.New(t)
 
-			l := &libvirtInstance{Conn: tc.connection, Log: zap.NewNop()}
+			l := &LibvirtInstance{Conn: tc.connection, Log: zap.NewNop()}
 
 			if tc.expectErr {
 				assert.Error(l.createDomain("test"))
@@ -311,7 +311,7 @@ func TestCreateInstance(t *testing.T) {
 			assert := assert.New(t)
 			// require := require.New(t)
 
-			l := &libvirtInstance{Conn: tc.connection, Log: zap.NewNop()}
+			l := &LibvirtInstance{Conn: tc.connection, Log: zap.NewNop()}
 
 			if tc.expectErr {
 				assert.Error(l.createInstance("test", tc.masterNode))

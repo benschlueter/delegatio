@@ -19,7 +19,7 @@ import (
 	"libvirt.org/go/libvirt"
 )
 
-func (l *libvirtInstance) blockUntilInstanceReady(ctx context.Context, number string, controlPlane bool) error {
+func (l *LibvirtInstance) blockUntilInstanceReady(ctx context.Context, number string, controlPlane bool) error {
 	var prefix string
 	if controlPlane {
 		prefix = definitions.DomainPrefixMaster
@@ -38,7 +38,7 @@ func (l *libvirtInstance) blockUntilInstanceReady(ctx context.Context, number st
 	return nil
 }
 
-func (l *libvirtInstance) blockUntilNetworkIsReady(ctx context.Context, id string) (string, error) {
+func (l *LibvirtInstance) blockUntilNetworkIsReady(ctx context.Context, id string) (string, error) {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	domain, err := l.Conn.LookupDomainByName(id)
@@ -74,7 +74,7 @@ func (l *libvirtInstance) blockUntilNetworkIsReady(ctx context.Context, id strin
 	}
 }
 
-func (l *libvirtInstance) blockUntilDelegatioAgentIsReady(ctx context.Context, id string) error {
+func (l *LibvirtInstance) blockUntilDelegatioAgentIsReady(ctx context.Context, id string) error {
 	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 	defer cancel()
 	domain, err := l.Conn.LookupDomainByName(id)

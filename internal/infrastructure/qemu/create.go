@@ -17,7 +17,7 @@ import (
 )
 
 // createInstance creates a new instance. The instance consists of a boot image and a domain.
-func (l *libvirtInstance) createInstance(number string, controlPlane bool) (err error) {
+func (l *LibvirtInstance) createInstance(number string, controlPlane bool) (err error) {
 	var prefix string
 	if controlPlane {
 		prefix = definitions.DomainPrefixMaster
@@ -34,7 +34,7 @@ func (l *libvirtInstance) createInstance(number string, controlPlane bool) (err 
 	return nil
 }
 
-func (l *libvirtInstance) createStoragePool() error {
+func (l *LibvirtInstance) createStoragePool() error {
 	// Might be needed for renaming in the future
 	poolXMLCopy := definitions.PoolXMLConfig
 	poolXMLString, err := poolXMLCopy.Marshal()
@@ -57,7 +57,7 @@ func (l *libvirtInstance) createStoragePool() error {
 	return nil
 }
 
-func (l *libvirtInstance) createBaseImage(ctx context.Context) error {
+func (l *LibvirtInstance) createBaseImage(ctx context.Context) error {
 	volumeBaseXMLString, err := definitions.VolumeBaseXMLConfig.Marshal()
 	if err != nil {
 		return err
@@ -79,7 +79,7 @@ func (l *libvirtInstance) createBaseImage(ctx context.Context) error {
 	return l.uploadBaseImage(ctx, volumeBaseObject)
 }
 
-func (l *libvirtInstance) createBootImage(id string) error {
+func (l *LibvirtInstance) createBootImage(id string) error {
 	volumeBootXMLCopy := definitions.VolumeBootXMLConfig
 	volumeBootXMLCopy.Name = id
 	volumeBootXMLCopy.Target.Path = path.Join(definitions.LibvirtStoragePoolPath, id)
@@ -103,7 +103,7 @@ func (l *libvirtInstance) createBootImage(id string) error {
 	return nil
 }
 
-func (l *libvirtInstance) createNetwork() error {
+func (l *LibvirtInstance) createNetwork() error {
 	networkXMLString, err := definitions.NetworkXMLConfig.Marshal()
 	if err != nil {
 		return err
@@ -117,7 +117,7 @@ func (l *libvirtInstance) createNetwork() error {
 	return nil
 }
 
-func (l *libvirtInstance) createDomain(id string) error {
+func (l *LibvirtInstance) createDomain(id string) error {
 	domainCpyIface, err := deepcopy.Anything(&definitions.DomainXMLConfig)
 	if err != nil {
 		return err
