@@ -11,13 +11,10 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
-	"os/signal"
 	"runtime"
 	"strings"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/benschlueter/delegatio/internal/store"
@@ -44,8 +41,8 @@ type Server struct {
 	privateKey         []byte
 }
 
-// NewSSHServer returns a sshServer.
-func NewSSHServer(client kubernetes.K8sAPI, log *zap.Logger, storage store.Store, privKey []byte) *Server {
+// NewServer returns a sshServer.
+func NewServer(client kubernetes.K8sAPI, log *zap.Logger, storage store.Store, privKey []byte) *Server {
 	return &Server{
 		k8sHelper:          client,
 		log:                log,
@@ -56,8 +53,8 @@ func NewSSHServer(client kubernetes.K8sAPI, log *zap.Logger, storage store.Store
 	}
 }
 
-// StartServer starts the ssh server.
-func (s *Server) StartServer(ctx context.Context) {
+// Start starts the ssh server.
+func (s *Server) Start(ctx context.Context) {
 	// In the latest version of crypto/ssh (after Go 1.3), the SSH server type has been removed
 	// in favour of an SSH connection type. A ssh.ServerConn is created by passing an existing
 	// net.Conn and a ssh.ServerConfig to ssh.NewServerConn, in effect, upgrading the net.Conn
@@ -172,17 +169,4 @@ func (s *Server) periodicLogs(ctx context.Context) {
 
 func (s *Server) data() storewrapper.StoreWrapper {
 	return storewrapper.StoreWrapper{Store: s.backingStore}
-}
-
-func registerSignalHandler(cancelContext context.CancelFunc, done chan<- struct{}, log *zap.Logger) {
-	sigs := make(chan os.Signal, 1)
-	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
-
-	<-sigs
-
-	log.Info("cancellation signal received")
-	cancelContext()
-	signal.Stop(sigs)
-	close(sigs)
-	done <- struct{}{}
 }

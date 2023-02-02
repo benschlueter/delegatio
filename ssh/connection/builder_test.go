@@ -12,8 +12,8 @@ import (
 	"testing"
 
 	"github.com/benschlueter/delegatio/internal/config"
-	"github.com/benschlueter/delegatio/ssh/connection/channels"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
+	"github.com/benschlueter/delegatio/ssh/kubernetes"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 	"go.uber.org/zap"
@@ -117,19 +117,19 @@ func TestNewSession(t *testing.T) {
 		setLog     bool
 		setChannel bool
 		setRequest bool
-		setShared  bool
+		k8sUserAPI bool
 	}{
 		"no error": {
 			setLog:     true,
 			setChannel: true,
 			setRequest: true,
-			setShared:  true,
+			k8sUserAPI: true,
 		},
 		"no log set": {
 			expectErr:  true,
 			setChannel: true,
 			setRequest: true,
-			setShared:  true,
+			k8sUserAPI: true,
 		},
 		"no shared set": {
 			expectErr:  true,
@@ -141,13 +141,13 @@ func TestNewSession(t *testing.T) {
 			expectErr:  true,
 			setLog:     true,
 			setRequest: true,
-			setShared:  true,
+			k8sUserAPI: true,
 		},
 		"no requests set": {
 			expectErr:  true,
 			setChannel: true,
 			setLog:     true,
-			setShared:  true,
+			k8sUserAPI: true,
 		},
 	}
 
@@ -158,7 +158,7 @@ func TestNewSession(t *testing.T) {
 			var log *zap.Logger
 			var channel ssh.Channel
 			var request <-chan *ssh.Request
-			var shared *channels.Shared
+			var k8sUserAPI kubernetes.K8sAPIUser
 
 			if tc.setLog {
 				log = zap.NewNop()
@@ -169,11 +169,11 @@ func TestNewSession(t *testing.T) {
 			if tc.setRequest {
 				request = make(<-chan *ssh.Request)
 			}
-			if tc.setShared {
-				shared = &channels.Shared{}
+			if tc.k8sUserAPI {
+				k8sUserAPI = &kubernetes.K8sAPIUserWrapper{}
 			}
 
-			_, err := newSession(log, channel, request, shared)
+			_, err := newSession(log, channel, request, k8sUserAPI)
 
 			if tc.expectErr {
 				assert.Error(err)
@@ -187,26 +187,26 @@ func TestNewSession(t *testing.T) {
 func TestNewDirectTCPIP(t *testing.T) {
 	defer goleak.VerifyNone(t)
 	testCases := map[string]struct {
-		expectErr    bool
-		setLog       bool
-		setChannel   bool
-		setRequest   bool
-		setShared    bool
-		setTCPIPData bool
+		expectErr     bool
+		setLog        bool
+		setChannel    bool
+		setRequest    bool
+		setK8sUserAPI bool
+		setTCPIPData  bool
 	}{
 		"no error": {
-			setLog:       true,
-			setChannel:   true,
-			setRequest:   true,
-			setShared:    true,
-			setTCPIPData: true,
+			setLog:        true,
+			setChannel:    true,
+			setRequest:    true,
+			setK8sUserAPI: true,
+			setTCPIPData:  true,
 		},
 		"no log set": {
-			expectErr:    true,
-			setChannel:   true,
-			setRequest:   true,
-			setShared:    true,
-			setTCPIPData: true,
+			expectErr:     true,
+			setChannel:    true,
+			setRequest:    true,
+			setK8sUserAPI: true,
+			setTCPIPData:  true,
 		},
 		"no shared set": {
 			expectErr:    true,
@@ -216,24 +216,24 @@ func TestNewDirectTCPIP(t *testing.T) {
 			setTCPIPData: true,
 		},
 		"no channel set": {
-			expectErr:    true,
-			setLog:       true,
-			setRequest:   true,
-			setShared:    true,
-			setTCPIPData: true,
+			expectErr:     true,
+			setLog:        true,
+			setRequest:    true,
+			setK8sUserAPI: true,
+			setTCPIPData:  true,
 		},
 		"no requests set": {
-			expectErr:    true,
-			setChannel:   true,
-			setLog:       true,
-			setShared:    true,
-			setTCPIPData: true,
+			expectErr:     true,
+			setChannel:    true,
+			setLog:        true,
+			setK8sUserAPI: true,
+			setTCPIPData:  true,
 		},
 		"no tcpIPData set": {
-			expectErr:  true,
-			setChannel: true,
-			setLog:     true,
-			setShared:  true,
+			expectErr:     true,
+			setChannel:    true,
+			setLog:        true,
+			setK8sUserAPI: true,
 		},
 	}
 
@@ -244,7 +244,7 @@ func TestNewDirectTCPIP(t *testing.T) {
 			var log *zap.Logger
 			var channel ssh.Channel
 			var request <-chan *ssh.Request
-			var shared *channels.Shared
+			var k8sUserAPI kubernetes.K8sAPIUser
 			var tcpIPData *payload.ForwardTCPChannelOpen
 
 			if tc.setLog {
@@ -256,14 +256,14 @@ func TestNewDirectTCPIP(t *testing.T) {
 			if tc.setRequest {
 				request = make(<-chan *ssh.Request)
 			}
-			if tc.setShared {
-				shared = &channels.Shared{}
+			if tc.setK8sUserAPI {
+				k8sUserAPI = &kubernetes.K8sAPIUserWrapper{}
 			}
 			if tc.setTCPIPData {
 				tcpIPData = &payload.ForwardTCPChannelOpen{}
 			}
 
-			_, err := newDirectTCPIP(log, channel, request, shared, tcpIPData)
+			_, err := newDirectTCPIP(log, channel, request, k8sUserAPI, tcpIPData)
 
 			if tc.expectErr {
 				assert.Error(err)

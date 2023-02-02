@@ -14,6 +14,7 @@ import (
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
+	"github.com/benschlueter/delegatio/ssh/kubernetes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
@@ -109,11 +110,17 @@ func TestSession(t *testing.T) {
 			builder.SetRequests(requests)
 			builder.SetChannel(stubChannel)
 			builder.SetLog(log)
-			builder.SetSharedData(&Shared{
-				ExecFunc:            func(ctx context.Context, kec *config.KubeExecConfig) error { return nil },
-				Namespace:           "ns-test",
-				AuthenticatedUserID: "pod-test",
-			})
+			builder.SetK8sUserAPI(
+				&kubernetes.K8sAPIUserWrapper{
+					K8sAPI: &stubK8sAPIWrapper{
+						execFunc: func(ctx context.Context, kec *config.KubeExecConfig) error { return nil },
+					},
+					UserInformation: &config.KubeRessourceIdentifier{
+						Namespace:      "test-ns",
+						UserIdentifier: "test-user",
+					},
+				},
+			)
 
 			for _, v := range tc.requests {
 				requests <- v
@@ -251,21 +258,27 @@ func TestSessionBlockingExec(t *testing.T) {
 			builder.SetRequests(requests)
 			builder.SetChannel(stubChannel)
 			builder.SetLog(log)
-			builder.SetSharedData(&Shared{
-				Namespace:           "ns-test",
-				AuthenticatedUserID: "pod-test",
-				ExecFunc: func(ctx context.Context, kec *config.KubeExecConfig) error {
-					select {
-					case <-ctx.Done():
-						return ctx.Err()
-					default:
-						if _, err := kec.Communication.Write([]byte("hello")); err != nil {
-							return err
-						}
-					}
-					return nil
+			builder.SetK8sUserAPI(
+				&kubernetes.K8sAPIUserWrapper{
+					K8sAPI: &stubK8sAPIWrapper{
+						execFunc: func(ctx context.Context, kec *config.KubeExecConfig) error {
+							select {
+							case <-ctx.Done():
+								return ctx.Err()
+							default:
+								if _, err := kec.Communication.Write([]byte("hello")); err != nil {
+									return err
+								}
+							}
+							return nil
+						},
+					},
+					UserInformation: &config.KubeRessourceIdentifier{
+						Namespace:      "test-ns",
+						UserIdentifier: "test-user",
+					},
 				},
-			})
+			)
 
 			for _, v := range tc.requests {
 				requests <- v

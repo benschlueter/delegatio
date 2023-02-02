@@ -12,6 +12,7 @@ import (
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
+	"github.com/benschlueter/delegatio/ssh/kubernetes"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 	"go.uber.org/zap"
@@ -74,10 +75,14 @@ func TestHandleShell(t *testing.T) {
 				wg:              &sync.WaitGroup{},
 				log:             zap.NewNop(),
 				terminalResizer: NewTerminalSizeHandler(10),
-				Shared: &Shared{
-					Namespace:           "ns-test",
-					AuthenticatedUserID: "user-test",
-					ExecFunc:            execFunc,
+				K8sAPIUser: &kubernetes.K8sAPIUserWrapper{
+					K8sAPI: &stubK8sAPIWrapper{
+						execFunc: execFunc,
+					},
+					UserInformation: &config.KubeRessourceIdentifier{
+						Namespace:      "ns-test",
+						UserIdentifier: "user-test",
+					},
 				},
 			}
 			ctx, cancel := context.WithCancel(context.Background())
@@ -159,10 +164,14 @@ func TestHandleSubsystem(t *testing.T) {
 				wg:              &sync.WaitGroup{},
 				log:             zap.NewNop(),
 				terminalResizer: NewTerminalSizeHandler(10),
-				Shared: &Shared{
-					Namespace:           "ns-test",
-					AuthenticatedUserID: "user-test",
-					ExecFunc:            execFunc,
+				K8sAPIUser: &kubernetes.K8sAPIUserWrapper{
+					K8sAPI: &stubK8sAPIWrapper{
+						execFunc: execFunc,
+					},
+					UserInformation: &config.KubeRessourceIdentifier{
+						Namespace:      "ns-test",
+						UserIdentifier: "user-test",
+					},
 				},
 			}
 			ctx, cancel := context.WithCancel(context.Background())
@@ -244,10 +253,14 @@ func TestHandlePortForward(t *testing.T) {
 				wg:              &sync.WaitGroup{},
 				log:             zap.NewNop(),
 				directTCPIPData: &payload.ForwardTCPChannelOpen{},
-				Shared: &Shared{
-					Namespace:           "ns-test",
-					AuthenticatedUserID: "user-test",
-					ForwardFunc:         forwardFunc,
+				K8sAPIUser: &kubernetes.K8sAPIUserWrapper{
+					K8sAPI: &stubK8sAPIWrapper{
+						forwardFunc: forwardFunc,
+					},
+					UserInformation: &config.KubeRessourceIdentifier{
+						Namespace:      "ns-test",
+						UserIdentifier: "user-test",
+					},
 				},
 			}
 			ctx, cancel := context.WithCancel(context.Background())
@@ -271,4 +284,22 @@ func TestHandlePortForward(t *testing.T) {
 			cancel()
 		})
 	}
+}
+
+type stubK8sAPIWrapper struct {
+	CreateAndWaitForRessourcesErr error
+	execFunc                      func(ctx context.Context, kec *config.KubeExecConfig) error
+	forwardFunc                   func(ctx context.Context, kec *config.KubeForwardConfig) error
+}
+
+func (k *stubK8sAPIWrapper) CreateAndWaitForRessources(ctx context.Context, conf *config.KubeRessourceIdentifier) error {
+	return nil
+}
+
+func (k *stubK8sAPIWrapper) ExecuteCommandInPod(ctx context.Context, conf *config.KubeExecConfig) error {
+	return k.execFunc(ctx, conf)
+}
+
+func (k *stubK8sAPIWrapper) CreatePodPortForward(ctx context.Context, conf *config.KubeForwardConfig) error {
+	return k.forwardFunc(ctx, conf)
 }

@@ -15,6 +15,7 @@ import (
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/channels"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
+	"github.com/benschlueter/delegatio/ssh/kubernetes"
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 	"go.uber.org/zap"
@@ -28,8 +29,8 @@ func TestHandleChannel(t *testing.T) {
 	testCases := map[string]struct {
 		channel                ssh.NewChannel
 		expectFinish           bool
-		sessionHandlerFunc     func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared) (channels.Channel, error)
-		directtcpIPHandlerFunc func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared, *payload.ForwardTCPChannelOpen) (channels.Channel, error)
+		sessionHandlerFunc     func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, kubernetes.K8sAPIUser) (channels.Channel, error)
+		directtcpIPHandlerFunc func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, kubernetes.K8sAPIUser, *payload.ForwardTCPChannelOpen) (channels.Channel, error)
 		logMessages            []string
 		nonLogMessages         []string
 	}{
@@ -48,7 +49,7 @@ func TestHandleChannel(t *testing.T) {
 				channelType: "session",
 			},
 			expectFinish: true,
-			sessionHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared) (channels.Channel, error) {
+			sessionHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, kubernetes.K8sAPIUser) (channels.Channel, error) {
 				return nil, testErr
 			},
 			logMessages: []string{
@@ -60,7 +61,7 @@ func TestHandleChannel(t *testing.T) {
 				channelType: "session",
 			},
 			expectFinish: false,
-			sessionHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared) (channels.Channel, error) {
+			sessionHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, kubernetes.K8sAPIUser) (channels.Channel, error) {
 				return &stubHandler{done: make(chan struct{})}, nil
 			},
 			nonLogMessages: []string{
@@ -133,7 +134,7 @@ func TestHandleChannel(t *testing.T) {
 				channelType: "direct-tcpip",
 				data:        ssh.Marshal(payload.ForwardTCPChannelOpen{}),
 			},
-			directtcpIPHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared, *payload.ForwardTCPChannelOpen) (channels.Channel, error) {
+			directtcpIPHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, kubernetes.K8sAPIUser, *payload.ForwardTCPChannelOpen) (channels.Channel, error) {
 				return nil, testErr
 			},
 			expectFinish: true,
@@ -151,7 +152,7 @@ func TestHandleChannel(t *testing.T) {
 				channelType: "direct-tcpip",
 				data:        ssh.Marshal(payload.ForwardTCPChannelOpen{}),
 			},
-			directtcpIPHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared, *payload.ForwardTCPChannelOpen) (channels.Channel, error) {
+			directtcpIPHandlerFunc: func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, kubernetes.K8sAPIUser, *payload.ForwardTCPChannelOpen) (channels.Channel, error) {
 				return &stubHandler{done: make(chan struct{})}, nil
 			},
 			expectFinish: false,
@@ -286,13 +287,13 @@ func TestHandleGlobalConnection(t *testing.T) {
 	defer goleak.VerifyNone(t)
 	testErr := errors.New("test errr")
 	testCases := map[string]struct {
-		createWfunc    func(context.Context, *config.KubeRessourceIdentifier) error
+		createWfuncErr error
 		sshConnection  *ssh.ServerConn
 		logMessages    []string
 		nonLogMessages []string
 	}{
 		"works": {
-			createWfunc: func(context.Context, *config.KubeRessourceIdentifier) error { return nil },
+			createWfuncErr: nil,
 			sshConnection: &ssh.ServerConn{
 				Conn: &stubConn{},
 			},
@@ -301,7 +302,7 @@ func TestHandleGlobalConnection(t *testing.T) {
 			},
 		},
 		"createWaitFunc error": {
-			createWfunc: func(context.Context, *config.KubeRessourceIdentifier) error { return testErr },
+			createWfuncErr: testErr,
 			sshConnection: &ssh.ServerConn{
 				Conn: &stubConn{},
 			},
@@ -310,7 +311,7 @@ func TestHandleGlobalConnection(t *testing.T) {
 			},
 		},
 		"close error": {
-			createWfunc: func(context.Context, *config.KubeRessourceIdentifier) error { return nil },
+			createWfuncErr: nil,
 			sshConnection: &ssh.ServerConn{
 				Conn: &stubConn{
 					closeErr: testErr,
@@ -334,12 +335,16 @@ func TestHandleGlobalConnection(t *testing.T) {
 				wg:                &sync.WaitGroup{},
 				keepAliveInterval: time.Second,
 				channel:           channelChan,
-				Shared: &channels.Shared{
-					Namespace:           "test-ns",
-					AuthenticatedUserID: "test-uid",
+				K8sAPIUser: &kubernetes.K8sAPIUserWrapper{
+					K8sAPI: &stubK8sAPIWrapper{
+						CreateAndWaitForRessourcesErr: tc.createWfuncErr,
+					},
+					UserInformation: &config.KubeRessourceIdentifier{
+						Namespace:      "test-ns",
+						UserIdentifier: "test-user",
+					},
 				},
-				createWaitFunc: tc.createWfunc,
-				connection:     tc.sshConnection,
+				connection: tc.sshConnection,
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
@@ -569,4 +574,22 @@ func (s *stubHandler) Serve(ctx context.Context) {
 
 func (s *stubHandler) Wait() {
 	<-s.done
+}
+
+type stubK8sAPIWrapper struct {
+	CreateAndWaitForRessourcesErr error
+	ExecuteCommandInPodErr        error
+	CreatePodPortForwardErr       error
+}
+
+func (k *stubK8sAPIWrapper) CreateAndWaitForRessources(ctx context.Context, conf *config.KubeRessourceIdentifier) error {
+	return k.CreateAndWaitForRessourcesErr
+}
+
+func (k *stubK8sAPIWrapper) ExecuteCommandInPod(ctx context.Context, conf *config.KubeExecConfig) error {
+	return k.ExecuteCommandInPodErr
+}
+
+func (k *stubK8sAPIWrapper) CreatePodPortForward(ctx context.Context, conf *config.KubeForwardConfig) error {
+	return k.CreatePodPortForwardErr
 }

@@ -6,10 +6,15 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
+	"net"
+	"os"
+	"strings"
 	"time"
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/k8sapi"
+	"github.com/benschlueter/delegatio/internal/store"
 	"go.uber.org/zap"
 )
 
@@ -20,28 +25,28 @@ type K8sAPI interface {
 	CreatePodPortForward(context.Context, *config.KubeForwardConfig) error
 }
 
-// K8sapiWrapper is the struct used to access kubernetes helpers.
-type K8sapiWrapper struct {
+// K8sAPIWrapper is the struct used to access kubernetes helpers.
+type K8sAPIWrapper struct {
 	Client *k8sapi.Client
 	logger *zap.Logger
 }
 
-// NewK8sClient returns a new kuberenetes client-go wrapper.
+// NewK8sAPIWrapper returns a new kuberenetes client-go wrapper.
 // if no kubeconfig path is given we use the service account token.
-func NewK8sClient(logger *zap.Logger) (*K8sapiWrapper, error) {
+func NewK8sAPIWrapper(logger *zap.Logger) (*K8sAPIWrapper, error) {
 	// use the current context in kubeconfig
 	client, err := k8sapi.NewClient(logger)
 	if err != nil {
 		return nil, err
 	}
-	return &K8sapiWrapper{
+	return &K8sAPIWrapper{
 		Client: client,
 		logger: logger,
 	}, nil
 }
 
 // CreateAndWaitForRessources creates the ressources for a user in a namespace.
-func (k *K8sapiWrapper) CreateAndWaitForRessources(ctx context.Context, conf *config.KubeRessourceIdentifier) error {
+func (k *K8sAPIWrapper) CreateAndWaitForRessources(ctx context.Context, conf *config.KubeRessourceIdentifier) error {
 	exists, err := k.Client.StatefulSetExists(ctx, conf.Namespace, conf.UserIdentifier)
 	if err != nil {
 		return err
@@ -67,11 +72,62 @@ func (k *K8sapiWrapper) CreateAndWaitForRessources(ctx context.Context, conf *co
 }
 
 // ExecuteCommandInPod executes a command in the specified pod.
-func (k *K8sapiWrapper) ExecuteCommandInPod(ctx context.Context, conf *config.KubeExecConfig) error {
+func (k *K8sAPIWrapper) ExecuteCommandInPod(ctx context.Context, conf *config.KubeExecConfig) error {
 	return k.Client.CreateExecInPod(ctx, conf.Namespace, conf.PodName, conf.Command, conf.Communication, conf.Communication, conf.Communication, conf.WinQueue, conf.Tty)
 }
 
 // CreatePodPortForward creates a port forward on the specified pod.
-func (k *K8sapiWrapper) CreatePodPortForward(ctx context.Context, conf *config.KubeForwardConfig) error {
+func (k *K8sAPIWrapper) CreatePodPortForward(ctx context.Context, conf *config.KubeForwardConfig) error {
 	return k.Client.CreatePodPortForward(ctx, conf.Namespace, conf.PodName, conf.Port, conf.Communication)
+}
+
+// GetStore returns a store backed by kube etcd.
+func (k *K8sAPIWrapper) GetStore() (store.Store, error) {
+	var err error
+	var ns string
+	_, err = os.Stat("./admin.conf")
+	if errors.Is(err, os.ErrNotExist) {
+		// ns is not ready when container spawns
+		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+		defer cancel()
+		ns, err = waitForNamespaceMount(ctx)
+		if err != nil {
+			k.logger.Error("failed to get namespace, assuming default namespace \"ssh\"", zap.Error(err))
+			ns = "ssh"
+		}
+	} else {
+		ns = "ssh"
+	}
+	k.logger.Info("namespace", zap.String("namespace", ns))
+	configData, err := k.Client.GetConfigMapData(context.Background(), ns, "etcd-credentials")
+	if err != nil {
+		return nil, err
+	}
+	// logger.Info("config", zap.Any("configData", configData))
+	etcdStore, err := store.NewEtcdStore([]string{net.JoinHostPort(configData["advertiseAddr"], "2379")}, k.logger, []byte(configData["caCert"]), []byte(configData["cert"]), []byte(configData["key"]))
+	if err != nil {
+		return nil, err
+	}
+	return etcdStore, nil
+}
+
+// waitForNamespaceMount waits for the namespace file to be mounted and filled.
+func waitForNamespaceMount(ctx context.Context) (string, error) {
+	t := time.NewTicker(100 * time.Millisecond)
+	defer t.Stop()
+	for {
+		select {
+		case <-ctx.Done():
+			return "", ctx.Err()
+		case <-t.C:
+			data, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
+			if err != nil && !errors.Is(err, os.ErrNotExist) {
+				return "", err
+			}
+			ns := strings.TrimSpace(string(data))
+			if len(ns) != 0 {
+				return ns, nil
+			}
+		}
+	}
 }
