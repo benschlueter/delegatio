@@ -17,10 +17,9 @@ import (
 	"libvirt.org/go/libvirt"
 )
 
-// libvirtInstance is a wrapper around libvirt.
-
+// LibvirtInstance is a wrapper around libvirt.
 // Probably a better way to test the package is trough the test:///default connection.
-type libvirtInstance struct {
+type LibvirtInstance struct {
 	Conn               libvirtInterface
 	fs                 *afero.Afero
 	Log                *zap.Logger
@@ -33,8 +32,8 @@ type libvirtInstance struct {
 }
 
 // NewQemu creates a new Qemu Infrastructure.
-func NewQemu(log *zap.Logger, imagePath string) (*libvirtInstance, error) {
-	return &libvirtInstance{
+func NewQemu(log *zap.Logger, imagePath string) (*LibvirtInstance, error) {
+	return &LibvirtInstance{
 		Log:           log,
 		ImagePath:     imagePath,
 		fs:            &afero.Afero{Fs: afero.NewOsFs()},
@@ -44,7 +43,7 @@ func NewQemu(log *zap.Logger, imagePath string) (*libvirtInstance, error) {
 }
 
 // ConnectWithInfrastructureService connects to the libvirt instance.
-func (l *libvirtInstance) ConnectWithInfrastructureService(ctx context.Context, url string) error {
+func (l *LibvirtInstance) ConnectWithInfrastructureService(ctx context.Context, url string) error {
 	conn, err := libvirt.NewConnect(url)
 	if err != nil {
 		return err
@@ -54,7 +53,7 @@ func (l *libvirtInstance) ConnectWithInfrastructureService(ctx context.Context, 
 }
 
 // InitializeInfrastructure initializes the infrastructure.
-func (l *libvirtInstance) InitializeInfrastructure(ctx context.Context) (nodes *config.NodeInformation, err error) {
+func (l *LibvirtInstance) InitializeInfrastructure(ctx context.Context) (nodes *config.NodeInformation, err error) {
 	// sanity check
 	if err := l.TerminateInfrastructure(); err != nil {
 		return nil, err
@@ -79,7 +78,7 @@ func (l *libvirtInstance) InitializeInfrastructure(ctx context.Context) (nodes *
 	return l.waitUntilAllNodesAreReady(ctx)
 }
 
-func (l *libvirtInstance) createInstances(g *errgroup.Group, num int, isMaster bool) {
+func (l *LibvirtInstance) createInstances(g *errgroup.Group, num int, isMaster bool) {
 	for i := 0; i < num; i++ {
 		// the wrapper is necessary to prevent an update of the loop variable.
 		// without it, it would race and have the same value all the time.
@@ -92,7 +91,7 @@ func (l *libvirtInstance) createInstances(g *errgroup.Group, num int, isMaster b
 }
 
 // waitUntilAllNodesAreReady initializes kubernetes on the infrastructure.
-func (l *libvirtInstance) waitUntilAllNodesAreReady(ctx context.Context) (*config.NodeInformation, error) {
+func (l *LibvirtInstance) waitUntilAllNodesAreReady(ctx context.Context) (*config.NodeInformation, error) {
 	g, _ := errgroup.WithContext(ctx)
 	l.blockUntilInstancesReady(ctx, g, l.workerNodeNum, false)
 	l.blockUntilInstancesReady(ctx, g, l.masterNodeNum, true)
@@ -108,7 +107,7 @@ func (l *libvirtInstance) waitUntilAllNodesAreReady(ctx context.Context) (*confi
 }
 
 // blockUntilInstancesReady blocks until all instances are ready.
-func (l *libvirtInstance) blockUntilInstancesReady(ctx context.Context, g *errgroup.Group, num int, isMaster bool) {
+func (l *LibvirtInstance) blockUntilInstancesReady(ctx context.Context, g *errgroup.Group, num int, isMaster bool) {
 	for i := 0; i < num; i++ {
 		// the wrapper is necessary to prevent an update of the loop variable.
 		// without it, it would race and have the same value all the time.
@@ -121,12 +120,12 @@ func (l *libvirtInstance) blockUntilInstancesReady(ctx context.Context, g *errgr
 }
 
 // TerminateInfrastructure deletes all resources created by the infrastructure.
-func (l *libvirtInstance) TerminateInfrastructure() error {
+func (l *LibvirtInstance) TerminateInfrastructure() error {
 	return errors.Join(l.deleteNetwork(), l.deleteDomains(), l.deletePool())
 }
 
 // TerminateConnection closes the libvirt connection.
-func (l *libvirtInstance) TerminateConnection() error {
+func (l *LibvirtInstance) TerminateConnection() error {
 	_, err := l.Conn.Close()
 	return err
 }

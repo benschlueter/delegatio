@@ -77,7 +77,7 @@ func TestUploadBaseImage(t *testing.T) {
 				require.NoError(file.Close())
 			}
 
-			l := &libvirtInstance{Conn: tc.connection, Log: zap.NewNop(), ImagePath: imagePath, fs: &afero.Afero{Fs: fs}}
+			l := &LibvirtInstance{Conn: tc.connection, Log: zap.NewNop(), ImagePath: imagePath, fs: &afero.Afero{Fs: fs}}
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
 			if tc.cancelCtx {
@@ -219,7 +219,7 @@ func TestGetControlPlaneIP(t *testing.T) {
 			// Must fix the stream stuff before this can be tested
 			assert := assert.New(t)
 			// require := require.New(t)
-			l := &libvirtInstance{Conn: tc.connection, Log: zap.NewNop()}
+			l := &LibvirtInstance{Conn: tc.connection, Log: zap.NewNop()}
 
 			_, err := l.getControlPlaneIP()
 			if tc.expectErr {

@@ -12,7 +12,7 @@ import (
 )
 
 // DirectTCPIPBuilderSkeleton returns a new ChannelHandlerBuilder, which has the corresponding field set to handle directTCPIP.
-func DirectTCPIPBuilderSkeleton() *builder {
+func DirectTCPIPBuilderSkeleton() *Builder {
 	builder := NewBuilder().WithChannelType("direct-tcpip")
 
 	builder.SetOnReqDefault(func(ctx context.Context, req *ssh.Request, rd *callbackData) {

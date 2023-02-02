@@ -14,8 +14,8 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-// builder is a wrapper around an ssh.Channel and ssh.Requests.
-type builder struct {
+// Builder is builder for channels.
+type Builder struct {
 	channelType     string
 	channel         ssh.Channel
 	requests        <-chan *ssh.Request
@@ -33,78 +33,78 @@ type builder struct {
 }
 
 // NewBuilder returns a new ChannelBuilder.
-func NewBuilder() *builder {
-	return &builder{}
+func NewBuilder() *Builder {
+	return &Builder{}
 }
 
 // WithChannelType sets the channel type.
-func (b *builder) WithChannelType(channelType string) *builder {
+func (b *Builder) WithChannelType(channelType string) *Builder {
 	b.channelType = channelType
 	return b
 }
 
 // SetChannel sets the channel.
-func (b *builder) SetChannel(channel ssh.Channel) {
+func (b *Builder) SetChannel(channel ssh.Channel) {
 	b.channel = channel
 }
 
 // SetRequests sets the requests.
-func (b *builder) SetRequests(requests <-chan *ssh.Request) {
+func (b *Builder) SetRequests(requests <-chan *ssh.Request) {
 	b.requests = requests
 }
 
 // SetOnStartup sets the onStartup callback.
-func (b *builder) SetOnStartup(onStartup func(context.Context, *callbackData)) {
+func (b *Builder) SetOnStartup(onStartup func(context.Context, *callbackData)) {
 	b.onStartup = append(b.onStartup, onStartup)
 }
 
 // SetOnRequest sets the onRequest callback.
-func (b *builder) SetOnRequest(onRequest func(context.Context, *ssh.Request, *callbackData)) {
+func (b *Builder) SetOnRequest(onRequest func(context.Context, *ssh.Request, *callbackData)) {
 	b.onRequest = append(b.onRequest, onRequest)
 }
 
 // SetOnReqShell sets the onReqShell callback.
-func (b *builder) SetOnReqShell(onReqShell func(context.Context, *ssh.Request, *callbackData)) {
+func (b *Builder) SetOnReqShell(onReqShell func(context.Context, *ssh.Request, *callbackData)) {
 	b.onReqShell = append(b.onReqShell, onReqShell)
 }
 
 // SetOnReqPty sets the onReqPty callback.
-func (b *builder) SetOnReqPty(onReqPty func(context.Context, *ssh.Request, *callbackData)) {
+func (b *Builder) SetOnReqPty(onReqPty func(context.Context, *ssh.Request, *callbackData)) {
 	b.onReqPty = append(b.onReqPty, onReqPty)
 }
 
 // SetOnReqWinCh sets the onReqWinCh callback.
-func (b *builder) SetOnReqWinCh(onReqWinCh func(context.Context, *ssh.Request, *callbackData)) {
+func (b *Builder) SetOnReqWinCh(onReqWinCh func(context.Context, *ssh.Request, *callbackData)) {
 	b.onReqWinCh = append(b.onReqWinCh, onReqWinCh)
 }
 
 // SetOnReqSubSys sets the onReqSubSys callback.
-func (b *builder) SetOnReqSubSys(onReqSubSys func(context.Context, *ssh.Request, *callbackData)) {
+func (b *Builder) SetOnReqSubSys(onReqSubSys func(context.Context, *ssh.Request, *callbackData)) {
 	b.onReqSubSys = append(b.onReqSubSys, onReqSubSys)
 }
 
 // SetOnReqDefault sets the onReqDefault callback.
-func (b *builder) SetOnReqDefault(onReqDefault func(context.Context, *ssh.Request, *callbackData)) {
+func (b *Builder) SetOnReqDefault(onReqDefault func(context.Context, *ssh.Request, *callbackData)) {
 	b.onReqDefault = append(b.onReqDefault, onReqDefault)
 }
 
 // SetLog sets the logger.
-func (b *builder) SetLog(logger *zap.Logger) {
+func (b *Builder) SetLog(logger *zap.Logger) {
 	b.logger = logger
 }
 
 // SetSharedData sets the sharedData.
-func (b *builder) SetSharedData(shared *Shared) {
+func (b *Builder) SetSharedData(shared *Shared) {
 	b.sharedData = shared
 }
 
 // SetDirectTCPIPData sets the directTCPIPData.
-func (b *builder) SetDirectTCPIPData(directTCPIPData *payload.ForwardTCPChannelOpen) {
+func (b *Builder) SetDirectTCPIPData(directTCPIPData *payload.ForwardTCPChannelOpen) {
 	b.directTCPIPData = directTCPIPData
 }
 
 // Build builds the channel.
-func (b *builder) Build() (*channel, error) {
+func (b *Builder) Build() (*Handler, error) {
 	if b.channel == nil {
 		return nil, errors.New("channel is nil")
 	}
@@ -121,7 +121,7 @@ func (b *builder) Build() (*channel, error) {
 		return nil, errors.New("directTCPIPData is nil")
 	}
 
-	handler := &channel{
+	handler := &Handler{
 		requests:       b.requests,
 		serveCloseDone: make(chan struct{}),
 		reqData: &callbackData{

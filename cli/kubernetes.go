@@ -17,23 +17,23 @@ import (
 	"go.uber.org/zap"
 )
 
-// kubeWrapper is a wrapper around internal kubernets.Client.
-type kubeWrapper struct {
+// KubeWrapper is a wrapper around internal kubernets.Client.
+type KubeWrapper struct {
 	kubeClient *installer.Client
 	logger     *zap.Logger
 }
 
 // NewKubeWrapper returns a new kubeWrapper.
-func NewKubeWrapper(logger *zap.Logger) (*kubeWrapper, error) {
+func NewKubeWrapper(logger *zap.Logger) (*KubeWrapper, error) {
 	kubeClient, err := installer.NewK8sClient(logger.Named("k8sAPI"))
 	if err != nil {
 		logger.With(zap.Error(err)).Error("failed to connect to Kubernetes")
 		return nil, err
 	}
-	return &kubeWrapper{kubeClient: kubeClient, logger: logger}, nil
+	return &KubeWrapper{kubeClient: kubeClient, logger: logger}, nil
 }
 
-func (kW *kubeWrapper) createKubernetes(ctx context.Context, creds *config.EtcdCredentials, config *config.UserConfiguration) error {
+func (kW *KubeWrapper) createKubernetes(ctx context.Context, creds *config.EtcdCredentials, config *config.UserConfiguration) error {
 	if err := kW.kubeClient.InstallCilium(ctx); err != nil {
 		kW.logger.With(zap.Error(err)).Error("failed to install helm charts")
 		return err
@@ -57,7 +57,7 @@ func (kW *kubeWrapper) createKubernetes(ctx context.Context, creds *config.EtcdC
 	return nil
 }
 
-func (kW *kubeWrapper) saveKubernetesState(_ context.Context, configFile string) error {
+func (kW *KubeWrapper) saveKubernetesState(_ context.Context, configFile string) error {
 	configData, err := kW.kubeClient.Client.GetStoreUserData()
 	if err != nil {
 		return err

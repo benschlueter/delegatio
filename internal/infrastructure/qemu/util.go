@@ -18,7 +18,7 @@ import (
 	"libvirt.org/go/libvirt"
 )
 
-func (l *libvirtInstance) uploadBaseImage(ctx context.Context, baseVolume storageVolume) (err error) {
+func (l *LibvirtInstance) uploadBaseImage(ctx context.Context, baseVolume storageVolume) (err error) {
 	stream, err := l.Conn.NewStream(libvirt.STREAM_NONBLOCK)
 	if err != nil {
 		return err
@@ -96,7 +96,7 @@ func deleteVolumesFromPool(pool storagePool) error {
 	return nil
 }
 
-func (l *libvirtInstance) getNodeInformation(ctx context.Context) (*config.NodeInformation, error) {
+func (l *LibvirtInstance) getNodeInformation(ctx context.Context) (*config.NodeInformation, error) {
 	controlPlaneIP, err := l.getControlPlaneIP()
 	if err != nil {
 		return nil, err
@@ -113,7 +113,7 @@ func (l *libvirtInstance) getNodeInformation(ctx context.Context) (*config.NodeI
 	}, nil
 }
 
-func (l *libvirtInstance) getControlPlaneIP() (ip string, err error) {
+func (l *LibvirtInstance) getControlPlaneIP() (ip string, err error) {
 	domain, err := l.Conn.LookupDomainByName(definitions.DomainPrefixMaster + "0")
 	if err != nil {
 		return
@@ -139,7 +139,7 @@ func (l *libvirtInstance) getControlPlaneIP() (ip string, err error) {
 	return
 }
 
-func (l *libvirtInstance) getWorkerInstanceIPs(ctx context.Context) (map[string]string, error) {
+func (l *LibvirtInstance) getWorkerInstanceIPs(ctx context.Context) (map[string]string, error) {
 	nameToIP := make(map[string]string)
 	for id := 0; id < l.workerNodeNum; id++ {
 		node := definitions.DomainPrefixWorker + strconv.Itoa(id)

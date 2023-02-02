@@ -34,7 +34,8 @@ const (
 
 // TODO: Add support for multiple users
 
-type sshServer struct {
+// Server is a ssh server.
+type Server struct {
 	log                *zap.Logger
 	client             *installer.Client
 	handleConnWG       *sync.WaitGroup
@@ -44,8 +45,8 @@ type sshServer struct {
 }
 
 // NewSSHServer returns a sshServer.
-func NewSSHServer(client *installer.Client, log *zap.Logger, storage store.Store, privKey []byte) *sshServer {
-	return &sshServer{
+func NewSSHServer(client *installer.Client, log *zap.Logger, storage store.Store, privKey []byte) *Server {
+	return &Server{
 		client:             client,
 		log:                log,
 		handleConnWG:       &sync.WaitGroup{},
@@ -55,7 +56,8 @@ func NewSSHServer(client *installer.Client, log *zap.Logger, storage store.Store
 	}
 }
 
-func (s *sshServer) StartServer(ctx context.Context) {
+// StartServer starts the ssh server.
+func (s *Server) StartServer(ctx context.Context) {
 	// In the latest version of crypto/ssh (after Go 1.3), the SSH server type has been removed
 	// in favour of an SSH connection type. A ssh.ServerConn is created by passing an existing
 	// net.Conn and a ssh.ServerConfig to ssh.NewServerConn, in effect, upgrading the net.Conn
@@ -122,7 +124,7 @@ func (s *sshServer) StartServer(ctx context.Context) {
 	s.log.Info("closing program")
 }
 
-func (s *sshServer) validateAndProcessConnection(ctx context.Context, tcpConn net.Conn, config *ssh.ServerConfig) {
+func (s *Server) validateAndProcessConnection(ctx context.Context, tcpConn net.Conn, config *ssh.ServerConfig) {
 	defer func() {
 		s.handleConnWG.Done()
 		atomic.AddInt64(&s.currentConnections, -1)
@@ -154,7 +156,7 @@ func (s *sshServer) validateAndProcessConnection(ctx context.Context, tcpConn ne
 	sshConnHandler.HandleGlobalConnection(ctx)
 }
 
-func (s *sshServer) periodicLogs(ctx context.Context) {
+func (s *Server) periodicLogs(ctx context.Context) {
 	t := time.NewTicker(10 * time.Second)
 	defer t.Stop()
 	s.log.Debug("starting periodicLogs")
@@ -170,7 +172,7 @@ func (s *sshServer) periodicLogs(ctx context.Context) {
 	}
 }
 
-func (s *sshServer) data() storewrapper.StoreWrapper {
+func (s *Server) data() storewrapper.StoreWrapper {
 	return storewrapper.StoreWrapper{Store: s.backingStore}
 }
 

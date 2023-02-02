@@ -173,7 +173,7 @@ func TestHandleChannel(t *testing.T) {
 			observedZapCore, observedLogs := observer.New(zap.DebugLevel)
 			observedLogger := zap.New(observedZapCore)
 
-			handler := connection{
+			handler := Handler{
 				log:                   observedLogger,
 				newSessionHandler:     tc.sessionHandlerFunc,
 				newDirectTCPIPHandler: tc.directtcpIPHandlerFunc,
@@ -244,7 +244,7 @@ func TestHandleChannels(t *testing.T) {
 			observedLogger := zap.New(observedZapCore)
 
 			channelChan := make(chan ssh.NewChannel)
-			handler := connection{
+			handler := Handler{
 				log:     observedLogger,
 				wg:      &sync.WaitGroup{},
 				channel: channelChan,
@@ -329,7 +329,7 @@ func TestHandleGlobalConnection(t *testing.T) {
 			observedLogger := zap.New(observedZapCore)
 
 			channelChan := make(chan ssh.NewChannel)
-			handler := connection{
+			handler := Handler{
 				log:               observedLogger,
 				wg:                &sync.WaitGroup{},
 				keepAliveInterval: time.Second,
@@ -407,7 +407,7 @@ func TestKeepAlive(t *testing.T) {
 			assert := assert.New(t)
 			observedZapCore, observedLogs := observer.New(zap.DebugLevel)
 			observedLogger := zap.New(observedZapCore)
-			handler := connection{keepAliveInterval: tc.interval, log: observedLogger}
+			handler := Handler{keepAliveInterval: tc.interval, log: observedLogger}
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -462,7 +462,7 @@ func TestGlobalRequests(t *testing.T) {
 			requests <- &ssh.Request{
 				WantReply: false,
 			}
-			handler := connection{log: observedLogger, globalRequests: requests}
+			handler := Handler{log: observedLogger, globalRequests: requests}
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()

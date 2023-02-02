@@ -11,7 +11,7 @@ import (
 	"libvirt.org/go/libvirt"
 )
 
-func (l *libvirtInstance) deleteNetwork() error {
+func (l *LibvirtInstance) deleteNetwork() error {
 	nets, err := l.Conn.ListAllNetworks(libvirt.CONNECT_LIST_NETWORKS_ACTIVE)
 	if err != nil {
 		return err
@@ -36,7 +36,7 @@ func (l *libvirtInstance) deleteNetwork() error {
 	return nil
 }
 
-func (l *libvirtInstance) deleteDomains() error {
+func (l *LibvirtInstance) deleteDomains() error {
 	doms, err := l.Conn.ListAllDomains(libvirt.CONNECT_LIST_DOMAINS_ACTIVE)
 	if err != nil {
 		return err
@@ -61,7 +61,7 @@ func (l *libvirtInstance) deleteDomains() error {
 	return nil
 }
 
-func (l *libvirtInstance) deletePool() error {
+func (l *LibvirtInstance) deletePool() error {
 	pools, err := l.Conn.ListAllStoragePools(libvirt.CONNECT_LIST_STORAGE_POOLS_DIR)
 	if err != nil {
 		return err
