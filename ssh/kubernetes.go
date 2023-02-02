@@ -12,12 +12,12 @@ import (
 	"strings"
 	"time"
 
-	"github.com/benschlueter/delegatio/internal/installer"
 	"github.com/benschlueter/delegatio/internal/store"
+	"github.com/benschlueter/delegatio/ssh/kubernetes"
 	"go.uber.org/zap"
 )
 
-func etcdConnector(logger *zap.Logger, client *installer.Client) (store.Store, error) {
+func etcdConnector(logger *zap.Logger, client *kubernetes.K8sapiWrapper) (store.Store, error) {
 	var err error
 	var ns string
 	_, err = os.Stat("./admin.conf")

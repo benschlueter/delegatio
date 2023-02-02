@@ -20,10 +20,10 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/benschlueter/delegatio/internal/installer"
 	"github.com/benschlueter/delegatio/internal/store"
 	"github.com/benschlueter/delegatio/internal/storewrapper"
 	"github.com/benschlueter/delegatio/ssh/connection"
+	"github.com/benschlueter/delegatio/ssh/kubernetes"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
@@ -37,7 +37,7 @@ const (
 // Server is a ssh server.
 type Server struct {
 	log                *zap.Logger
-	client             *installer.Client
+	k8sHelper          kubernetes.K8sAPI
 	handleConnWG       *sync.WaitGroup
 	currentConnections int64
 	backingStore       store.Store
@@ -45,9 +45,9 @@ type Server struct {
 }
 
 // NewSSHServer returns a sshServer.
-func NewSSHServer(client *installer.Client, log *zap.Logger, storage store.Store, privKey []byte) *Server {
+func NewSSHServer(client kubernetes.K8sAPI, log *zap.Logger, storage store.Store, privKey []byte) *Server {
 	return &Server{
-		client:             client,
+		k8sHelper:          client,
 		log:                log,
 		handleConnWG:       &sync.WaitGroup{},
 		currentConnections: 0,
@@ -141,9 +141,7 @@ func (s *Server) validateAndProcessConnection(ctx context.Context, tcpConn net.C
 	}
 	s.log.Info("authentication of connection successful", zap.Binary("session", sshConn.SessionID()))
 	builder := connection.NewBuilder()
-	builder.SetExecFunc(s.client.ExecuteCommandInPod)
-	builder.SetForwardFunc(s.client.CreatePodPortForward)
-	builder.SetRessourceFunc(s.client.CreateAndWaitForRessources)
+	builder.SetK8sHelper(s.k8sHelper)
 	builder.SetChannel(chans)
 	builder.SetGlobalRequests(reqs)
 	builder.SetConnection(sshConn)

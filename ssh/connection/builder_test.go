@@ -8,8 +8,6 @@ import (
 	"context"
 	"errors"
 	"io"
-	"reflect"
-	"runtime"
 	"sync"
 	"testing"
 
@@ -70,9 +68,7 @@ func TestBuilder(t *testing.T) {
 				Conn: &stubConn{},
 			}
 			log := zap.NewNop()
-			forwardFunc := func(context.Context, *config.KubeForwardConfig) error { return nil }
-			execFunc := func(context.Context, *config.KubeExecConfig) error { return nil }
-			createWaitFunc := func(context.Context, *config.KubeRessourceIdentifier) error { return nil }
+			helper := &stubK8sHelper{}
 
 			if !tc.skipSetPermissions {
 				connection.Permissions = &ssh.Permissions{
@@ -84,9 +80,7 @@ func TestBuilder(t *testing.T) {
 			}
 
 			if !tc.skipSetFunc {
-				builder.SetExecFunc(execFunc)
-				builder.SetForwardFunc(forwardFunc)
-				builder.SetRessourceFunc(createWaitFunc)
+				builder.SetK8sHelper(helper)
 			}
 
 			if !tc.skipSetConn {
@@ -103,15 +97,7 @@ func TestBuilder(t *testing.T) {
 				assert.Equal(builder.connection, connection)
 				assert.Equal(builder.log, log)
 				assert.Equal(builder.globalRequests, globalRequests)
-				funcName1 := runtime.FuncForPC(reflect.ValueOf(execFunc).Pointer()).Name()
-				funcName2 := runtime.FuncForPC(reflect.ValueOf(builder.execFunc).Pointer()).Name()
-				assert.Equal(funcName1, funcName2)
-				funcName1 = runtime.FuncForPC(reflect.ValueOf(forwardFunc).Pointer()).Name()
-				funcName2 = runtime.FuncForPC(reflect.ValueOf(builder.forwardFunc).Pointer()).Name()
-				assert.Equal(funcName1, funcName2)
-				funcName1 = runtime.FuncForPC(reflect.ValueOf(createWaitFunc).Pointer()).Name()
-				funcName2 = runtime.FuncForPC(reflect.ValueOf(createWaitFunc).Pointer()).Name()
-				assert.Equal(funcName1, funcName2)
+				assert.Equal(builder.k8sHelper, helper)
 			}
 			_, err := builder.Build()
 
@@ -327,5 +313,19 @@ func (cs *stubChannel) SendRequest(name string, wantReply bool, payload []byte) 
 }
 
 func (cs *stubChannel) Stderr() io.ReadWriter {
+	return nil
+}
+
+type stubK8sHelper struct{}
+
+func (k *stubK8sHelper) CreatePodPortForward(context.Context, *config.KubeForwardConfig) error {
+	return nil
+}
+
+func (k *stubK8sHelper) ExecuteCommandInPod(context.Context, *config.KubeExecConfig) error {
+	return nil
+}
+
+func (k *stubK8sHelper) CreateAndWaitForRessources(context.Context, *config.KubeRessourceIdentifier) error {
 	return nil
 }

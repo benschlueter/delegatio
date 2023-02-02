@@ -11,8 +11,8 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/benschlueter/delegatio/cli/infrastructure"
 	"github.com/benschlueter/delegatio/internal/config"
-	"github.com/benschlueter/delegatio/internal/infrastructure"
 
 	"go.uber.org/zap"
 )

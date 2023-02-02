@@ -10,8 +10,8 @@ import (
 	"os"
 
 	"github.com/benschlueter/delegatio/cli/apps"
+	"github.com/benschlueter/delegatio/cli/installer"
 	"github.com/benschlueter/delegatio/internal/config"
-	"github.com/benschlueter/delegatio/internal/installer"
 	v1 "k8s.io/api/core/v1"
 
 	"go.uber.org/zap"
@@ -19,7 +19,7 @@ import (
 
 // KubeWrapper is a wrapper around internal kubernets.Client.
 type KubeWrapper struct {
-	kubeClient *installer.Client
+	kubeClient *installer.K8sapiWrapper
 	logger     *zap.Logger
 }
 

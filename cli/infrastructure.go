@@ -7,10 +7,10 @@ package main
 import (
 	"context"
 
-	"github.com/benschlueter/delegatio/internal/bootstrapper"
+	"github.com/benschlueter/delegatio/cli/bootstrapper"
+	"github.com/benschlueter/delegatio/cli/infrastructure"
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/config/utils"
-	"github.com/benschlueter/delegatio/internal/infrastructure"
 
 	"go.uber.org/zap"
 )
