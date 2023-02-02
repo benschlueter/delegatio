@@ -11,7 +11,7 @@ import (
 
 	"github.com/benschlueter/delegatio/cli/apps"
 	"github.com/benschlueter/delegatio/internal/config"
-	"github.com/benschlueter/delegatio/internal/kubernetes"
+	"github.com/benschlueter/delegatio/internal/installer"
 	v1 "k8s.io/api/core/v1"
 
 	"go.uber.org/zap"
@@ -19,13 +19,13 @@ import (
 
 // kubeWrapper is a wrapper around internal kubernets.Client.
 type kubeWrapper struct {
-	kubeClient *kubernetes.Client
+	kubeClient *installer.Client
 	logger     *zap.Logger
 }
 
 // NewKubeWrapper returns a new kubeWrapper.
 func NewKubeWrapper(logger *zap.Logger) (*kubeWrapper, error) {
-	kubeClient, err := kubernetes.NewK8sClient(logger.Named("k8sAPI"))
+	kubeClient, err := installer.NewK8sClient(logger.Named("k8sAPI"))
 	if err != nil {
 		logger.With(zap.Error(err)).Error("failed to connect to Kubernetes")
 		return nil, err

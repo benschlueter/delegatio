@@ -12,8 +12,8 @@ import (
 	"io"
 	"strconv"
 
+	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/config/definitions"
-	"github.com/benschlueter/delegatio/internal/infrastructure/configurer"
 	"go.uber.org/zap"
 	"libvirt.org/go/libvirt"
 )
@@ -96,7 +96,7 @@ func deleteVolumesFromPool(pool storagePool) error {
 	return nil
 }
 
-func (l *libvirtInstance) createAgent(ctx context.Context) (*configurer.Configurer, error) {
+func (l *libvirtInstance) getNodeInformation(ctx context.Context) (*config.NodeInformation, error) {
 	controlPlaneIP, err := l.getControlPlaneIP()
 	if err != nil {
 		return nil, err
@@ -105,11 +105,12 @@ func (l *libvirtInstance) createAgent(ctx context.Context) (*configurer.Configur
 	if err != nil {
 		return nil, err
 	}
-	vmAgent, err := configurer.NewConfigurer(l.Log, controlPlaneIP, workerInstance)
-	if err != nil {
-		return nil, err
-	}
-	return vmAgent, nil
+	return &config.NodeInformation{
+		Masters: map[string]string{
+			"delegatio-0": controlPlaneIP,
+		},
+		Workers: workerInstance,
+	}, nil
 }
 
 func (l *libvirtInstance) getControlPlaneIP() (ip string, err error) {

@@ -10,7 +10,6 @@ import (
 	"strconv"
 
 	"github.com/benschlueter/delegatio/internal/config"
-	"github.com/benschlueter/delegatio/internal/config/definitions"
 	"github.com/spf13/afero"
 	"go.uber.org/zap"
 
@@ -55,71 +54,70 @@ func (l *libvirtInstance) ConnectWithInfrastructureService(ctx context.Context, 
 }
 
 // InitializeInfrastructure initializes the infrastructure.
-func (l *libvirtInstance) InitializeInfrastructure(ctx context.Context) (err error) {
+func (l *libvirtInstance) InitializeInfrastructure(ctx context.Context) (nodes *config.NodeInformation, err error) {
 	// sanity check
 	if err := l.TerminateInfrastructure(); err != nil {
-		return err
+		return nil, err
 	}
 	if err := l.createStoragePool(); err != nil {
-		return err
+		return nil, err
 	}
 	if err := l.createBaseImage(ctx); err != nil {
-		return err
+		return nil, err
 	}
 	if err := l.createNetwork(); err != nil {
-		return err
+		return nil, err
 	}
 	l.Log.Info("waiting for instances to be created")
 	g, _ := errgroup.WithContext(ctx)
 	l.createInstances(g, l.workerNodeNum, false)
 	l.createInstances(g, l.masterNodeNum, true)
 	if err := g.Wait(); err != nil {
-		return err
+		return nil, err
 	}
 	l.Log.Info("waiting for instances to become ready")
-	return err
+	return l.waitUntilAllNodesAreReady(ctx)
 }
 
-func (l *libvirtInstance) createInstances(g *errgroup.Group, num int, masters bool) {
+func (l *libvirtInstance) createInstances(g *errgroup.Group, num int, isMaster bool) {
 	for i := 0; i < num; i++ {
 		// the wrapper is necessary to prevent an update of the loop variable.
 		// without it, it would race and have the same value all the time.
 		func(id int) {
 			g.Go(func() error {
-				return l.CreateInstance(strconv.Itoa(id), masters)
+				return l.createInstance(strconv.Itoa(id), isMaster)
 			})
 		}(i)
 	}
 }
 
-// BootstrapKubernetes initializes kubernetes on the infrastructure.
-func (l *libvirtInstance) BootstrapKubernetes(ctx context.Context, k8sConfig []byte) (*config.EtcdCredentials, error) {
-	if _, err := l.blockUntilNetworkIsReady(ctx, definitions.DomainPrefixMaster+"0"); err != nil {
+// waitUntilAllNodesAreReady initializes kubernetes on the infrastructure.
+func (l *libvirtInstance) waitUntilAllNodesAreReady(ctx context.Context) (*config.NodeInformation, error) {
+	g, _ := errgroup.WithContext(ctx)
+	l.blockUntilInstancesReady(ctx, g, l.workerNodeNum, false)
+	l.blockUntilInstancesReady(ctx, g, l.masterNodeNum, true)
+	if err := g.Wait(); err != nil {
 		return nil, err
 	}
-	l.Log.Info("network is ready")
-	if err := l.blockUntilDelegatioAgentIsReady(ctx); err != nil {
-		return nil, err
-	}
-	l.Log.Info("delegatio-agent is ready")
-	agent, err := l.createAgent(ctx)
+	l.Log.Info("all instaces are ready")
+	agent, err := l.getNodeInformation(ctx)
 	if err != nil {
 		return nil, err
 	}
-	l.Log.Info("agent created")
-	if err := agent.InstallKubernetes(ctx, k8sConfig); err != nil {
-		return nil, err
+	return agent, nil
+}
+
+// blockUntilInstancesReady blocks until all instances are ready.
+func (l *libvirtInstance) blockUntilInstancesReady(ctx context.Context, g *errgroup.Group, num int, isMaster bool) {
+	for i := 0; i < num; i++ {
+		// the wrapper is necessary to prevent an update of the loop variable.
+		// without it, it would race and have the same value all the time.
+		func(id int) {
+			g.Go(func() error {
+				return l.blockUntilInstanceReady(ctx, strconv.Itoa(id), isMaster)
+			})
+		}(i)
 	}
-	l.Log.Info("kubernetes init successful")
-	joinToken, err := agent.ConfigureKubernetes(ctx)
-	if err != nil {
-		return nil, err
-	}
-	l.Log.Info("join token generated")
-	if err := agent.JoinClusterCoordinator(ctx, joinToken); err != nil {
-		return nil, err
-	}
-	return agent.GetEtcdCredentials(ctx)
 }
 
 // TerminateInfrastructure deletes all resources created by the infrastructure.

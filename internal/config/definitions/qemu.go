@@ -121,7 +121,7 @@ var (
 		Name: "MUST-BE-FILLED-WITH-STH-VM",
 		Type: "kvm",
 		Memory: &libvirtxml.DomainMemory{
-			Value: 4,
+			Value: 8,
 			Unit:  "GiB",
 		},
 		Resource: &libvirtxml.DomainResource{

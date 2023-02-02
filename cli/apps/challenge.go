@@ -8,13 +8,13 @@ import (
 	"context"
 
 	"github.com/benschlueter/delegatio/internal/config"
-	"github.com/benschlueter/delegatio/internal/kubernetes"
+	"github.com/benschlueter/delegatio/internal/installer"
 	"github.com/benschlueter/delegatio/internal/storewrapper"
 	"go.uber.org/zap"
 )
 
 // InitalizeChallenges creates the namespaces and persistent volumes for the challenges. It also adds the users to etcd.
-func InitalizeChallenges(ctx context.Context, log *zap.Logger, kubeClient *kubernetes.Client, config *config.UserConfiguration) error {
+func InitalizeChallenges(ctx context.Context, log *zap.Logger, kubeClient *installer.Client, config *config.UserConfiguration) error {
 	if err := kubeClient.Client.CreateStorageClass(ctx, "nfs", "Retain"); err != nil {
 		log.With(zap.Error(err)).Error("failed to CreateStorageClass")
 		return err

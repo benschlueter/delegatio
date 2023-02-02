@@ -20,7 +20,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/benschlueter/delegatio/internal/kubernetes"
+	"github.com/benschlueter/delegatio/internal/installer"
 	"github.com/benschlueter/delegatio/internal/store"
 	"github.com/benschlueter/delegatio/internal/storewrapper"
 	"github.com/benschlueter/delegatio/ssh/connection"
@@ -36,7 +36,7 @@ const (
 
 type sshServer struct {
 	log                *zap.Logger
-	client             *kubernetes.Client
+	client             *installer.Client
 	handleConnWG       *sync.WaitGroup
 	currentConnections int64
 	backingStore       store.Store
@@ -44,7 +44,7 @@ type sshServer struct {
 }
 
 // NewSSHServer returns a sshServer.
-func NewSSHServer(client *kubernetes.Client, log *zap.Logger, storage store.Store, privKey []byte) *sshServer {
+func NewSSHServer(client *installer.Client, log *zap.Logger, storage store.Store, privKey []byte) *sshServer {
 	return &sshServer{
 		client:             client,
 		log:                log,

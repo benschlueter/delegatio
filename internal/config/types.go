@@ -59,3 +59,9 @@ type EtcdCredentials struct {
 	KeyData      []byte // self generated
 	CaCertData   []byte // "/etc/kubernetes/pki/etcd/ca.crt"
 }
+
+// NodeInformation contains the information about the nodes.
+type NodeInformation struct {
+	Masters map[string]string
+	Workers map[string]string
+}

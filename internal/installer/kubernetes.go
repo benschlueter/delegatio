@@ -2,7 +2,7 @@
  * Copyright (c) Benedict Schlueter
  */
 
-package kubernetes
+package installer
 
 import (
 	"context"
@@ -11,15 +11,15 @@ import (
 	"time"
 
 	"github.com/benschlueter/delegatio/internal/config"
-	"github.com/benschlueter/delegatio/internal/kubernetes/helm"
-	"github.com/benschlueter/delegatio/internal/kubernetes/helpers"
+	"github.com/benschlueter/delegatio/internal/installer/helm"
+	"github.com/benschlueter/delegatio/internal/installer/k8sapi"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
 )
 
 // Client is the struct used to access kubernetes helpers.
 type Client struct {
-	Client *helpers.Client
+	Client *k8sapi.Client
 	logger *zap.Logger
 }
 
@@ -27,7 +27,7 @@ type Client struct {
 // if no kubeconfig path is given we use the service account token.
 func NewK8sClient(logger *zap.Logger) (*Client, error) {
 	// use the current context in kubeconfig
-	client, err := helpers.NewClient(logger)
+	client, err := k8sapi.NewClient(logger)
 	if err != nil {
 		return nil, err
 	}
