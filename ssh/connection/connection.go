@@ -13,6 +13,7 @@ import (
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/channels"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
+	"github.com/benschlueter/delegatio/ssh/kubernetes"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
@@ -26,11 +27,10 @@ type Handler struct {
 	channel               <-chan ssh.NewChannel
 	maxKeepAliveRetries   int
 	keepAliveInterval     time.Duration
-	createWaitFunc        func(context.Context, *config.KubeRessourceIdentifier) error
-	newDirectTCPIPHandler func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared, *payload.ForwardTCPChannelOpen) (channels.Channel, error)
-	newSessionHandler     func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, *channels.Shared) (channels.Channel, error)
+	newDirectTCPIPHandler func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, kubernetes.K8sAPIUser, *payload.ForwardTCPChannelOpen) (channels.Channel, error)
+	newSessionHandler     func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, kubernetes.K8sAPIUser) (channels.Channel, error)
 	// Also needed by channel handlers
-	*channels.Shared
+	kubernetes.K8sAPIUser
 }
 
 // HandleGlobalConnection handles the global connection and is the entry point for this handler.
@@ -53,10 +53,10 @@ func (c *Handler) HandleGlobalConnection(ctx context.Context) {
 
 	c.log.Info("waiting for ressources to be ready")
 	// Check that all kubernetes ressources are ready and usable for future use.
-	if err := c.createWaitFunc(ctx, &config.KubeRessourceIdentifier{Namespace: c.Namespace, UserIdentifier: c.AuthenticatedUserID}); err != nil {
+	if err := c.CreateAndWaitForRessources(ctx, &config.KubeRessourceIdentifier{Namespace: c.GetNamespace(), UserIdentifier: c.GetAuthenticatedUserID()}); err != nil {
 		c.log.Error("creating/waiting for kubernetes ressources",
 			zap.Error(err),
-			zap.String("userID", c.AuthenticatedUserID),
+			zap.String("userID", c.GetAuthenticatedUserID()),
 			zap.String("namespace", c.connection.User()),
 		)
 		return
@@ -121,7 +121,7 @@ func (c *Handler) handleChannelTypeSession(ctx context.Context, newChannel ssh.N
 		return
 	}
 
-	handler, err := c.newSessionHandler(c.log, channel, requests, c.Shared)
+	handler, err := c.newSessionHandler(c.log, channel, requests, c.K8sAPIUser)
 	if err != nil {
 		c.log.Error("could not create session handler", zap.Error(err))
 		return
@@ -152,7 +152,7 @@ func (c *Handler) handleChannelTypeDirectTCPIP(ctx context.Context, newChannel s
 		c.log.Error("could not accept the channel", zap.Error(err))
 		return
 	}
-	handler, err := c.newDirectTCPIPHandler(c.log, channel, requests, c.Shared, &tcpipData)
+	handler, err := c.newDirectTCPIPHandler(c.log, channel, requests, c.K8sAPIUser, &tcpipData)
 	if err != nil {
 		c.log.Error("could not create directtcpip handler", zap.Error(err))
 		return

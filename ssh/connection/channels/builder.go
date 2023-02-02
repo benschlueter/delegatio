@@ -10,6 +10,7 @@ import (
 	"sync"
 
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
+	"github.com/benschlueter/delegatio/ssh/kubernetes"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
@@ -21,7 +22,7 @@ type Builder struct {
 	requests        <-chan *ssh.Request
 	logger          *zap.Logger
 	directTCPIPData *payload.ForwardTCPChannelOpen
-	sharedData      *Shared
+	k8sAPIUser      kubernetes.K8sAPIUser
 
 	onStartup    []func(context.Context, *callbackData)
 	onRequest    []func(context.Context, *ssh.Request, *callbackData)
@@ -93,9 +94,9 @@ func (b *Builder) SetLog(logger *zap.Logger) {
 	b.logger = logger
 }
 
-// SetSharedData sets the sharedData.
-func (b *Builder) SetSharedData(shared *Shared) {
-	b.sharedData = shared
+// SetK8sUserAPI sets the k8sAPIUser.
+func (b *Builder) SetK8sUserAPI(api kubernetes.K8sAPIUser) {
+	b.k8sAPIUser = api
 }
 
 // SetDirectTCPIPData sets the directTCPIPData.
@@ -114,8 +115,8 @@ func (b *Builder) Build() (*Handler, error) {
 	if b.logger == nil {
 		return nil, errors.New("logger is nil")
 	}
-	if b.sharedData == nil {
-		return nil, errors.New("sharedData is nil")
+	if b.k8sAPIUser == nil {
+		return nil, errors.New("k8sAPIUser is nil")
 	}
 	if b.channelType == "direct-tcpip" && b.directTCPIPData == nil {
 		return nil, errors.New("directTCPIPData is nil")
@@ -131,7 +132,7 @@ func (b *Builder) Build() (*Handler, error) {
 			log:             b.logger.Named("channels").Named(b.channelType),
 			channel:         b.channel,
 			directTCPIPData: b.directTCPIPData,
-			Shared:          b.sharedData,
+			K8sAPIUser:      b.k8sAPIUser,
 		},
 		log:                b.logger.Named(b.channelType),
 		onStartupCallback:  b.onStartup,

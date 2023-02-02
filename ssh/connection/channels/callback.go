@@ -11,6 +11,7 @@ import (
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
+	"github.com/benschlueter/delegatio/ssh/kubernetes"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 	"k8s.io/client-go/tools/remotecommand"
@@ -26,7 +27,7 @@ type callbackData struct {
 	ptyReqData      *payload.PtyRequest
 	directTCPIPData *payload.ForwardTCPChannelOpen
 	terminalResizer *TerminalSizeHandler
-	*Shared
+	kubernetes.K8sAPIUser
 }
 
 // handleShell handles the "shell" request. This is used for "kubectl exec".
@@ -53,14 +54,14 @@ func (rd *callbackData) handleShell(ctx context.Context) {
 	}
 
 	execConf := config.KubeExecConfig{
-		Namespace:     rd.Namespace,
-		PodName:       fmt.Sprintf("%s-statefulset-0", rd.AuthenticatedUserID),
+		Namespace:     rd.GetNamespace(),
+		PodName:       fmt.Sprintf("%s-statefulset-0", rd.GetAuthenticatedUserID()),
 		Command:       "bash",
 		Communication: rd.channel,
 		WinQueue:      rd.terminalResizer,
 		Tty:           tty,
 	}
-	if err := rd.ExecFunc(ctx, &execConf); err != nil {
+	if err := rd.ExecuteCommandInPod(ctx, &execConf); err != nil {
 		rd.log.Error("createPodShell exited", zap.Error(err))
 		_, _ = rd.channel.Write([]byte(fmt.Sprintf("closing connection, reason: %v", err)))
 		return
@@ -89,14 +90,14 @@ func (rd *callbackData) handleSubsystem(ctx context.Context, cmd string) {
 	}
 
 	execConf := config.KubeExecConfig{
-		Namespace:     rd.Namespace,
-		PodName:       fmt.Sprintf("%s-statefulset-0", rd.AuthenticatedUserID),
+		Namespace:     rd.GetNamespace(),
+		PodName:       fmt.Sprintf("%s-statefulset-0", rd.GetAuthenticatedUserID()),
 		Command:       parsedSubsystem,
 		Communication: rd.channel,
 		WinQueue:      rd.terminalResizer,
 		Tty:           false,
 	}
-	err := rd.ExecFunc(ctx, &execConf)
+	err := rd.ExecuteCommandInPod(ctx, &execConf)
 	if err != nil {
 		rd.log.Error("ExecuteCommandInPod exited", zap.Error(err))
 		_, _ = rd.channel.Write([]byte(fmt.Sprintf("closing connection, reason: %v", err)))
@@ -114,13 +115,13 @@ func (rd *callbackData) handlePortForward(ctx context.Context) {
 		rd.wg.Done()
 	}()
 	forwardConf := config.KubeForwardConfig{
-		Namespace:     rd.Namespace,
-		PodName:       fmt.Sprintf("%s-statefulset-0", rd.AuthenticatedUserID),
+		Namespace:     rd.GetNamespace(),
+		PodName:       fmt.Sprintf("%s-statefulset-0", rd.GetAuthenticatedUserID()),
 		Communication: rd.channel,
 		Port:          fmt.Sprint(rd.directTCPIPData.PortToConnect),
 	}
 	// this call will block until the context is cancelled, the channel is closed from the client side, or kubeapi is closing the channel (most likely an error).
-	err := rd.ForwardFunc(ctx, &forwardConf)
+	err := rd.CreatePodPortForward(ctx, &forwardConf)
 	if err != nil {
 		rd.log.Error("createPodPortForward exited", zap.Error(err))
 		return

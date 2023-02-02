@@ -79,6 +79,8 @@ func (s *Builder) Build() (*Handler, error) {
 		return nil, errors.New("no logger provided")
 	}
 
+	userK8SAPI := kubernetes.NewK8sAPIUserWrapper(s.k8sHelper, &config.KubeRessourceIdentifier{Namespace: s.connection.User(), UserIdentifier: userID})
+
 	return &Handler{
 		wg:                  &sync.WaitGroup{},
 		maxKeepAliveRetries: 3,
@@ -86,35 +88,29 @@ func (s *Builder) Build() (*Handler, error) {
 		connection:          s.connection,
 		channel:             s.channel,
 		globalRequests:      s.globalRequests,
-		createWaitFunc:      s.k8sHelper.CreateAndWaitForRessources,
 		log:                 s.log.Named("connection").Named(logIdentifier),
-		Shared: &channels.Shared{
-			ForwardFunc:         s.k8sHelper.CreatePodPortForward,
-			ExecFunc:            s.k8sHelper.ExecuteCommandInPod,
-			Namespace:           s.connection.User(),
-			AuthenticatedUserID: userID,
-		},
+		K8sAPIUser:          userK8SAPI,
 
 		newSessionHandler:     newSession,
 		newDirectTCPIPHandler: newDirectTCPIP,
 	}, nil
 }
 
-func newSession(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.Request, shared *channels.Shared) (channels.Channel, error) {
+func newSession(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.Request, api kubernetes.K8sAPIUser) (channels.Channel, error) {
 	builder := channels.SessionBuilderSkeleton()
 	builder.SetRequests(requests)
 	builder.SetChannel(channel)
 	builder.SetLog(log)
-	builder.SetSharedData(shared)
+	builder.SetK8sUserAPI(api)
 	return builder.Build()
 }
 
-func newDirectTCPIP(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.Request, shared *channels.Shared, data *payload.ForwardTCPChannelOpen) (channels.Channel, error) {
+func newDirectTCPIP(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.Request, api kubernetes.K8sAPIUser, data *payload.ForwardTCPChannelOpen) (channels.Channel, error) {
 	builder := channels.DirectTCPIPBuilderSkeleton()
 	builder.SetRequests(requests)
 	builder.SetChannel(channel)
 	builder.SetLog(log)
-	builder.SetSharedData(shared)
+	builder.SetK8sUserAPI(api)
 	builder.SetDirectTCPIPData(data)
 	return builder.Build()
 }

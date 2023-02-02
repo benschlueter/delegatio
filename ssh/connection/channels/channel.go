@@ -7,7 +7,6 @@ package channels
 import (
 	"context"
 
-	"github.com/benschlueter/delegatio/internal/config"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
@@ -60,14 +59,6 @@ func (h *Handler) Serve(ctx context.Context) {
 // Wait waits until serve has finished (including all goroutines started by it).
 func (h *Handler) Wait() {
 	<-h.serveCloseDone
-}
-
-// Shared contains data shared between a ssh connection and the sub-channels opened by it.
-type Shared struct {
-	Namespace           string
-	AuthenticatedUserID string
-	ForwardFunc         func(context.Context, *config.KubeForwardConfig) error
-	ExecFunc            func(context.Context, *config.KubeExecConfig) error
 }
 
 // Handler handles incoming requests on a Handler.

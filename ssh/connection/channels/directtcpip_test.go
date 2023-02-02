@@ -12,6 +12,7 @@ import (
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/ssh/connection/payload"
+	"github.com/benschlueter/delegatio/ssh/kubernetes"
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 	"go.uber.org/goleak"
@@ -57,11 +58,16 @@ func TestDirectTCPIP(t *testing.T) {
 			builder.SetRequests(requests)
 			builder.SetChannel(stubChannel)
 			builder.SetLog(log)
-			builder.SetSharedData(&Shared{
-				ForwardFunc:         func(ctx context.Context, kec *config.KubeForwardConfig) error { return nil },
-				AuthenticatedUserID: "test-user",
-				Namespace:           "test-ns",
-			},
+			builder.SetK8sUserAPI(
+				&kubernetes.K8sAPIUserWrapper{
+					K8sAPI: &stubK8sAPIWrapper{
+						forwardFunc: func(ctx context.Context, kec *config.KubeForwardConfig) error { return nil },
+					},
+					UserInformation: &config.KubeRessourceIdentifier{
+						Namespace:      "test-ns",
+						UserIdentifier: "test-user",
+					},
+				},
 			)
 			builder.SetDirectTCPIPData(&payload.ForwardTCPChannelOpen{})
 

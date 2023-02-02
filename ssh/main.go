@@ -7,6 +7,9 @@ package main
 
 import (
 	"context"
+	"os"
+	"os/signal"
+	"syscall"
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/storewrapper"
@@ -15,7 +18,7 @@ import (
 )
 
 func main() {
-	var client *kubernetes.K8sapiWrapper
+	var client *kubernetes.K8sAPIWrapper
 	var err error
 	zapconf := zap.NewDevelopmentConfig()
 	zapconf.Level.SetLevel(zap.DebugLevel)
@@ -27,12 +30,12 @@ func main() {
 	logger.Info("Starting delegatio ssh server", zap.String("commit", config.Commit))
 	defer func() { _ = logger.Sync() }()
 
-	client, err = kubernetes.NewK8sClient(logger.Named("k8sAPI"))
+	client, err = kubernetes.NewK8sAPIWrapper(logger.Named("k8sAPI"))
 	if err != nil {
 		logger.With(zap.Error(err)).DPanic("failed to create k8s client")
 	}
 
-	store, err := etcdConnector(logger, client)
+	store, err := client.GetStore()
 	if err != nil {
 		logger.With(zap.Error(err)).DPanic("connecting to etcd")
 	}
@@ -46,11 +49,24 @@ func main() {
 		logger.With(zap.Error(err)).DPanic("gettign priv key for ssh server")
 	}
 	logger.Info("pulled private key from store")
-	server := NewSSHServer(client, logger, store, privKey)
+	server := NewServer(client, logger, store, privKey)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 
 	done := make(chan struct{})
 	go registerSignalHandler(cancel, done, logger)
-	server.StartServer(ctx)
+	server.Start(ctx)
+}
+
+func registerSignalHandler(cancelContext context.CancelFunc, done chan<- struct{}, log *zap.Logger) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	<-sigs
+
+	log.Info("cancellation signal received")
+	cancelContext()
+	signal.Stop(sigs)
+	close(sigs)
+	done <- struct{}{}
 }
