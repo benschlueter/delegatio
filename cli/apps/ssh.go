@@ -11,14 +11,14 @@ import (
 	"os"
 
 	"github.com/benschlueter/delegatio/internal/config"
-	"github.com/benschlueter/delegatio/internal/kubernetes"
+	"github.com/benschlueter/delegatio/internal/installer"
 	"go.uber.org/zap"
 )
 
 const sshNamespaceName = "ssh"
 
 // InitializeSSH initializes the SSH application.
-func InitializeSSH(ctx context.Context, log *zap.Logger, kubeClient *kubernetes.Client, creds *config.EtcdCredentials) error {
+func InitializeSSH(ctx context.Context, log *zap.Logger, kubeClient *installer.Client, creds *config.EtcdCredentials) error {
 	if err := kubeClient.Client.CreateNamespace(ctx, sshNamespaceName); err != nil {
 		log.With(zap.Error(err)).Error("failed to create namespace")
 		return err

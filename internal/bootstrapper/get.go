@@ -2,7 +2,7 @@
  * Copyright (c) Benedict Schlueter
  */
 
-package configurer
+package bootstrapper
 
 import (
 	"context"
@@ -27,7 +27,7 @@ import (
 	"k8s.io/kubernetes/cmd/kubeadm/app/util/pubkeypin"
 )
 
-func (a *Configurer) getKubernetesConfig(ctx context.Context) (output []byte, err error) {
+func (a *bootstrapper) getKubernetesConfig(ctx context.Context) (output []byte, err error) {
 	conn, err := grpc.DialContext(ctx, net.JoinHostPort(a.controlPlaneIP, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (a *Configurer) getKubernetesConfig(ctx context.Context) (output []byte, er
 	return adminConfData, nil
 }
 
-func (a *Configurer) getKubernetesRootCert(ctx context.Context) (output []byte, err error) {
+func (a *bootstrapper) getKubernetesRootCert(ctx context.Context) (output []byte, err error) {
 	conn, err := grpc.DialContext(ctx, net.JoinHostPort(a.controlPlaneIP, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
@@ -64,7 +64,7 @@ func (a *Configurer) getKubernetesRootCert(ctx context.Context) (output []byte, 
 }
 
 // getJoinToken creates a new bootstrap (join) token, which a node can use to join the cluster.
-func (a *Configurer) getJoinToken(ttl time.Duration, caFileContentPem []byte) (*kubeadmv1beta3.BootstrapTokenDiscovery, error) {
+func (a *bootstrapper) getJoinToken(ttl time.Duration, caFileContentPem []byte) (*kubeadmv1beta3.BootstrapTokenDiscovery, error) {
 	a.Log.Info("generating new random bootstrap token")
 	rawToken, err := bootstraputil.GenerateBootstrapToken()
 	if err != nil {

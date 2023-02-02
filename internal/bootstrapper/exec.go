@@ -2,7 +2,7 @@
  * Copyright (c) Benedict Schlueter
  */
 
-package configurer
+package bootstrapper
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 )
 
 // InstallKubernetes initializes a kubernetes cluster using the gRPC API.
-func (a *Configurer) InstallKubernetes(ctx context.Context, kubernetesInitConfiguration []byte) (err error) {
+func (a *bootstrapper) InstallKubernetes(ctx context.Context, kubernetesInitConfiguration []byte) (err error) {
 	conn, err := grpc.DialContext(ctx, net.JoinHostPort(a.controlPlaneIP, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
@@ -35,7 +35,7 @@ func (a *Configurer) InstallKubernetes(ctx context.Context, kubernetesInitConfig
 }
 
 // JoinClusterCoordinator coordinates cluster joining for all worker nodes.
-func (a *Configurer) JoinClusterCoordinator(ctx context.Context, joinToken *kubeadm.BootstrapTokenDiscovery) (err error) {
+func (a *bootstrapper) JoinClusterCoordinator(ctx context.Context, joinToken *kubeadm.BootstrapTokenDiscovery) (err error) {
 	a.Log.Info("coordinating kubeadm join")
 	g, ctxGo := errgroup.WithContext(ctx)
 	for name, addr := range a.workerIPs {
@@ -52,7 +52,7 @@ func (a *Configurer) JoinClusterCoordinator(ctx context.Context, joinToken *kube
 }
 
 // joinCluster connects to a node and executes kubeadm join.
-func (a *Configurer) joinCluster(ctx context.Context, id, ip string, joinToken *kubeadm.BootstrapTokenDiscovery) (err error) {
+func (a *bootstrapper) joinCluster(ctx context.Context, id, ip string, joinToken *kubeadm.BootstrapTokenDiscovery) (err error) {
 	a.Log.Info("executing kubeadm join", zap.String("id", id), zap.String("ip", ip))
 	conn, err := grpc.DialContext(ctx, net.JoinHostPort(ip, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
@@ -92,7 +92,7 @@ func (a *Configurer) joinCluster(ctx context.Context, id, ip string, joinToken *
 	}
 }
 
-func (a *Configurer) executeKubeadm(ctx context.Context, client vmproto.APIClient) (output []byte, err error) {
+func (a *bootstrapper) executeKubeadm(ctx context.Context, client vmproto.APIClient) (output []byte, err error) {
 	a.Log.Info("execute executeKubeadm")
 	resp, err := client.ExecCommandStream(ctx, &vmproto.ExecCommandStreamRequest{
 		Command: "/usr/bin/kubeadm",
@@ -127,7 +127,7 @@ func (a *Configurer) executeKubeadm(ctx context.Context, client vmproto.APIClien
 	}
 }
 
-func (a *Configurer) executeWriteInitConfiguration(ctx context.Context, client vmproto.APIClient, initConfigKubernetes []byte) (err error) {
+func (a *bootstrapper) executeWriteInitConfiguration(ctx context.Context, client vmproto.APIClient, initConfigKubernetes []byte) (err error) {
 	a.Log.Info("write initconfig", zap.String("config", string(initConfigKubernetes)))
 	_, err = client.WriteFile(ctx, &vmproto.WriteFileRequest{
 		Filepath: "/tmp",

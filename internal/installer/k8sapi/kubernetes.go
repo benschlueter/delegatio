@@ -2,7 +2,7 @@
  * Copyright (c) Benedict Schlueter
  */
 
-package helpers
+package k8sapi
 
 import (
 	"errors"

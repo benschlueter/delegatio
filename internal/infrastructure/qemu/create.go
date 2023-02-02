@@ -16,8 +16,8 @@ import (
 	"libvirt.org/go/libvirtxml"
 )
 
-// CreateInstance creates a new instance. The instance consists of a boot image and a domain.
-func (l *libvirtInstance) CreateInstance(number string, controlPlane bool) (err error) {
+// createInstance creates a new instance. The instance consists of a boot image and a domain.
+func (l *libvirtInstance) createInstance(number string, controlPlane bool) (err error) {
 	var prefix string
 	if controlPlane {
 		prefix = definitions.DomainPrefixMaster

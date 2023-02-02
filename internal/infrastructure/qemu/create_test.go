@@ -314,9 +314,9 @@ func TestCreateInstance(t *testing.T) {
 			l := &libvirtInstance{Conn: tc.connection, Log: zap.NewNop()}
 
 			if tc.expectErr {
-				assert.Error(l.CreateInstance("test", tc.masterNode))
+				assert.Error(l.createInstance("test", tc.masterNode))
 			} else {
-				assert.NoError(l.CreateInstance("test", tc.masterNode))
+				assert.NoError(l.createInstance("test", tc.masterNode))
 			}
 		})
 	}

@@ -2,7 +2,7 @@
 * Copyright (c) Benedict Schlueter
  */
 
-package configurer
+package bootstrapper
 
 import (
 	"context"
@@ -19,27 +19,55 @@ import (
 	"k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 )
 
-// Configurer communicates with the agent inside the control-plane VM after Kubernetes was initialized.
-type Configurer struct {
+// Bootstrapper is the interface for the bootstrapper. It is used to bootstrap a kubernetes cluster.
+// It covers Kubeadm init on the control plane, as well as joining the worker nodes.
+type Bootstrapper interface {
+	BootstrapKubernetes(context.Context) (*config.EtcdCredentials, error)
+}
+
+// bootstrapper communicates with the agent inside the control-plane VM after Kubernetes was initialized.
+type bootstrapper struct {
 	Log            *zap.Logger
 	client         kubernetes.Interface
 	adminConf      []byte
 	controlPlaneIP string
 	workerIPs      map[string]string
+	k8sConfig      []byte
 }
 
-// NewConfigurer creates a new agent object.
-func NewConfigurer(log *zap.Logger, controlPlaneIP string, workerIPs map[string]string) (*Configurer, error) {
-	agentLog := log.Named("kube")
-	return &Configurer{
+// NewBootstrapper creates a new agent object.
+func NewBootstrapper(log *zap.Logger, nodes *config.NodeInformation, k8sConfig []byte) (Bootstrapper, error) {
+	agentLog := log.Named("bootstrapper")
+	var controlPlaneIP string
+	for _, ip := range nodes.Masters {
+		controlPlaneIP = ip
+	}
+	return &bootstrapper{
 		Log:            agentLog,
 		controlPlaneIP: controlPlaneIP,
-		workerIPs:      workerIPs,
+		workerIPs:      nodes.Workers,
+		k8sConfig:      k8sConfig,
 	}, nil
 }
 
-// ConfigureKubernetes configures the kubernetes cluster.
-func (a *Configurer) ConfigureKubernetes(ctx context.Context) (*v1beta3.BootstrapTokenDiscovery, error) {
+func (a *bootstrapper) BootstrapKubernetes(ctx context.Context) (*config.EtcdCredentials, error) {
+	if err := a.InstallKubernetes(ctx, a.k8sConfig); err != nil {
+		return nil, err
+	}
+	a.Log.Info("kubernetes init successful")
+	joinToken, err := a.configureKubernetes(ctx)
+	if err != nil {
+		return nil, err
+	}
+	a.Log.Info("join token generated")
+	if err := a.JoinClusterCoordinator(ctx, joinToken); err != nil {
+		return nil, err
+	}
+	return a.getEtcdCredentials(ctx)
+}
+
+// configureKubernetes configures the kubernetes cluster.
+func (a *bootstrapper) configureKubernetes(ctx context.Context) (*v1beta3.BootstrapTokenDiscovery, error) {
 	if err := a.writeKubeconfigToDisk(ctx); err != nil {
 		return nil, err
 	}
@@ -59,8 +87,8 @@ func (a *Configurer) ConfigureKubernetes(ctx context.Context) (*v1beta3.Bootstra
 	return joinToken, nil
 }
 
-// GetEtcdCredentials returns the etcd credentials for the instance.
-func (a *Configurer) GetEtcdCredentials(ctx context.Context) (*config.EtcdCredentials, error) {
+// getEtcdCredentials returns the etcd credentials for the instance.
+func (a *bootstrapper) getEtcdCredentials(ctx context.Context) (*config.EtcdCredentials, error) {
 	conn, err := grpc.DialContext(ctx, net.JoinHostPort(a.controlPlaneIP, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
@@ -89,7 +117,7 @@ func (a *Configurer) GetEtcdCredentials(ctx context.Context) (*config.EtcdCreden
 }
 
 // establishClientGoConnection configures the client-go connection.
-func (a *Configurer) establishClientGoConnection() error {
+func (a *bootstrapper) establishClientGoConnection() error {
 	config, err := clientcmd.BuildConfigFromFlags("", "./admin.conf")
 	if err != nil {
 		return err
