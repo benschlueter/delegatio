@@ -32,7 +32,7 @@ replace (
 
 require (
 	github.com/barkimedes/go-deepcopy v0.0.0-20220514131651-17c30cfc62df
-	github.com/docker/docker v20.10.23+incompatible
+	github.com/docker/docker v23.0.0+incompatible
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
 	github.com/spf13/afero v1.9.3
 	github.com/stretchr/testify v1.8.1
