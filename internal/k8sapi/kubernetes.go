@@ -13,6 +13,7 @@ import (
 	"github.com/benschlueter/delegatio/internal/store"
 	"github.com/benschlueter/delegatio/internal/storewrapper"
 	"go.uber.org/zap"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/rest"
 	"k8s.io/client-go/tools/clientcmd"
@@ -113,5 +114,9 @@ func (k *Client) DownloadSSHServerPrivKey(privKey []byte) (err error) {
 	return stWrapper.PutPrivKey(privKey)
 }
 
-// ErrNotConnected is returned when the client is not connected to etcd.
-var ErrNotConnected = errors.New("client is not connected to etcd")
+var (
+	// ErrNotConnected is returned when the client is not connected to etcd.
+	ErrNotConnected = errors.New("client is not connected to etcd")
+	// Scheme is the kubernetes scheme.
+	scheme = runtime.NewScheme()
+)

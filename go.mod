@@ -23,6 +23,7 @@ replace (
 	k8s.io/kube-scheduler v0.0.0 => k8s.io/kube-scheduler v0.26.1
 	k8s.io/kubectl v0.0.0 => k8s.io/kubectl v0.26.1
 	k8s.io/kubelet v0.0.0 => k8s.io/kubelet v0.26.1
+	k8s.io/kubernetes v0.0.0 => k8s.io/kubernetes v1.26.1
 	k8s.io/legacy-cloud-providers v0.0.0 => k8s.io/legacy-cloud-providers v0.26.1
 	k8s.io/metrics v0.0.0 => k8s.io/metrics v0.26.1
 	k8s.io/mount-utils v0.0.0 => k8s.io/mount-utils v0.26.1
@@ -48,9 +49,8 @@ require (
 	k8s.io/apimachinery v0.26.1
 	k8s.io/client-go v0.26.1
 	k8s.io/cluster-bootstrap v0.0.0
-	k8s.io/kubectl v0.26.1
 	k8s.io/kubelet v0.0.0
-	k8s.io/kubernetes v1.26.1
+	k8s.io/kubernetes v0.0.0
 	libvirt.org/go/libvirt v1.9000.0
 	libvirt.org/go/libvirtxml v1.9000.0
 )
@@ -167,10 +167,11 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	k8s.io/apiextensions-apiserver v0.26.0 // indirect
 	k8s.io/apiserver v0.26.0 // indirect
-	k8s.io/cli-runtime v0.26.1 // indirect
+	k8s.io/cli-runtime v0.26.0 // indirect
 	k8s.io/component-base v0.26.1 // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
+	k8s.io/kubectl v0.26.0 // indirect
 	k8s.io/utils v0.0.0-20221107191617-1a15be271d1d // indirect
 	oras.land/oras-go v1.2.2 // indirect
 	sigs.k8s.io/json v0.0.0-20220713155537-f223a00ba0e2 // indirect

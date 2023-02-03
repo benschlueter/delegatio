@@ -45,7 +45,7 @@ func (k *Client) CreatePodPortForward(ctx context.Context, namespace, podName, p
 		}
 	}()
 
-	k.logger.Info("handling for forwarding connection", zap.String("pod", podName), zap.String("port", podPort))
+	k.logger.Info("handling forwarding connection", zap.String("pod", podName), zap.String("port", podPort))
 
 	k.mux.Lock()
 	requestID := k.requestID

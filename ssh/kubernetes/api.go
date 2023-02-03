@@ -85,8 +85,8 @@ func (k *K8sAPIWrapper) CreatePodPortForward(ctx context.Context, conf *config.K
 func (k *K8sAPIWrapper) GetStore() (store.Store, error) {
 	var err error
 	var ns string
-	_, err = os.Stat("./admin.conf")
-	if errors.Is(err, os.ErrNotExist) {
+	_, present := os.LookupEnv("KUBECONFIG")
+	if !present {
 		// ns is not ready when container spawns
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
@@ -96,6 +96,7 @@ func (k *K8sAPIWrapper) GetStore() (store.Store, error) {
 			ns = "ssh"
 		}
 	} else {
+		// out of cluster mode currently assumes 'ssh' namespace
 		ns = "ssh"
 	}
 	k.logger.Info("namespace", zap.String("namespace", ns))

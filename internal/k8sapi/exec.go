@@ -10,8 +10,8 @@ import (
 
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
+	"k8s.io/apimachinery/pkg/runtime"
 	"k8s.io/client-go/tools/remotecommand"
-	"k8s.io/kubectl/pkg/scheme"
 )
 
 // CreateExecInPod creates a shell on the specified pod.
@@ -27,10 +27,12 @@ func (k *Client) CreateExecInPod(ctx context.Context, namespace, podName, comman
 		Stderr:  true,
 		TTY:     tty,
 	}
+
 	req.VersionedParams(
 		option,
-		scheme.ParameterCodec,
+		runtime.NewParameterCodec(scheme),
 	)
+	k.logger.Info("query kubeapi", zap.String("url", req.URL().String()))
 	exec, err := remotecommand.NewSPDYExecutor(k.RestConfig, "POST", req.URL())
 	if err != nil {
 		return err

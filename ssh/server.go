@@ -55,10 +55,6 @@ func NewServer(client kubernetes.K8sAPI, log *zap.Logger, storage store.Store, p
 
 // Start starts the ssh server.
 func (s *Server) Start(ctx context.Context) {
-	// In the latest version of crypto/ssh (after Go 1.3), the SSH server type has been removed
-	// in favour of an SSH connection type. A ssh.ServerConn is created by passing an existing
-	// net.Conn and a ssh.ServerConfig to ssh.NewServerConn, in effect, upgrading the net.Conn
-	// into an ssh.ServerConn
 	config := &ssh.ServerConfig{
 		// Function is called to determine if the user is allowed to connect with the ssh server
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
