@@ -81,5 +81,5 @@ func TestEtcdStore(t *testing.T) {
 	})
 
 	// Usually call it with a defer statement. However this causes problems with the construct above
-	require.NoError(dockerClient.ContainerStop(ctx, createResp.ID, nil))
+	require.NoError(dockerClient.ContainerStop(ctx, createResp.ID, container.StopOptions{}))
 }
