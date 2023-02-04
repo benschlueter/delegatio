@@ -114,6 +114,21 @@ func (k *Client) DownloadSSHServerPrivKey(privKey []byte) (err error) {
 	return stWrapper.PutPrivKey(privKey)
 }
 
+// GetKubeConfigPath returns the path to the kubeconfig file.
+func GetKubeConfigPath() (string, error) {
+	val, present := os.LookupEnv("KUBECONFIG")
+	if !present {
+		return "", errors.New("KUBECONFIG not set")
+	}
+	if _, err := os.Stat(val); err != nil {
+		if os.IsNotExist(err) {
+			return "", errors.New("KUBECONFIG file does not exist")
+		}
+		return "", err
+	}
+	return val, nil
+}
+
 var (
 	// ErrNotConnected is returned when the client is not connected to etcd.
 	ErrNotConnected = errors.New("client is not connected to etcd")
