@@ -11,7 +11,6 @@ import (
 	"os/signal"
 	"syscall"
 
-	"github.com/benschlueter/delegatio/cli/infrastructure"
 	"github.com/benschlueter/delegatio/internal/config"
 
 	"go.uber.org/zap"
@@ -61,41 +60,7 @@ func main() {
 		flag.Usage()
 		os.Exit(1)
 	}
-
-	lInstance, err := infrastructure.NewQemu(log.Named("infra"), imageLocation)
-	if err != nil {
-		log.With(zap.Error(err)).DPanic("error creating infrastructure")
-	}
-
-	defer func(logger *zap.Logger, l infrastructure.Infrastructure) {
-		if err := l.TerminateInfrastructure(); err != nil {
-			logger.Error("error while cleaning up", zap.Error(err))
-		}
-		log.Info("instaces terminated successfully")
-		if err := l.TerminateConnection(); err != nil {
-			logger.Error("error while cleaning up", zap.Error(err))
-		}
-		log.Info("connection successfully closed")
-	}(log, lInstance)
-
-	creds, err := createInfrastructure(ctx, log, lInstance)
-	if err != nil {
-		log.With(zap.Error(err)).DPanic("create infrastructure")
-	}
-	log.Info("finished infrastructure initialization")
-	kubewrapper, err := NewKubeWrapper(log.Named("kubeWrapper"))
-	if err != nil {
-		log.With(zap.Error(err)).DPanic("new kubeWrapper")
-	}
-	if err := kubewrapper.createKubernetes(ctx, creds, config.GetExampleConfig()); err != nil {
-		log.With(zap.Error(err)).DPanic("failed to initialize kubernetes")
-	}
-	log.Info("finished kubernetes initialization")
-
-	<-ctx.Done()
-	cleanUpCtx, secondCancel := context.WithTimeout(context.Background(), config.CleanUpTimeout)
-	defer secondCancel()
-	if err := kubewrapper.saveKubernetesState(cleanUpCtx, "./kubernetes-state.json"); err != nil {
-		log.Error("failed to save kubernetes state", zap.Error(err))
+	if err := run(ctx, log, imageLocation); err != nil {
+		log.With(zap.Error(err)).DPanic("run")
 	}
 }
