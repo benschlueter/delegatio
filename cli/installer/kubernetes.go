@@ -10,6 +10,7 @@ import (
 	"net/url"
 
 	"github.com/benschlueter/delegatio/cli/installer/helm"
+	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/k8sapi"
 	"go.uber.org/zap"
 	v1 "k8s.io/api/core/v1"
@@ -46,7 +47,30 @@ func (k *K8sapiWrapper) InstallCilium(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	return helm.Install(ctx, k.logger.Named("helm"), "cilium", host)
+	vals := map[string]interface{}{
+		"kubeProxyReplacement": "strict",
+		"k8sServicePort":       "6443",
+		"k8sServiceHost":       host,
+		/* 		"prometheus.enabled":          "true",
+		   		"operator.prometheus.enabled": true, */
+	}
+	helmInstaller := helm.NewHelmInstaller(k.logger, "cilium", "cilium", config.CiliumPath, config.Cilium256Hash, vals)
+	return helmInstaller.Install(ctx)
+}
+
+// InstallTetragon installs tetragon in the cluster.
+func (k *K8sapiWrapper) InstallTetragon(ctx context.Context) error {
+	/* 	u, err := url.Parse(k.Client.RestConfig.Host)
+	   	if err != nil {
+	   		return err
+	   	}
+	   	k.logger.Info("endpoint", zap.String("api", u.Host))
+	   	host, _, err := net.SplitHostPort(u.Host)
+	   	if err != nil {
+	   		return err
+	   	} */
+	helmInstaller := helm.NewHelmInstaller(k.logger, "tetragon", "kube-system", config.CiliumPath, config.Cilium256Hash, nil)
+	return helmInstaller.Install(ctx)
 }
 
 // CreatePersistentVolume creates a shell on the specified pod.

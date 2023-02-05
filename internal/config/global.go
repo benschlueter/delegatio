@@ -23,6 +23,10 @@ var (
 	CiliumPath = "https://github.com/cilium/charts/raw/master/cilium-1.12.5.tgz"
 	// Cilium256Hash is the sha256 hash of the cilium helm chart.
 	Cilium256Hash = "a9211be3d0d43b91aaaece1191a69c1c676a6226194bec7d806111086e620ab8"
+	// TetratePath is the path to the tetrate helm chart.
+	TetratePath = "https://github.com/cilium/tetragon/releases/download/v0.8.3/tetra-linux-amd64.tar.gz"
+	// Tetragon256Hash is the sha256 hash of the tetrate helm chart.
+	Tetragon256Hash = "fa0e23839732cf2a3c4a1d27573431a99dd2599075bf249d3564990d906b9140"
 )
 
 const (
