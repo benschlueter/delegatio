@@ -7,13 +7,9 @@ package bootstrapper
 import (
 	"context"
 	"fmt"
-	"net"
 
-	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
 	"github.com/benschlueter/delegatio/internal/config"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	"k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
@@ -71,49 +67,22 @@ func (a *bootstrapper) configureKubernetes(ctx context.Context) (*v1beta3.Bootst
 	if err := a.writeKubeconfigToDisk(ctx); err != nil {
 		return nil, err
 	}
+	a.Log.Info("admin.conf written to disk")
 	if err := a.establishClientGoConnection(); err != nil {
 		return nil, err
 	}
-	a.Log.Info("admin.conf written to disk")
+	a.Log.Info("client-go connection establishedw")
 	caFileContentPem, err := a.getKubernetesRootCert(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("loading ca.crt file: %w", err)
 	}
+	a.Log.Info("ca.crt loaded")
 	joinToken, err := a.getJoinToken(config.DefaultTimeout, caFileContentPem)
 	if err != nil {
 		return nil, err
 	}
-	a.Log.Info("generated join token")
+	a.Log.Info("join token generated")
 	return joinToken, nil
-}
-
-// getEtcdCredentials returns the etcd credentials for the instance.
-func (a *bootstrapper) getEtcdCredentials(ctx context.Context) (*config.EtcdCredentials, error) {
-	conn, err := grpc.DialContext(ctx, net.JoinHostPort(a.controlPlaneIP, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
-	if err != nil {
-		return nil, err
-	}
-	defer conn.Close()
-	client := vmproto.NewAPIClient(conn)
-	// Get the peer cert
-	resp, err := client.ReadFile(ctx, &vmproto.ReadFileRequest{
-		Filepath: "/etc/kubernetes/pki/etcd/",
-		Filename: "ca.key",
-	})
-	if err != nil {
-		return nil, nil
-	}
-	caKey := resp.Content
-	// get the CA cert
-	resp, err = client.ReadFile(ctx, &vmproto.ReadFileRequest{
-		Filepath: "/etc/kubernetes/pki/etcd/",
-		Filename: "ca.crt",
-	})
-	if err != nil {
-		return nil, nil
-	}
-	caCert := resp.Content
-	return a.generateEtcdCertificate(caCert, caKey)
 }
 
 // establishClientGoConnection configures the client-go connection.

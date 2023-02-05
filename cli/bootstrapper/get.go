@@ -105,3 +105,32 @@ func (a *bootstrapper) getJoinToken(ttl time.Duration, caFileContentPem []byte) 
 	a.Log.Info("Join token creation successful", zap.Any("token", bootstrapToken))
 	return bootstrapToken, nil
 }
+
+// getEtcdCredentials returns the etcd credentials for the instance.
+func (a *bootstrapper) getEtcdCredentials(ctx context.Context) (*config.EtcdCredentials, error) {
+	conn, err := grpc.DialContext(ctx, net.JoinHostPort(a.controlPlaneIP, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return nil, err
+	}
+	defer conn.Close()
+	client := vmproto.NewAPIClient(conn)
+	// Get the peer cert
+	resp, err := client.ReadFile(ctx, &vmproto.ReadFileRequest{
+		Filepath: "/etc/kubernetes/pki/etcd/",
+		Filename: "ca.key",
+	})
+	if err != nil {
+		return nil, nil
+	}
+	caKey := resp.Content
+	// get the CA cert
+	resp, err = client.ReadFile(ctx, &vmproto.ReadFileRequest{
+		Filepath: "/etc/kubernetes/pki/etcd/",
+		Filename: "ca.crt",
+	})
+	if err != nil {
+		return nil, nil
+	}
+	caCert := resp.Content
+	return a.generateEtcdCertificate(caCert, caKey)
+}

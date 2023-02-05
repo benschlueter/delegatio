@@ -1,0 +1,50 @@
+/* SPDX-License-Identifier: AGPL-3.0-only
+ * Copyright (c) Benedict Schlueter
+ */
+
+package terminate
+
+import (
+	"context"
+	"encoding/json"
+	"os"
+
+	"github.com/benschlueter/delegatio/internal/k8sapi"
+
+	"go.uber.org/zap"
+)
+
+// Terminate is an interface for the terminate package.
+type Terminate interface {
+	SaveState(context.Context, string) error
+}
+
+// terminateWrapper is a wrapper around internal kubernets.Client.
+type terminateWrapper struct {
+	kubeClient *k8sapi.Client
+	logger     *zap.Logger
+}
+
+// NewTerminate returns a new TerminateWrapper.
+func NewTerminate(logger *zap.Logger) (Terminate, error) {
+	client, err := k8sapi.NewClient(logger)
+	if err != nil {
+		return nil, err
+	}
+	return &terminateWrapper{kubeClient: client, logger: logger}, nil
+}
+
+func (t *terminateWrapper) SaveState(_ context.Context, configFile string) error {
+	configData, err := t.kubeClient.GetStoreUserData()
+	if err != nil {
+		return err
+	}
+	byteData, err := json.Marshal(configData)
+	if err != nil {
+		return err
+	}
+	if err := os.WriteFile(configFile, byteData, 0o600); err != nil {
+		return err
+	}
+	return nil
+}
