@@ -13,6 +13,7 @@ import (
 	appsAPI "k8s.io/api/apps/v1"
 	coreAPI "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
+	"k8s.io/apimachinery/pkg/api/resource"
 	metaAPI "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
@@ -50,8 +51,15 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 				Spec: coreAPI.PodSpec{
 					/* 					ServiceAccountName:           "development",
 					   					AutomountServiceAccountToken: &automountServiceAccountToken, */
+
 					Containers: []coreAPI.Container{
 						{
+							Resources: coreAPI.ResourceRequirements{
+								Limits: coreAPI.ResourceList{
+									coreAPI.ResourceCPU:    resource.MustParse("1"),
+									coreAPI.ResourceMemory: resource.MustParse("1Gi"),
+								},
+							},
 							Name:  "archlinux-container-ssh",
 							Image: config.UserContainerImage,
 							TTY:   true,
