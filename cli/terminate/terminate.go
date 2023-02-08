@@ -7,8 +7,11 @@ package terminate
 import (
 	"context"
 	"encoding/json"
+	"net"
+	"net/url"
 	"os"
 
+	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/k8sapi"
 
 	"go.uber.org/zap"
@@ -26,9 +29,21 @@ type terminateWrapper struct {
 }
 
 // NewTerminate returns a new TerminateWrapper.
-func NewTerminate(logger *zap.Logger) (Terminate, error) {
+func NewTerminate(logger *zap.Logger, creds *config.EtcdCredentials) (Terminate, error) {
 	client, err := k8sapi.NewClient(logger)
 	if err != nil {
+		return nil, err
+	}
+	u, err := url.Parse(client.RestConfig.Host)
+	if err != nil {
+		return nil, err
+	}
+	logger.Info("endpoint", zap.String("api", u.Host))
+	host, _, err := net.SplitHostPort(u.Host)
+	if err != nil {
+		return nil, err
+	}
+	if err := client.ConnectToStore(creds, []string{net.JoinHostPort(host, "2379")}); err != nil {
 		return nil, err
 	}
 	return &terminateWrapper{kubeClient: client, logger: logger}, nil

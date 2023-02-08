@@ -55,7 +55,7 @@ func run(ctx context.Context, log *zap.Logger, imageLocation string) error {
 	log.Info("finished kubernetes initialization")
 
 	<-ctx.Done()
-	return handleTermination(log)
+	return handleTermination(log, creds)
 }
 
 func bootstrapKubernetes(ctx context.Context, log *zap.Logger, nodes *config.NodeInformation) (*config.EtcdCredentials, error) {
@@ -98,11 +98,11 @@ func createInfrastructure(ctx context.Context, log *zap.Logger, infra infrastruc
 	return nodes, nil
 }
 
-func handleTermination(log *zap.Logger) error {
+func handleTermination(log *zap.Logger, creds *config.EtcdCredentials) error {
 	cleanUpCtx, secondCancel := context.WithTimeout(context.Background(), config.CleanUpTimeout)
 	defer secondCancel()
 	// --- terminate ---
-	terminator, err := terminate.NewTerminate(log.Named("terminate"))
+	terminator, err := terminate.NewTerminate(log.Named("terminate"), creds)
 	if err != nil {
 		log.With(zap.Error(err)).DPanic("new terminate")
 		return err
