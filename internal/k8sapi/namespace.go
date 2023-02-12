@@ -7,23 +7,15 @@ package k8sapi
 import (
 	"context"
 
-	coreAPI "k8s.io/api/core/v1"
+	"github.com/benschlueter/delegatio/internal/k8sapi/templates"
 	"k8s.io/apimachinery/pkg/api/errors"
 	metaAPI "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // CreateNamespace creates a namespace.
 func (k *Client) CreateNamespace(ctx context.Context, namespace string) error {
-	nspace := coreAPI.Namespace{
-		TypeMeta: metaAPI.TypeMeta{
-			Kind:       "Namespace",
-			APIVersion: coreAPI.SchemeGroupVersion.Version,
-		},
-		ObjectMeta: metaAPI.ObjectMeta{
-			Name: namespace,
-		},
-	}
-	_, err := k.Client.CoreV1().Namespaces().Create(ctx, &nspace, metaAPI.CreateOptions{})
+	nspace := templates.Namespace(namespace)
+	_, err := k.Client.CoreV1().Namespaces().Create(ctx, nspace, metaAPI.CreateOptions{})
 	return err
 }
 

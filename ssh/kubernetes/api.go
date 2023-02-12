@@ -47,24 +47,17 @@ func NewK8sAPIWrapper(logger *zap.Logger) (*K8sAPIWrapper, error) {
 
 // CreateAndWaitForRessources creates the ressources for a user in a namespace.
 func (k *K8sAPIWrapper) CreateAndWaitForRessources(ctx context.Context, conf *config.KubeRessourceIdentifier) error {
-	exists, err := k.Client.StatefulSetExists(ctx, conf.Namespace, conf.UserIdentifier)
+	exists, err := k.Client.UserRessourcesExist(ctx, conf.Namespace, conf.UserIdentifier)
 	if err != nil {
 		return err
 	}
 	if !exists {
-		/* 		if err := k.Client.CreateServiceAccount(ctx, namespace, "development"); err != nil {
-			return err
-		} */
-		/* 		if err := k.Client.CreateClusterRoleBinding(ctx, "testchallenge1", "development"); err != nil {
-			return err
-		} */
-		/* 		if err := k.Client.CreateSecret(ctx, "development"); err != nil {
-			return err
-		} */
-		if err := k.Client.CreateStatefulSetForUser(ctx, conf.Namespace, conf.UserIdentifier); err != nil {
+		if err := k.Client.CreateUserRessources(ctx, conf); err != nil {
 			return err
 		}
 	}
+	// In case the ressource exists, but the Pod is not yet ready we need this statement
+	// otherwise the ssh server might crash.
 	if err := k.Client.WaitForPodRunning(ctx, conf.Namespace, conf.UserIdentifier, 1*time.Minute); err != nil {
 		return err
 	}

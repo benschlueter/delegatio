@@ -5,6 +5,8 @@
 package kubernetes
 
 import (
+	"os"
+
 	"github.com/benschlueter/delegatio/internal/config"
 )
 
@@ -14,6 +16,7 @@ type K8sAPIUser interface {
 	GetUserInformation() *config.KubeRessourceIdentifier
 	GetNamespace() string
 	GetAuthenticatedUserID() string
+	GetNodeName() string
 }
 
 // K8sAPIUserWrapper is the struct used to access kubernetes helpers and user data.
@@ -43,4 +46,9 @@ func (k *K8sAPIUserWrapper) GetNamespace() string {
 // GetAuthenticatedUserID returns the authenticated user id.
 func (k *K8sAPIUserWrapper) GetAuthenticatedUserID() string {
 	return k.UserInformation.UserIdentifier
+}
+
+// GetNodeName returns the node this application is currently running on.
+func (k *K8sAPIUserWrapper) GetNodeName() string {
+	return os.Getenv(config.NodeNameEnvVariable)
 }

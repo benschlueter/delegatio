@@ -53,7 +53,11 @@ func (c *Handler) HandleGlobalConnection(ctx context.Context) {
 
 	c.log.Info("waiting for ressources to be ready")
 	// Check that all kubernetes ressources are ready and usable for future use.
-	if err := c.CreateAndWaitForRessources(ctx, &config.KubeRessourceIdentifier{Namespace: c.GetNamespace(), UserIdentifier: c.GetAuthenticatedUserID()}); err != nil {
+	if err := c.CreateAndWaitForRessources(ctx, &config.KubeRessourceIdentifier{
+		Namespace:      c.GetNamespace(),
+		UserIdentifier: c.GetAuthenticatedUserID(),
+		NodeName:       c.GetNodeName(),
+	}); err != nil {
 		c.log.Error("creating/waiting for kubernetes ressources",
 			zap.Error(err),
 			zap.String("userID", c.GetAuthenticatedUserID()),
