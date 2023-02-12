@@ -2,7 +2,7 @@
 * Copyright (c) Benedict Schlueter
  */
 
-package bootstrapper
+package kubernetes
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 )
 
 // writeKubeconfigToDisk writes the kubeconfig to disk.
-func (a *bootstrapper) writeKubeconfigToDisk(ctx context.Context) (err error) {
+func (a *Bootstrapper) writeKubeconfigToDisk(ctx context.Context) (err error) {
 	file, err := a.getKubernetesConfig(ctx)
 	if err != nil {
 		return err

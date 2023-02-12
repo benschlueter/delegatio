@@ -18,45 +18,52 @@ import (
 	v1 "k8s.io/api/core/v1"
 )
 
-// Installer is the struct used to access kubernetes helpers.
-type Installer struct {
+const sshNamespaceName = "ssh"
+
+// Installer is the interface for the installer. It is used to install all the kubernetes applications.
+type Installer interface {
+	InstallKubernetesApplications(context.Context, *config.EtcdCredentials, *config.UserConfiguration) error
+}
+
+// installer is the struct used to access kubernetes helpers.
+type installer struct {
 	Client *k8sapi.Client
 	logger *zap.Logger
 }
 
 // NewInstaller returns a new kuberenetes client-go wrapper.
 // if no kubeconfig path is given we use the service account token.
-func NewInstaller(logger *zap.Logger) (*Installer, error) {
+func NewInstaller(logger *zap.Logger) (Installer, error) {
 	// use the current context in kubeconfig
 	client, err := k8sapi.NewClient(logger)
 	if err != nil {
 		return nil, err
 	}
-	return &Installer{
+	return &installer{
 		Client: client,
 		logger: logger.Named("installer"),
 	}, nil
 }
 
 // InstallKubernetesApplications installs all the kubernetes applications.
-func (k *Installer) InstallKubernetesApplications(ctx context.Context, creds *config.EtcdCredentials, config *config.UserConfiguration) error {
-	if err := k.InstallCilium(ctx); err != nil {
+func (k *installer) InstallKubernetesApplications(ctx context.Context, creds *config.EtcdCredentials, config *config.UserConfiguration) error {
+	if err := k.installCilium(ctx); err != nil {
 		k.logger.With(zap.Error(err)).Error("failed to install helm charts")
 		return err
 	}
-	if err := k.InitializeSSH(ctx, k.logger.Named("ssh"), creds); err != nil {
+	if err := k.initializeSSH(ctx, k.logger.Named("ssh"), creds); err != nil {
 		k.logger.With(zap.Error(err)).Error("failed to deploy ssh config")
 		return err
 	}
-	if err := k.InitalizeChallenges(ctx, k.logger.Named("challenges"), config); err != nil {
+	if err := k.initalizeChallenges(ctx, k.logger.Named("challenges"), config); err != nil {
 		k.logger.With(zap.Error(err)).Error("failed to deploy challenges")
 		return err
 	}
 	return nil
 }
 
-// InstallCilium installs cilium in the cluster.
-func (k *Installer) InstallCilium(ctx context.Context) error {
+// installCilium installs cilium in the cluster.
+func (k *installer) installCilium(ctx context.Context) error {
 	u, err := url.Parse(k.Client.RestConfig.Host)
 	if err != nil {
 		return err
@@ -77,14 +84,14 @@ func (k *Installer) InstallCilium(ctx context.Context) error {
 	return helmInstaller.Install(ctx)
 }
 
-// InstallTetragon installs tetragon in the cluster.
-func (k *Installer) InstallTetragon(ctx context.Context) error {
+// installTetragon installs tetragon in the cluster.
+func (k *installer) installTetragon(ctx context.Context) error {
 	helmInstaller := helm.NewHelmInstaller(k.logger, "tetragon", "kube-system", config.TetratePath, config.Tetragon256Hash, nil)
 	return helmInstaller.Install(ctx)
 }
 
-// InitalizeChallenges creates the namespaces and persistent volumes for the challenges. It also adds the users to etcd.
-func (k *Installer) InitalizeChallenges(ctx context.Context, log *zap.Logger, config *config.UserConfiguration) error {
+// initalizeChallenges creates the namespaces and persistent volumes for the challenges. It also adds the users to etcd.
+func (k *installer) initalizeChallenges(ctx context.Context, log *zap.Logger, config *config.UserConfiguration) error {
 	if err := k.Client.CreateStorageClass(ctx, "nfs", "Retain"); err != nil {
 		log.With(zap.Error(err)).Error("failed to CreateStorageClass")
 		return err
@@ -123,10 +130,8 @@ func (k *Installer) InitalizeChallenges(ctx context.Context, log *zap.Logger, co
 	return nil
 }
 
-const sshNamespaceName = "ssh"
-
-// InitializeSSH initializes the SSH application.
-func (k *Installer) InitializeSSH(ctx context.Context, log *zap.Logger, creds *config.EtcdCredentials) error {
+// initializeSSH initializes the SSH application.
+func (k *installer) initializeSSH(ctx context.Context, log *zap.Logger, creds *config.EtcdCredentials) error {
 	if err := k.Client.CreateNamespace(ctx, sshNamespaceName); err != nil {
 		log.With(zap.Error(err)).Error("failed to create namespace")
 		return err
@@ -182,17 +187,17 @@ func (k *Installer) InitializeSSH(ctx context.Context, log *zap.Logger, creds *c
 }
 
 // createPersistentVolume creates a shell on the specified pod.
-func (k *Installer) createPersistentVolume(ctx context.Context, volumeName string) error {
+func (k *installer) createPersistentVolume(ctx context.Context, volumeName string) error {
 	return k.Client.CreatePersistentVolume(ctx, volumeName, string(v1.ReadWriteMany))
 }
 
 // createPersistentVolumeClaim creates a shell on the specified pod.
-func (k *Installer) createPersistentVolumeClaim(ctx context.Context, namespace, volumeName, storageClass string) error {
+func (k *installer) createPersistentVolumeClaim(ctx context.Context, namespace, volumeName, storageClass string) error {
 	return k.Client.CreatePersistentVolumeClaim(ctx, namespace, volumeName, storageClass)
 }
 
 // createConfigMapAndPutData creates a shell on the specified pod.
-func (k *Installer) createConfigMapAndPutData(ctx context.Context, namespace, configMapName string, data map[string]string) error {
+func (k *installer) createConfigMapAndPutData(ctx context.Context, namespace, configMapName string, data map[string]string) error {
 	if err := k.Client.CreateConfigMap(ctx, namespace, configMapName); err != nil {
 		return err
 	}

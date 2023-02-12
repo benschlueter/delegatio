@@ -22,8 +22,8 @@ type Terminate interface {
 	SaveState(context.Context, string) error
 }
 
-// terminateWrapper is a wrapper around internal kubernets.Client.
-type terminateWrapper struct {
+// terminate is a wrapper around internal kubernets.Client.
+type terminate struct {
 	kubeClient *k8sapi.Client
 	logger     *zap.Logger
 }
@@ -46,10 +46,10 @@ func NewTerminate(logger *zap.Logger, creds *config.EtcdCredentials) (Terminate,
 	if err := client.ConnectToStore(creds, []string{net.JoinHostPort(host, "2379")}); err != nil {
 		return nil, err
 	}
-	return &terminateWrapper{kubeClient: client, logger: logger}, nil
+	return &terminate{kubeClient: client, logger: logger}, nil
 }
 
-func (t *terminateWrapper) SaveState(_ context.Context, configFile string) error {
+func (t *terminate) SaveState(_ context.Context, configFile string) error {
 	configData, err := t.kubeClient.GetStoreUserData()
 	if err != nil {
 		return err

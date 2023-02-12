@@ -2,7 +2,7 @@
  * Copyright (c) Benedict Schlueter
  */
 
-package bootstrapper
+package kubernetes
 
 import (
 	"crypto/rand"
@@ -15,7 +15,7 @@ import (
 )
 
 // generateEtcdCertificate generates a new etcd certificate for the instance.
-func (a *bootstrapper) generateEtcdCertificate(caCert, caKey []byte) (*config.EtcdCredentials, error) {
+func (a *Bootstrapper) generateEtcdCertificate(caCert, caKey []byte) (*config.EtcdCredentials, error) {
 	pemBlock, _ := pem.Decode(caCert)
 	if pemBlock == nil {
 		return nil, errors.New("no PEM data found in CA cert")
@@ -42,7 +42,7 @@ func (a *bootstrapper) generateEtcdCertificate(caCert, caKey []byte) (*config.Et
 		Type:  "RSA PRIVATE KEY",
 		Bytes: x509.MarshalPKCS1PrivateKey(key),
 	})
-	a.Log.Info("encode to mem")
+	a.log.Info("encode to mem")
 	cert, err := x509.CreateCertificate(rand.Reader, caCertX509, caCertX509, &key.PublicKey, caPrivateKey)
 	if err != nil {
 		return nil, err

@@ -63,7 +63,7 @@ func bootstrapKubernetes(ctx context.Context, log *zap.Logger, nodes *config.Nod
 	if err != nil {
 		log.With(zap.Error(err)).DPanic("failed to get kubeConfig")
 	}
-	agent, err := bootstrapper.NewBootstrapper(log, nodes, kubeConf)
+	agent, err := bootstrapper.NewKubernetes(log, nodes, kubeConf)
 	if err != nil {
 		log.Error("failed to initialize bootstrapper", zap.Error(err))
 		return nil, err

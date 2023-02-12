@@ -2,7 +2,7 @@
  * Copyright (c) Benedict Schlueter
  */
 
-package bootstrapper
+package kubernetes
 
 import (
 	"context"
@@ -20,7 +20,7 @@ import (
 )
 
 // InstallKubernetes initializes a kubernetes cluster using the gRPC API.
-func (a *bootstrapper) InstallKubernetes(ctx context.Context, kubernetesInitConfiguration []byte) (err error) {
+func (a *Bootstrapper) InstallKubernetes(ctx context.Context, kubernetesInitConfiguration []byte) (err error) {
 	conn, err := grpc.DialContext(ctx, net.JoinHostPort(a.controlPlaneIP, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
@@ -35,8 +35,8 @@ func (a *bootstrapper) InstallKubernetes(ctx context.Context, kubernetesInitConf
 }
 
 // JoinClusterCoordinator coordinates cluster joining for all worker nodes.
-func (a *bootstrapper) JoinClusterCoordinator(ctx context.Context, joinToken *kubeadm.BootstrapTokenDiscovery) (err error) {
-	a.Log.Info("coordinating kubeadm join")
+func (a *Bootstrapper) JoinClusterCoordinator(ctx context.Context, joinToken *kubeadm.BootstrapTokenDiscovery) (err error) {
+	a.log.Info("coordinating kubeadm join")
 	g, ctxGo := errgroup.WithContext(ctx)
 	for name, addr := range a.workerIPs {
 		func(nodeName, nodeIP string) {
@@ -52,8 +52,8 @@ func (a *bootstrapper) JoinClusterCoordinator(ctx context.Context, joinToken *ku
 }
 
 // joinCluster connects to a node and executes kubeadm join.
-func (a *bootstrapper) joinCluster(ctx context.Context, id, ip string, joinToken *kubeadm.BootstrapTokenDiscovery) (err error) {
-	a.Log.Info("executing kubeadm join", zap.String("id", id), zap.String("ip", ip))
+func (a *Bootstrapper) joinCluster(ctx context.Context, id, ip string, joinToken *kubeadm.BootstrapTokenDiscovery) (err error) {
+	a.log.Info("executing kubeadm join", zap.String("id", id), zap.String("ip", ip))
 	conn, err := grpc.DialContext(ctx, net.JoinHostPort(ip, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return err
@@ -82,7 +82,7 @@ func (a *bootstrapper) joinCluster(ctx context.Context, id, ip string, joinToken
 				return err
 			}
 			if len(data.GetOutput()) > 0 {
-				a.Log.Info("kubeadm join succeed", zap.String("id", id), zap.String("ip", ip))
+				a.log.Info("kubeadm join succeed", zap.String("id", id), zap.String("ip", ip))
 				return nil
 			}
 			if len(data.GetLog().GetMessage()) > 0 {
@@ -92,8 +92,8 @@ func (a *bootstrapper) joinCluster(ctx context.Context, id, ip string, joinToken
 	}
 }
 
-func (a *bootstrapper) executeKubeadm(ctx context.Context, client vmproto.APIClient) (output []byte, err error) {
-	a.Log.Info("execute executeKubeadm")
+func (a *Bootstrapper) executeKubeadm(ctx context.Context, client vmproto.APIClient) (output []byte, err error) {
+	a.log.Info("execute executeKubeadm")
 	resp, err := client.ExecCommandStream(ctx, &vmproto.ExecCommandStreamRequest{
 		Command: "/usr/bin/kubeadm",
 		Args: []string{
@@ -117,7 +117,7 @@ func (a *bootstrapper) executeKubeadm(ctx context.Context, client vmproto.APICli
 				return nil, err
 			}
 			if output := data.GetOutput(); len(output) > 0 {
-				a.Log.Info("kubeadm init response", zap.String("response", string(output)))
+				a.log.Info("kubeadm init response", zap.String("response", string(output)))
 				return output, nil
 			}
 			if log := data.GetLog().GetMessage(); len(log) > 0 {
@@ -127,8 +127,8 @@ func (a *bootstrapper) executeKubeadm(ctx context.Context, client vmproto.APICli
 	}
 }
 
-func (a *bootstrapper) executeWriteInitConfiguration(ctx context.Context, client vmproto.APIClient, initConfigKubernetes []byte) (err error) {
-	a.Log.Info("write initconfig", zap.String("config", string(initConfigKubernetes)))
+func (a *Bootstrapper) executeWriteInitConfiguration(ctx context.Context, client vmproto.APIClient, initConfigKubernetes []byte) (err error) {
+	a.log.Info("write initconfig", zap.String("config", string(initConfigKubernetes)))
 	_, err = client.WriteFile(ctx, &vmproto.WriteFileRequest{
 		Filepath: "/tmp",
 		Filename: "kubeadmconf.yaml",
