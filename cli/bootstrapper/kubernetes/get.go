@@ -2,7 +2,7 @@
  * Copyright (c) Benedict Schlueter
  */
 
-package bootstrapper
+package kubernetes
 
 import (
 	"context"
@@ -27,7 +27,7 @@ import (
 	"k8s.io/kubernetes/cmd/kubeadm/app/util/pubkeypin"
 )
 
-func (a *bootstrapper) getKubernetesConfig(ctx context.Context) (output []byte, err error) {
+func (a *Bootstrapper) getKubernetesConfig(ctx context.Context) (output []byte, err error) {
 	conn, err := grpc.DialContext(ctx, net.JoinHostPort(a.controlPlaneIP, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
@@ -46,7 +46,7 @@ func (a *bootstrapper) getKubernetesConfig(ctx context.Context) (output []byte, 
 	return adminConfData, nil
 }
 
-func (a *bootstrapper) getKubernetesRootCert(ctx context.Context) (output []byte, err error) {
+func (a *Bootstrapper) getKubernetesRootCert(ctx context.Context) (output []byte, err error) {
 	conn, err := grpc.DialContext(ctx, net.JoinHostPort(a.controlPlaneIP, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
@@ -64,8 +64,8 @@ func (a *bootstrapper) getKubernetesRootCert(ctx context.Context) (output []byte
 }
 
 // getJoinToken creates a new bootstrap (join) token, which a node can use to join the cluster.
-func (a *bootstrapper) getJoinToken(ttl time.Duration, caFileContentPem []byte) (*kubeadmv1beta3.BootstrapTokenDiscovery, error) {
-	a.Log.Info("generating new random bootstrap token")
+func (a *Bootstrapper) getJoinToken(ttl time.Duration, caFileContentPem []byte) (*kubeadmv1beta3.BootstrapTokenDiscovery, error) {
+	a.log.Info("generating new random bootstrap token")
 	rawToken, err := bootstraputil.GenerateBootstrapToken()
 	if err != nil {
 		return nil, fmt.Errorf("couldn't generate random token: %w", err)
@@ -82,12 +82,12 @@ func (a *bootstrapper) getJoinToken(ttl time.Duration, caFileContentPem []byte) 
 		Groups:      kubeconstants.DefaultTokenGroups,
 	}
 	// create the token in Kubernetes
-	a.Log.Info("creating bootstrap token in Kubernetes")
+	a.log.Info("creating bootstrap token in Kubernetes")
 	if err := tokenphase.CreateNewTokens(a.client, []tokenv1.BootstrapToken{token}); err != nil {
 		return nil, fmt.Errorf("creating bootstrap token: %w", err)
 	}
 	// parse Kubernetes CA certs
-	a.Log.Info("Preparing join token for new node")
+	a.log.Info("Preparing join token for new node")
 
 	caFileContent, _ := pem.Decode(caFileContentPem)
 	if caFileContent == nil {
@@ -102,12 +102,12 @@ func (a *bootstrapper) getJoinToken(ttl time.Duration, caFileContentPem []byte) 
 		APIServerEndpoint: net.JoinHostPort(a.controlPlaneIP, "6443"),
 		CACertHashes:      []string{pubkeypin.Hash(caCertX509)},
 	}
-	a.Log.Info("Join token creation successful", zap.Any("token", bootstrapToken))
+	a.log.Info("Join token creation successful", zap.Any("token", bootstrapToken))
 	return bootstrapToken, nil
 }
 
 // getEtcdCredentials returns the etcd credentials for the instance.
-func (a *bootstrapper) getEtcdCredentials(ctx context.Context) (*config.EtcdCredentials, error) {
+func (a *Bootstrapper) getEtcdCredentials(ctx context.Context) (*config.EtcdCredentials, error) {
 	conn, err := grpc.DialContext(ctx, net.JoinHostPort(a.controlPlaneIP, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
 	if err != nil {
 		return nil, err
