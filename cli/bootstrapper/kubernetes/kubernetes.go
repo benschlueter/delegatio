@@ -6,7 +6,9 @@ package kubernetes
 
 import (
 	"context"
+	"errors"
 	"fmt"
+	"os"
 
 	"github.com/benschlueter/delegatio/internal/config"
 	"go.uber.org/zap"
@@ -82,7 +84,11 @@ func (a *Bootstrapper) configureKubernetes(ctx context.Context) (*v1beta3.Bootst
 
 // establishClientGoConnection configures the client-go connection.
 func (a *Bootstrapper) establishClientGoConnection() error {
-	config, err := clientcmd.BuildConfigFromFlags("", "./admin.conf")
+	val, present := os.LookupEnv("KUBECONFIG")
+	if !present {
+		return errors.New("KUBECONFIG environment variable not set")
+	}
+	config, err := clientcmd.BuildConfigFromFlags("", val)
 	if err != nil {
 		return err
 	}
