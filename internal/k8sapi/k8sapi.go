@@ -18,6 +18,8 @@ import (
 	"k8s.io/client-go/tools/clientcmd"
 )
 
+// TODO: When functions are stable expose them through an interface.
+
 // Client is the struct used to access kubernetes helpers.
 type Client struct {
 	Client      kubernetes.Interface

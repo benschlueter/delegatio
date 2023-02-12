@@ -57,7 +57,7 @@ func (c *Handler) HandleGlobalConnection(ctx context.Context) {
 		c.log.Error("creating/waiting for kubernetes ressources",
 			zap.Error(err),
 			zap.String("userID", c.GetAuthenticatedUserID()),
-			zap.String("namespace", c.connection.User()),
+			zap.String("challenge", c.connection.User()),
 		)
 		return
 	}

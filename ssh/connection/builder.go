@@ -79,7 +79,12 @@ func (s *Builder) Build() (*Handler, error) {
 		return nil, errors.New("no logger provided")
 	}
 
-	userK8SAPI := kubernetes.NewK8sAPIUserWrapper(s.k8sHelper, &config.KubeRessourceIdentifier{Namespace: s.connection.User(), UserIdentifier: userID})
+	userK8SAPI := kubernetes.NewK8sAPIUserWrapper(s.k8sHelper, &config.KubeRessourceIdentifier{
+		Namespace:      config.UserNamespace,
+		UserIdentifier: userID,
+		// Currently unused, but required for later.
+		Challenge: s.connection.User(),
+	})
 
 	return &Handler{
 		wg:                  &sync.WaitGroup{},

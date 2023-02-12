@@ -43,6 +43,8 @@ const (
 	UserContainerImage = "ghcr.io/benschlueter/delegatio/archimage:0.1"
 	// SSHContainerImage is the image used for the ssh containers.
 	SSHContainerImage = "ghcr.io/benschlueter/delegatio/ssh:0.1"
+	// UserNamespace is the namespace where the user containers are running.
+	UserNamespace = "users"
 )
 
 // GetExampleConfig writes an example config to config.json.

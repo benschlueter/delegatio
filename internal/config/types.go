@@ -51,6 +51,7 @@ type KubeForwardConfig struct {
 type KubeRessourceIdentifier struct {
 	Namespace      string
 	UserIdentifier string
+	Challenge      string
 }
 
 // EtcdCredentials contains the credentials for etcd.
