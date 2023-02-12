@@ -41,6 +41,9 @@ ssh testchallenge2@localhost -p 2200 -i ~/.ssh/id_rsa
 ```
 You must provide your public keys in `./internal/config/global.go` (will be changed to read a config file soon) 
 
+## Limitations
+Currently we only support one ControlPlane, thus we only have one KubeAPIServer. It might be possible that under high load (many port forward requests) the container is not capable of handing everything. However, we need to test it with some 100 users.
+
 ## TODO
 * Unittests
 * Abstract storage
