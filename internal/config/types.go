@@ -52,6 +52,8 @@ type KubeRessourceIdentifier struct {
 	Namespace      string
 	UserIdentifier string
 	Challenge      string
+	NodeName       string
+	StorageClass   string
 }
 
 // EtcdCredentials contains the credentials for etcd.

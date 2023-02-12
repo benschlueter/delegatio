@@ -10,131 +10,48 @@ import (
 	"time"
 
 	"github.com/benschlueter/delegatio/internal/config"
-	appsAPI "k8s.io/api/apps/v1"
-	coreAPI "k8s.io/api/core/v1"
-	v1 "k8s.io/api/core/v1"
+	"github.com/benschlueter/delegatio/internal/k8sapi/templates"
 	"k8s.io/apimachinery/pkg/api/errors"
-	"k8s.io/apimachinery/pkg/api/resource"
 	metaAPI "k8s.io/apimachinery/pkg/apis/meta/v1"
 	"k8s.io/apimachinery/pkg/util/wait"
 	"k8s.io/client-go/kubernetes"
 )
 
 // CreateUserStatefulSet creates a statefulset.
-func (k *Client) CreateUserStatefulSet(ctx context.Context, challengeNamespace, userID string) error {
-	sSet := appsAPI.StatefulSet{
-		TypeMeta: metaAPI.TypeMeta{
-			Kind:       "StatefulSet",
-			APIVersion: appsAPI.SchemeGroupVersion.Version,
-		},
-		ObjectMeta: metaAPI.ObjectMeta{
-			Name:      userID + "-statefulset",
-			Namespace: challengeNamespace,
-			Labels: map[string]string{
-				"app.kubernetes.io/name": userID,
-			},
-		},
-		Spec: appsAPI.StatefulSetSpec{
-			Selector: &metaAPI.LabelSelector{
-				MatchLabels: map[string]string{
-					"app.kubernetes.io/name": userID,
-				},
-			},
-			ServiceName: fmt.Sprintf("%s-service", userID),
-			Template: coreAPI.PodTemplateSpec{
-				ObjectMeta: metaAPI.ObjectMeta{
-					Name:      userID + "-pod",
-					Namespace: challengeNamespace,
-					Labels: map[string]string{
-						"app.kubernetes.io/name": userID,
-					},
-				},
-				Spec: coreAPI.PodSpec{
-					/* 					ServiceAccountName:           "development",
-					   					AutomountServiceAccountToken: &automountServiceAccountToken, */
-
-					Containers: []coreAPI.Container{
-						{
-							Resources: coreAPI.ResourceRequirements{
-								Limits: coreAPI.ResourceList{
-									coreAPI.ResourceCPU:    resource.MustParse("1"),
-									coreAPI.ResourceMemory: resource.MustParse("1Gi"),
-								},
-							},
-							Name:  "archlinux-container-ssh",
-							Image: config.UserContainerImage,
-							TTY:   true,
-							LivenessProbe: &coreAPI.Probe{
-								ProbeHandler: coreAPI.ProbeHandler{
-									Exec: &coreAPI.ExecAction{
-										Command: []string{"whoami"},
-									},
-								},
-							},
-							VolumeMounts: []coreAPI.VolumeMount{
-								{
-									Name:      "home-storage",
-									MountPath: "/root/",
-									SubPath:   userID,
-								},
-							},
-							ImagePullPolicy: coreAPI.PullAlways,
-							SecurityContext: &coreAPI.SecurityContext{
-								Capabilities: &coreAPI.Capabilities{
-									Add: []coreAPI.Capability{
-										"CAP_SYS_ADMIN",
-									},
-								},
-							},
-						},
-					},
-					Volumes: []coreAPI.Volume{
-						{
-							Name: "home-storage",
-							VolumeSource: coreAPI.VolumeSource{
-								PersistentVolumeClaim: &coreAPI.PersistentVolumeClaimVolumeSource{
-									ClaimName: userID,
-								},
-							},
-						},
-					},
-				},
-			},
-		},
-	}
-
-	if err := k.CreateHeadlessService(ctx, challengeNamespace, userID); err != nil {
+func (k *Client) CreateUserStatefulSet(ctx context.Context, identifier *config.KubeRessourceIdentifier) error {
+	if err := k.CreateHeadlessService(ctx, identifier); err != nil {
 		return err
 	}
-	_, err := k.Client.AppsV1().StatefulSets(challengeNamespace).Create(ctx, &sSet, metaAPI.CreateOptions{})
+	_, err := k.Client.AppsV1().StatefulSets(identifier.Namespace).Create(ctx, templates.StatefulSet(identifier), metaAPI.CreateOptions{})
 
 	return err
 }
 
-// CreateStatefulSetForUser creates want waits for the statefulSet.
-func (k *Client) CreateStatefulSetForUser(ctx context.Context, namespace, userID string) error {
-	exists, err := k.NamespaceExists(ctx, namespace)
+// CreateUserRessources creates want waits for the statefulSet.
+func (k *Client) CreateUserRessources(ctx context.Context, identifier *config.KubeRessourceIdentifier) error {
+	identifier.StorageClass = "nfs"
+	exists, err := k.NamespaceExists(ctx, identifier.Namespace)
 	if err != nil {
 		return err
 	}
 	if !exists {
-		if err := k.CreateNamespace(ctx, namespace); err != nil {
+		if err := k.CreateNamespace(ctx, identifier.Namespace); err != nil {
 			return err
 		}
 	}
-	if err := k.CreateUserStatefulSet(ctx, namespace, userID); err != nil {
+	if err := k.CreateUserStatefulSet(ctx, identifier); err != nil {
 		return err
 	}
-	if err := k.WaitForStatefulSet(ctx, namespace, userID, 20*time.Second); err != nil {
+	if err := k.WaitForStatefulSet(ctx, identifier.Namespace, identifier.UserIdentifier, 20*time.Second); err != nil {
 		return err
 	}
-	if err := k.CreatePersistentVolumeClaim(ctx, namespace, userID, "nfs"); err != nil {
+	if err := k.CreatePersistentVolumeClaim(ctx, identifier); err != nil {
 		return err
 	}
-	if err := k.CreatePersistentVolume(ctx, userID, string(v1.ReadWriteMany)); err != nil {
+	if err := k.CreatePersistentVolume(ctx, identifier); err != nil {
 		return err
 	}
-	return k.WaitForPodRunning(ctx, namespace, userID, 4*time.Minute)
+	return k.WaitForPodRunning(ctx, identifier.Namespace, identifier.UserIdentifier, 4*time.Minute)
 }
 
 // WaitForStatefulSet waits for a statefulSet to be active.
@@ -142,8 +59,8 @@ func (k *Client) WaitForStatefulSet(ctx context.Context, namespace, statefulSetN
 	return wait.PollImmediate(time.Second, timeout, isStatefulSetActive(ctx, k.Client, statefulSetName, namespace))
 }
 
-// StatefulSetExists checks if the statefulset exists.
-func (k *Client) StatefulSetExists(ctx context.Context, namespace, statefulSetName string) (bool, error) {
+// UserRessourcesExist checks if the statefulset exists.
+func (k *Client) UserRessourcesExist(ctx context.Context, namespace, statefulSetName string) (bool, error) {
 	return isStatefulSetActive(ctx, k.Client, statefulSetName, namespace)()
 }
 

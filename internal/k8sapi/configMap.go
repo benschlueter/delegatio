@@ -7,24 +7,15 @@ package k8sapi
 import (
 	"context"
 
+	"github.com/benschlueter/delegatio/internal/k8sapi/templates"
 	"go.uber.org/zap"
-	coreAPI "k8s.io/api/core/v1"
 	metaAPI "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // CreateConfigMap creates a configmap.
 func (k *Client) CreateConfigMap(ctx context.Context, namespace, name string) error {
-	cm := coreAPI.ConfigMap{
-		TypeMeta: metaAPI.TypeMeta{
-			Kind:       "ConfigMap",
-			APIVersion: coreAPI.SchemeGroupVersion.Version,
-		},
-		ObjectMeta: metaAPI.ObjectMeta{
-			Name:      name,
-			Namespace: namespace,
-		},
-	}
-	_, err := k.Client.CoreV1().ConfigMaps(namespace).Create(ctx, &cm, metaAPI.CreateOptions{})
+	cm := templates.ConfigMap(namespace, name)
+	_, err := k.Client.CoreV1().ConfigMaps(namespace).Create(ctx, cm, metaAPI.CreateOptions{})
 	return err
 }
 

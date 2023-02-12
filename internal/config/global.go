@@ -45,6 +45,8 @@ const (
 	SSHContainerImage = "ghcr.io/benschlueter/delegatio/ssh:0.1"
 	// UserNamespace is the namespace where the user containers are running.
 	UserNamespace = "users"
+	// NodeNameEnvVariable is the environment variable name of the node a user-pod is running on.
+	NodeNameEnvVariable = "NODE_NAME"
 )
 
 // GetExampleConfig writes an example config to config.json.

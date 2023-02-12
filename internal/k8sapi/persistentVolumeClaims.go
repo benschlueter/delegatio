@@ -7,37 +7,15 @@ package k8sapi
 import (
 	"context"
 
-	coreAPI "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
+	"github.com/benschlueter/delegatio/internal/config"
+	"github.com/benschlueter/delegatio/internal/k8sapi/templates"
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 )
 
 // CreatePersistentVolumeClaim creates a persistent volume claim.
-func (k *Client) CreatePersistentVolumeClaim(ctx context.Context, namespace, claimName, storageClassName string) error {
-	pVolumeClaim := coreAPI.PersistentVolumeClaim{
-		TypeMeta: v1.TypeMeta{
-			Kind:       "PersistentVolumeClaim",
-			APIVersion: coreAPI.SchemeGroupVersion.Version,
-		},
-		ObjectMeta: v1.ObjectMeta{
-			Name:      claimName,
-			Namespace: namespace,
-		},
-		Spec: coreAPI.PersistentVolumeClaimSpec{
-			AccessModes: []coreAPI.PersistentVolumeAccessMode{
-				coreAPI.ReadWriteMany,
-			},
-			VolumeName:       claimName,
-			StorageClassName: &storageClassName,
-			Resources: coreAPI.ResourceRequirements{
-				Requests: coreAPI.ResourceList{
-					coreAPI.ResourceStorage: resource.MustParse("10Gi"),
-				},
-			},
-		},
-	}
-
-	_, err := k.Client.CoreV1().PersistentVolumeClaims(namespace).Create(ctx, &pVolumeClaim, v1.CreateOptions{})
+func (k *Client) CreatePersistentVolumeClaim(ctx context.Context, identifier *config.KubeRessourceIdentifier) error {
+	pvc := templates.PersistentVolumeClaim(identifier)
+	_, err := k.Client.CoreV1().PersistentVolumeClaims(identifier.Namespace).Create(ctx, pvc, v1.CreateOptions{})
 	if err != nil {
 		return err
 	}
