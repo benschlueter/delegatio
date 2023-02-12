@@ -31,7 +31,7 @@ func (k *Client) CreatePersistentVolumeClaim(ctx context.Context, namespace, cla
 			StorageClassName: &storageClassName,
 			Resources: coreAPI.ResourceRequirements{
 				Requests: coreAPI.ResourceList{
-					coreAPI.ResourceStorage: resource.MustParse("5Gi"),
+					coreAPI.ResourceStorage: resource.MustParse("10Gi"),
 				},
 			},
 		},

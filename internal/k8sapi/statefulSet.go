@@ -12,6 +12,7 @@ import (
 	"github.com/benschlueter/delegatio/internal/config"
 	appsAPI "k8s.io/api/apps/v1"
 	coreAPI "k8s.io/api/core/v1"
+	v1 "k8s.io/api/core/v1"
 	"k8s.io/apimachinery/pkg/api/errors"
 	"k8s.io/apimachinery/pkg/api/resource"
 	metaAPI "k8s.io/apimachinery/pkg/apis/meta/v1"
@@ -19,8 +20,8 @@ import (
 	"k8s.io/client-go/kubernetes"
 )
 
-// CreateChallengeStatefulSet creates a statefulset.
-func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamespace, userID string) error {
+// CreateUserStatefulSet creates a statefulset.
+func (k *Client) CreateUserStatefulSet(ctx context.Context, challengeNamespace, userID string) error {
 	sSet := appsAPI.StatefulSet{
 		TypeMeta: metaAPI.TypeMeta{
 			Kind:       "StatefulSet",
@@ -92,8 +93,7 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 							Name: "home-storage",
 							VolumeSource: coreAPI.VolumeSource{
 								PersistentVolumeClaim: &coreAPI.PersistentVolumeClaimVolumeSource{
-									// ClaimName: fmt.Sprintf("pvc-%s-statefulset-0", userID),
-									ClaimName: challengeNamespace,
+									ClaimName: userID,
 								},
 							},
 						},
@@ -112,23 +112,29 @@ func (k *Client) CreateChallengeStatefulSet(ctx context.Context, challengeNamesp
 }
 
 // CreateStatefulSetForUser creates want waits for the statefulSet.
-func (k *Client) CreateStatefulSetForUser(ctx context.Context, challengeNamespace, userID string) error {
-	exists, err := k.NamespaceExists(ctx, challengeNamespace)
+func (k *Client) CreateStatefulSetForUser(ctx context.Context, namespace, userID string) error {
+	exists, err := k.NamespaceExists(ctx, namespace)
 	if err != nil {
 		return err
 	}
 	if !exists {
-		if err := k.CreateNamespace(ctx, challengeNamespace); err != nil {
+		if err := k.CreateNamespace(ctx, namespace); err != nil {
 			return err
 		}
 	}
-	if err := k.CreateChallengeStatefulSet(ctx, challengeNamespace, userID); err != nil {
+	if err := k.CreateUserStatefulSet(ctx, namespace, userID); err != nil {
 		return err
 	}
-	if err := k.WaitForStatefulSet(ctx, challengeNamespace, userID, 20*time.Second); err != nil {
+	if err := k.WaitForStatefulSet(ctx, namespace, userID, 20*time.Second); err != nil {
 		return err
 	}
-	return k.WaitForPodRunning(ctx, challengeNamespace, userID, 4*time.Minute)
+	if err := k.CreatePersistentVolumeClaim(ctx, namespace, userID, "nfs"); err != nil {
+		return err
+	}
+	if err := k.CreatePersistentVolume(ctx, userID, string(v1.ReadWriteMany)); err != nil {
+		return err
+	}
+	return k.WaitForPodRunning(ctx, namespace, userID, 4*time.Minute)
 }
 
 // WaitForStatefulSet waits for a statefulSet to be active.
