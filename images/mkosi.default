@@ -7,7 +7,6 @@ Bootable=yes
 QCow2=yes
 Output=image.qcow2
 WorkspaceDirectory=/tmp
-ExtraSearchPaths=/home/bschlueter/University/Github/systemd/build
 
 [Packages]
 Packages=
