@@ -46,12 +46,12 @@ require (
 	google.golang.org/protobuf v1.28.1
 	helm.sh/helm/v3 v3.11.1
 	k8s.io/api v0.26.1
-	k8s.io/apimachinery v0.26.1
+	k8s.io/apimachinery v0.26.2
 	k8s.io/client-go v0.26.1
 	k8s.io/cluster-bootstrap v0.0.0
 	k8s.io/kubectl v0.26.0
 	k8s.io/kubelet v0.0.0
-	k8s.io/kubernetes v1.26.1
+	k8s.io/kubernetes v1.26.2
 	libvirt.org/go/libvirt v1.9000.0
 	libvirt.org/go/libvirtxml v1.9000.0
 )
