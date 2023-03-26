@@ -47,6 +47,8 @@ const (
 	UserNamespace = "users"
 	// NodeNameEnvVariable is the environment variable name of the node a user-pod is running on.
 	NodeNameEnvVariable = "NODE_NAME"
+	// AgentPort is the port where the agent is listening.
+	AgentPort = 9000
 )
 
 // GetExampleConfig writes an example config to config.json.

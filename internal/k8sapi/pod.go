@@ -29,6 +29,11 @@ func (k *Client) ListPods(ctx context.Context, namespace string) error {
 	return nil
 }
 
+// GetPod gets a pod.
+func (k *Client) GetPod(ctx context.Context, namespace, podName string) (*v1.Pod, error) {
+	return k.Client.CoreV1().Pods(namespace).Get(ctx, podName, metaAPI.GetOptions{})
+}
+
 // WaitForPodRunning waits for a pod to be running.
 func (k *Client) WaitForPodRunning(ctx context.Context, namespace, podName string, timeout time.Duration) error {
 	return wait.PollImmediate(time.Second, timeout, isPodRunning(ctx, k.Client, podName, namespace))

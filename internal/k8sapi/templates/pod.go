@@ -63,7 +63,7 @@ func Pod(identifier *config.KubeRessourceIdentifier) *coreAPI.PodSpec {
 				Ports: []v1.ContainerPort{
 					{
 						Name:          "agent",
-						ContainerPort: 28,
+						ContainerPort: config.AgentPort,
 						Protocol:      coreAPI.ProtocolTCP,
 					},
 				},
