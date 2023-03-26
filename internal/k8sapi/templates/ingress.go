@@ -73,7 +73,8 @@ func IngressClass(namespace string) *networkAPI.IngressClass {
 			APIVersion: networkAPI.SchemeGroupVersion.Version,
 		},
 		ObjectMeta: metaAPI.ObjectMeta{
-			Name: className,
+			Name:      className,
+			Namespace: namespace,
 		},
 		Spec: networkAPI.IngressClassSpec{
 			Controller: "haproxy.org/ingress-controller",

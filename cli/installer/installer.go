@@ -178,6 +178,7 @@ func (k *installer) initializeSSH(ctx context.Context) error {
 	if err := k.client.CreateIngress(ctx, sshNamespaceName); err != nil {
 		return err
 	}
+	k.logger.Info("init ssh success")
 	return nil
 }
 

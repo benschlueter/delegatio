@@ -30,7 +30,7 @@ type stubLibvirtConnect struct {
 	domainCreate             *stubDomain
 }
 
-func (l *stubLibvirtConnect) ListAllNetworks(flags libvirt.ConnectListAllNetworksFlags) ([]network, error) {
+func (l *stubLibvirtConnect) ListAllNetworks(_ libvirt.ConnectListAllNetworksFlags) ([]network, error) {
 	var slice []network
 	for _, v := range l.networks {
 		if !v.destroyed {
@@ -49,7 +49,7 @@ func (l *stubLibvirtConnect) isNetworkPresent(name string) bool {
 	return false
 }
 
-func (l *stubLibvirtConnect) ListAllStoragePools(flags libvirt.ConnectListAllStoragePoolsFlags) ([]storagePool, error) {
+func (l *stubLibvirtConnect) ListAllStoragePools(_ libvirt.ConnectListAllStoragePoolsFlags) ([]storagePool, error) {
 	var slice []storagePool
 	for _, v := range l.pools {
 		if !v.destroyed {
@@ -68,7 +68,7 @@ func (l *stubLibvirtConnect) isPoolPresent(name string) bool {
 	return false
 }
 
-func (l *stubLibvirtConnect) ListAllDomains(flags libvirt.ConnectListAllDomainsFlags) ([]domain, error) {
+func (l *stubLibvirtConnect) ListAllDomains(_ libvirt.ConnectListAllDomainsFlags) ([]domain, error) {
 	var slice []domain
 	for _, v := range l.domains {
 		if !v.destroyed {
@@ -96,23 +96,23 @@ func (l *stubLibvirtConnect) LookupDomainByName(id string) (domain, error) {
 	return nil, errors.New("domain not found")
 }
 
-func (l *stubLibvirtConnect) LookupStoragePoolByTargetPath(path string) (storagePool, error) {
+func (l *stubLibvirtConnect) LookupStoragePoolByTargetPath(_ string) (storagePool, error) {
 	return l.storagePoolTargetPath, l.storagePoolTargetPathErr
 }
 
-func (l *stubLibvirtConnect) StoragePoolDefineXML(xmlConfig string, flags libvirt.StoragePoolDefineFlags) (storagePool, error) {
+func (l *stubLibvirtConnect) StoragePoolDefineXML(_ string, _ libvirt.StoragePoolDefineFlags) (storagePool, error) {
 	return l.storagePoolDefine, l.storagePoolDefineErr
 }
 
-func (l *stubLibvirtConnect) NetworkCreateXML(xmlConfig string) (network, error) {
+func (l *stubLibvirtConnect) NetworkCreateXML(_ string) (network, error) {
 	return l.networkCreate, l.networkCreateErr
 }
 
-func (l *stubLibvirtConnect) DomainCreateXML(xmlConfig string, flags libvirt.DomainCreateFlags) (domain, error) {
+func (l *stubLibvirtConnect) DomainCreateXML(_ string, _ libvirt.DomainCreateFlags) (domain, error) {
 	return l.domainCreate, l.domainCreateErr
 }
 
-func (l *stubLibvirtConnect) NewStream(flags libvirt.StreamFlags) (stream, error) {
+func (l *stubLibvirtConnect) NewStream(_ libvirt.StreamFlags) (stream, error) {
 	return &stubStream{}, l.newStreamErr
 }
 
@@ -152,7 +152,7 @@ type stubDomain struct {
 	listAllInterfaceAddressesErr error
 }
 
-func (d *stubDomain) ListAllInterfaceAddresses(src libvirt.DomainInterfaceAddressesSource) ([]libvirt.DomainInterface, error) {
+func (d *stubDomain) ListAllInterfaceAddresses(_ libvirt.DomainInterfaceAddressesSource) ([]libvirt.DomainInterface, error) {
 	return d.netIfaces, d.listAllInterfaceAddressesErr
 }
 
@@ -176,7 +176,7 @@ type stubVolume struct {
 	uploadErr error
 }
 
-func (vo *stubVolume) Upload(stream stream, offset uint64, length uint64, flags libvirt.StorageVolUploadFlags) error {
+func (vo *stubVolume) Upload(_ stream, _ uint64, _ uint64, _ libvirt.StorageVolUploadFlags) error {
 	return vo.uploadErr
 }
 
@@ -184,7 +184,7 @@ func (vo *stubVolume) Free() error {
 	return vo.freeErr
 }
 
-func (vo *stubVolume) Delete(flags libvirt.StorageVolDeleteFlags) error {
+func (vo *stubVolume) Delete(_ libvirt.StorageVolDeleteFlags) error {
 	return vo.deleteErr
 }
 
@@ -206,11 +206,11 @@ type stubStoragePool struct {
 	createErr            error
 }
 
-func (s *stubStoragePool) StorageVolCreateXML(xmlConfig string, flags libvirt.StorageVolCreateFlags) (storageVolume, error) {
+func (s *stubStoragePool) StorageVolCreateXML(_ string, _ libvirt.StorageVolCreateFlags) (storageVolume, error) {
 	return s.StorageVolCreate, s.StorageVolCreateErr
 }
 
-func (s *stubStoragePool) ListAllStorageVolumes(flags uint32) ([]storageVolume, error) {
+func (s *stubStoragePool) ListAllStorageVolumes(_ uint32) ([]storageVolume, error) {
 	var slice []storageVolume
 	for _, v := range s.volumes {
 		if !v.destroyed {
@@ -220,11 +220,11 @@ func (s *stubStoragePool) ListAllStorageVolumes(flags uint32) ([]storageVolume, 
 	return slice, s.listAllStorageVolErr
 }
 
-func (s *stubStoragePool) Build(flags libvirt.StoragePoolBuildFlags) error {
+func (s *stubStoragePool) Build(_ libvirt.StoragePoolBuildFlags) error {
 	return s.buildErr
 }
 
-func (s *stubStoragePool) Create(flags libvirt.StoragePoolCreateFlags) error {
+func (s *stubStoragePool) Create(_ libvirt.StoragePoolCreateFlags) error {
 	if s.createErr == nil {
 		s.active = true
 	}
@@ -244,7 +244,7 @@ func (s *stubStoragePool) Destroy() error {
 	return s.destroyErr
 }
 
-func (s *stubStoragePool) Delete(flags libvirt.StoragePoolDeleteFlags) error {
+func (s *stubStoragePool) Delete(_ libvirt.StoragePoolDeleteFlags) error {
 	return s.deleteErr
 }
 

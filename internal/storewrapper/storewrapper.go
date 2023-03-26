@@ -44,10 +44,7 @@ func (s StoreWrapper) GetChallengeData(challengeName string, target any) error {
 	if err != nil {
 		return err
 	}
-	if err := json.Unmarshal(challengeData, target); err != nil {
-		return err
-	}
-	return nil
+	return json.Unmarshal(challengeData, target)
 }
 
 // ChallengeExists checks whether the challenge is in the store.
@@ -99,10 +96,7 @@ func (s StoreWrapper) GetPublicKeyData(publickey string, target any) error {
 	if err != nil {
 		return err
 	}
-	if err := json.Unmarshal(publicKeyData, target); err != nil {
-		return err
-	}
-	return nil
+	return json.Unmarshal(publicKeyData, target)
 }
 
 // PublicKeyExists checks whether the publicKey is in the store.

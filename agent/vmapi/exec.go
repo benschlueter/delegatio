@@ -185,7 +185,7 @@ func (a *API) ExecCommandReturnStream(in *vmproto.ExecCommandRequest, srv vmprot
 }
 
 // ExecCommand executes a command in the VM.
-func (a *API) ExecCommand(ctx context.Context, in *vmproto.ExecCommandRequest) (*vmproto.ExecCommandResponse, error) {
+func (a *API) ExecCommand(_ context.Context, in *vmproto.ExecCommandRequest) (*vmproto.ExecCommandResponse, error) {
 	a.logger.Info("request to execute command", zap.String("command", in.Command), zap.Strings("args", in.Args))
 	command := exec.Command(in.Command, in.Args...)
 	output, err := command.Output()

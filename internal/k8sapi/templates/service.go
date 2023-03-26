@@ -52,7 +52,8 @@ func Service(namespace, serviceName string) *coreAPI.Service {
 			APIVersion: coreAPI.SchemeGroupVersion.Version,
 		},
 		ObjectMeta: v1.ObjectMeta{
-			Name: fmt.Sprintf("%s-service", serviceName),
+			Name:      fmt.Sprintf("%s-service", serviceName),
+			Namespace: namespace,
 			Labels: map[string]string{
 				"app.kubernetes.io/name": serviceName,
 			},

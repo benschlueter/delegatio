@@ -43,7 +43,7 @@ func NewQemu(log *zap.Logger, imagePath string) (*LibvirtInstance, error) {
 }
 
 // ConnectWithInfrastructureService connects to the libvirt instance.
-func (l *LibvirtInstance) ConnectWithInfrastructureService(ctx context.Context, url string) error {
+func (l *LibvirtInstance) ConnectWithInfrastructureService(_ context.Context, url string) error {
 	conn, err := libvirt.NewConnect(url)
 	if err != nil {
 		return err

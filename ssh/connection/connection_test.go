@@ -500,11 +500,11 @@ type stubConn struct {
 	waitErr        error
 }
 
-func (c *stubConn) SendRequest(name string, wantReply bool, payload []byte) (bool, []byte, error) {
+func (c *stubConn) SendRequest(_ string, _ bool, _ []byte) (bool, []byte, error) {
 	return true, nil, c.sendRequestErr
 }
 
-func (c *stubConn) OpenChannel(name string, data []byte) (ssh.Channel, <-chan *ssh.Request, error) {
+func (c *stubConn) OpenChannel(_ string, _ []byte) (ssh.Channel, <-chan *ssh.Request, error) {
 	return nil, nil, c.openChannelErr
 }
 
@@ -551,7 +551,7 @@ func (s *stubNewChannel) Accept() (ssh.Channel, <-chan *ssh.Request, error) {
 	return nil, nil, s.acceptErr
 }
 
-func (s *stubNewChannel) Reject(reason ssh.RejectionReason, message string) error {
+func (s *stubNewChannel) Reject(_ ssh.RejectionReason, _ string) error {
 	return s.rejectErr
 }
 
@@ -582,14 +582,14 @@ type stubK8sAPIWrapper struct {
 	CreatePodPortForwardErr       error
 }
 
-func (k *stubK8sAPIWrapper) CreateAndWaitForRessources(ctx context.Context, conf *config.KubeRessourceIdentifier) error {
+func (k *stubK8sAPIWrapper) CreateAndWaitForRessources(_ context.Context, _ *config.KubeRessourceIdentifier) error {
 	return k.CreateAndWaitForRessourcesErr
 }
 
-func (k *stubK8sAPIWrapper) ExecuteCommandInPod(ctx context.Context, conf *config.KubeExecConfig) error {
+func (k *stubK8sAPIWrapper) ExecuteCommandInPod(_ context.Context, _ *config.KubeExecConfig) error {
 	return k.ExecuteCommandInPodErr
 }
 
-func (k *stubK8sAPIWrapper) CreatePodPortForward(ctx context.Context, conf *config.KubeForwardConfig) error {
+func (k *stubK8sAPIWrapper) CreatePodPortForward(_ context.Context, _ *config.KubeForwardConfig) error {
 	return k.CreatePodPortForwardErr
 }

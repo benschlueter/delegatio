@@ -16,7 +16,7 @@ import (
 )
 
 // WriteFile creates a file and writes output to it.
-func (a *API) WriteFile(ctx context.Context, in *vmproto.WriteFileRequest) (*vmproto.WriteFileResponse, error) {
+func (a *API) WriteFile(_ context.Context, in *vmproto.WriteFileRequest) (*vmproto.WriteFileResponse, error) {
 	a.logger.Info("request to write file", zap.String("path", in.Filepath), zap.String("name", in.Filename))
 	if err := os.WriteFile(filepath.Join(in.Filepath, in.Filename), in.Content, os.ModeAppend); err != nil {
 		a.logger.Error("failed to write file", zap.String("path", in.Filepath), zap.String("name", in.Filename), zap.Error(err))
@@ -26,7 +26,7 @@ func (a *API) WriteFile(ctx context.Context, in *vmproto.WriteFileRequest) (*vmp
 }
 
 // ReadFile reads a file and returns its content.
-func (a *API) ReadFile(ctx context.Context, in *vmproto.ReadFileRequest) (*vmproto.ReadFileResponse, error) {
+func (a *API) ReadFile(_ context.Context, in *vmproto.ReadFileRequest) (*vmproto.ReadFileResponse, error) {
 	a.logger.Info("request to read file", zap.String("path", in.Filepath), zap.String("name", in.Filename))
 	content, err := os.ReadFile(filepath.Join(in.Filepath, in.Filename))
 	if err != nil {

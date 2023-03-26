@@ -46,6 +46,7 @@ func (a *Bootstrapper) JoinClusterCoordinator(ctx context.Context, joinToken *ku
 		}(name, addr)
 	}
 	if err := g.Wait(); err != nil {
+		a.log.Error("some nodes failed to join the cluster", zap.Error(err))
 		return err
 	}
 	return nil

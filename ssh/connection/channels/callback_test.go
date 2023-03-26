@@ -292,7 +292,7 @@ type stubK8sAPIWrapper struct {
 	forwardFunc                   func(ctx context.Context, kec *config.KubeForwardConfig) error
 }
 
-func (k *stubK8sAPIWrapper) CreateAndWaitForRessources(ctx context.Context, conf *config.KubeRessourceIdentifier) error {
+func (k *stubK8sAPIWrapper) CreateAndWaitForRessources(_ context.Context, _ *config.KubeRessourceIdentifier) error {
 	return nil
 }
 

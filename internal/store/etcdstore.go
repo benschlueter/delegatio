@@ -98,7 +98,7 @@ func (s *EtcdStore) Iterator(prefix string) (Iterator, error) {
 
 // Transfer transfers all entries from this store to the given store.
 // TODO: Implement this function, currently this function is never called.
-func (s *EtcdStore) Transfer(store Store) error {
+func (s *EtcdStore) Transfer(_ Store) error {
 	panic("etcd store Transfer() function not implemented, should never be called")
 }
 

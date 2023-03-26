@@ -61,5 +61,6 @@ func (t *terminate) SaveState(_ context.Context, configFile string) error {
 	if err := os.WriteFile(configFile, byteData, 0o600); err != nil {
 		return err
 	}
+	t.logger.Info("save state successful")
 	return nil
 }

@@ -366,7 +366,7 @@ type stubChannel struct {
 	mux     sync.Mutex
 }
 
-func (cs *stubChannel) Read(data []byte) (int, error) {
+func (cs *stubChannel) Read(_ []byte) (int, error) {
 	return 0, nil
 }
 
@@ -394,7 +394,7 @@ func (cs *stubChannel) CloseWrite() error {
 	return nil
 }
 
-func (cs *stubChannel) SendRequest(name string, wantReply bool, payload []byte) (bool, error) {
+func (cs *stubChannel) SendRequest(_ string, _ bool, _ []byte) (bool, error) {
 	return true, nil
 }
 

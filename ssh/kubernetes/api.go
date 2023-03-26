@@ -72,6 +72,7 @@ func (k *K8sAPIWrapper) CreateAndWaitForRessources(ctx context.Context, conf *co
 	if err := k.Client.WaitForPodRunning(ctx, conf.Namespace, conf.UserIdentifier, 1*time.Minute); err != nil {
 		return err
 	}
+	k.logger.Info("ressources created and ready", zap.String("namespace", conf.Namespace), zap.String("userIdentifier", conf.UserIdentifier))
 	return nil
 }
 

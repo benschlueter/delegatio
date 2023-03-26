@@ -31,6 +31,7 @@ func (l *LibvirtInstance) createInstance(number string, controlPlane bool) (err 
 	if err := l.createDomain(prefix + number); err != nil {
 		return err
 	}
+	l.Log.Debug("creating instance success", zap.String("num", number), zap.Bool("controlplane", controlPlane))
 	return nil
 }
 
