@@ -45,6 +45,7 @@ func (a *API) dialInsecure(ctx context.Context, target string) (*grpc.ClientConn
 	return grpc.DialContext(ctx, target,
 		a.grpcWithDialer(),
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
+		grpc.WithBlock(),
 	)
 }
 
@@ -59,6 +60,8 @@ func (a *API) grpcWithDialer() grpc.DialOption {
 type Dialer interface {
 	DialContext(ctx context.Context, network, address string) (net.Conn, error)
 }
+
+// TODO: This code needs some refactoring / cleanup.
 
 // CreateExecInPodgRPC creates a new exec in pod using gRPC connection to the endpoint agent.
 func (a *API) CreateExecInPodgRPC(ctx context.Context, endpoint string, conf *config.KubeExecConfig) error {
@@ -94,7 +97,10 @@ func (a *API) CreateExecInPodgRPC(ctx context.Context, endpoint string, conf *co
 	g.Go(func() error {
 		return a.termSizeHandler(ctx, resp, conf.WinQueue)
 	})
-	return g.Wait()
+	a.logger.Info("waiting for exec to finish")
+	err = g.Wait()
+	a.logger.Info("g wait returned")
+	return err
 }
 
 func (a *API) termSizeHandler(ctx context.Context, resp vmproto.API_ExecCommandStreamClient, resizeData remotecommand.TerminalSizeQueue) error {
@@ -143,6 +149,10 @@ func (a *API) receiver(ctx context.Context, resp vmproto.API_ExecCommandStreamCl
 			return ctx.Err()
 		default:
 			data, err := resp.Recv()
+			a.logger.Info("after blocking call to resp.Recv")
+			if err == io.EOF {
+				return nil
+			}
 			if err != nil {
 				a.logger.Error("failed to receive data from agent", zap.Error(err))
 				return err
@@ -157,17 +167,28 @@ func (a *API) receiver(ctx context.Context, resp vmproto.API_ExecCommandStreamCl
 	}
 }
 
+// sender should not signal error if we fail to send something to the server.
+// The reader will pull the remaining data from the server and will return the errorcode.
 func (a *API) sender(ctx context.Context, resp vmproto.API_ExecCommandStreamClient, stdin io.Reader) error {
-	copier := make([]byte, 4096)
-	for {
-		select {
-		case <-ctx.Done():
-			return ctx.Err()
-		default:
+	// g, _ := errgroup.WithContext(ctx)
+	errChan := make(chan error, 1)
+
+	// TODO: try to kill this goroutine when the context is done / synchronously
+	// Don't wait for the garbage collector to clean up this goroutine.
+	go func() {
+		copier := make([]byte, 4096)
+		for {
 			n, err := stdin.Read(copier)
+			a.logger.Info("after blocking call to stdin Read")
+			if err == io.EOF {
+				a.logger.Info("received EOF from stdin")
+				errChan <- err
+				return
+			}
 			if err != nil {
 				a.logger.Error("failed to receive data from ssh connection", zap.Error(err))
-				return err
+				errChan <- err
+				return
 			}
 			err = resp.Send(&vmproto.ExecCommandStreamRequest{
 				Content: &vmproto.ExecCommandStreamRequest_Stdin{
@@ -176,8 +197,18 @@ func (a *API) sender(ctx context.Context, resp vmproto.API_ExecCommandStreamClie
 			})
 			if err != nil {
 				a.logger.Error("failed to send data to agent", zap.Error(err))
-				return err
+				errChan <- err
+				return
 			}
+		}
+	}()
+	for {
+		select {
+		case <-ctx.Done():
+			return nil
+		case <-errChan:
+			close(errChan)
+			return nil
 		}
 	}
 }
