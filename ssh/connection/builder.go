@@ -2,7 +2,6 @@
  * Copyright (c) Benedict Schlueter
  */
 
-// code based on https://gist.github.com/protosam/53cf7970e17e06135f1622fa9955415f#file-basic-sshd-go
 package connection
 
 import (

@@ -60,7 +60,7 @@ func (a *Bootstrapper) joinCluster(ctx context.Context, id, ip string, joinToken
 	}
 	defer conn.Close()
 	client := vmproto.NewAPIClient(conn)
-	resp, err := client.ExecCommandStream(ctx, &vmproto.ExecCommandStreamRequest{
+	resp, err := client.ExecCommandReturnStream(ctx, &vmproto.ExecCommandRequest{
 		Command: "/usr/bin/kubeadm",
 		Args: []string{
 			"join", joinToken.APIServerEndpoint,
@@ -94,7 +94,7 @@ func (a *Bootstrapper) joinCluster(ctx context.Context, id, ip string, joinToken
 
 func (a *Bootstrapper) executeKubeadm(ctx context.Context, client vmproto.APIClient) (output []byte, err error) {
 	a.log.Info("execute executeKubeadm")
-	resp, err := client.ExecCommandStream(ctx, &vmproto.ExecCommandStreamRequest{
+	resp, err := client.ExecCommandReturnStream(ctx, &vmproto.ExecCommandRequest{
 		Command: "/usr/bin/kubeadm",
 		Args: []string{
 			"init",

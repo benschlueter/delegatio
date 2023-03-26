@@ -6,27 +6,44 @@ option go_package = "github.com/benschlueter/delegatio/core/vmapi/vmproto";
 
 
 service API {
-  rpc ExecCommandStream(ExecCommandStreamRequest) returns (stream ExecCommandStreamResponse);
+  rpc ExecCommandStream(stream ExecCommandStreamRequest) returns (stream ExecCommandStreamResponse);
+  rpc ExecCommandReturnStream(ExecCommandRequest) returns (stream ExecCommandReturnStreamResponse);
   rpc ExecCommand(ExecCommandRequest) returns (ExecCommandResponse);
   rpc WriteFile(WriteFileRequest) returns (WriteFileResponse);
   rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
 }
 
 message ExecCommandStreamRequest {
-  string command = 1;
-  repeated string args = 2;
+  oneof content {
+    ExecCommandRequest command = 1;
+    bytes stdin = 2;
+    TerminalSizeRequest termsize = 3;
+  }
 }
 
 message ExecCommandStreamResponse {
+  oneof content {
+    bytes stdout = 1;
+    bytes stderr = 2;
+  }
+}
+
+message ExecCommandReturnStreamResponse {
   oneof content {
     bytes output = 1;
     Log log = 2;
   }
 }
 
+message TerminalSizeRequest {
+	int32 width = 1;  
+	int32 height = 2;
+}
+
 message ExecCommandRequest {
   string command = 1;
   repeated string args = 2;
+  bool tty = 3;
 }
 
 message ExecCommandResponse {
