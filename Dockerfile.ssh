@@ -1,4 +1,4 @@
-FROM golang:1.20.0-bullseye
+FROM golang:1.20.1-bullseye
 # Copy Repo
 COPY go.mod /delegatio/
 COPY go.sum /delegatio/
