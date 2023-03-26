@@ -3,38 +3,40 @@ module github.com/benschlueter/delegatio
 go 1.20
 
 replace (
-	k8s.io/api v0.0.0 => k8s.io/api v0.26.1
-	k8s.io/apiextensions-apiserver v0.0.0 => k8s.io/apiextensions-apiserver v0.26.1
-	k8s.io/apimachinery v0.0.0 => k8s.io/apimachinery v0.26.1
-	k8s.io/apiserver v0.0.0 => k8s.io/apiserver v0.26.1
-	k8s.io/cli-runtime v0.0.0 => k8s.io/cli-runtime v0.26.1
-	k8s.io/client-go v0.0.0 => k8s.io/client-go v0.26.1
-	k8s.io/cloud-provider v0.0.0 => k8s.io/cloud-provider v0.26.1
-	k8s.io/cluster-bootstrap v0.0.0 => k8s.io/cluster-bootstrap v0.26.1
-	k8s.io/code-generator v0.0.0 => k8s.io/code-generator v0.26.1
-	k8s.io/component-base v0.0.0 => k8s.io/component-base v0.26.1
-	k8s.io/component-helpers v0.0.0 => k8s.io/component-helpers v0.26.1
-	k8s.io/controller-manager v0.0.0 => k8s.io/controller-manager v0.26.1
-	k8s.io/cri-api v0.0.0 => k8s.io/cri-api v0.26.1
-	k8s.io/csi-translation-lib v0.0.0 => k8s.io/csi-translation-lib v0.26.1
-	k8s.io/kube-aggregator v0.0.0 => k8s.io/kube-aggregator v0.26.1
-	k8s.io/kube-controller-manager v0.0.0 => k8s.io/kube-controller-manager v0.26.1
-	k8s.io/kube-proxy v0.0.0 => k8s.io/kube-proxy v0.26.1
-	k8s.io/kube-scheduler v0.0.0 => k8s.io/kube-scheduler v0.26.1
-	k8s.io/kubectl v0.0.0 => k8s.io/kubectl v0.26.1
-	k8s.io/kubelet v0.0.0 => k8s.io/kubelet v0.26.1
-	k8s.io/kubernetes v0.0.0 => k8s.io/kubernetes v1.26.1
-	k8s.io/legacy-cloud-providers v0.0.0 => k8s.io/legacy-cloud-providers v0.26.1
-	k8s.io/metrics v0.0.0 => k8s.io/metrics v0.26.1
-	k8s.io/mount-utils v0.0.0 => k8s.io/mount-utils v0.26.1
-	k8s.io/pod-security-admission v0.0.0 => k8s.io/pod-security-admission v0.26.1
-	k8s.io/sample-apiserver v0.0.0 => k8s.io/sample-apiserver v0.26.1
+	k8s.io/api v0.0.0 => k8s.io/api v0.26.3
+	k8s.io/apiextensions-apiserver v0.0.0 => k8s.io/apiextensions-apiserver v0.26.3
+	k8s.io/apimachinery v0.0.0 => k8s.io/apimachinery v0.26.3
+	k8s.io/apiserver v0.0.0 => k8s.io/apiserver v0.26.3
+	k8s.io/cli-runtime v0.0.0 => k8s.io/cli-runtime v0.26.3
+	k8s.io/client-go v0.0.0 => k8s.io/client-go v0.26.3
+	k8s.io/cloud-provider v0.0.0 => k8s.io/cloud-provider v0.26.3
+	k8s.io/cluster-bootstrap v0.0.0 => k8s.io/cluster-bootstrap v0.26.3
+	k8s.io/code-generator v0.0.0 => k8s.io/code-generator v0.26.3
+	k8s.io/component-base v0.0.0 => k8s.io/component-base v0.26.3
+	k8s.io/component-helpers v0.0.0 => k8s.io/component-helpers v0.26.3
+	k8s.io/controller-manager v0.0.0 => k8s.io/controller-manager v0.26.3
+	k8s.io/cri-api v0.0.0 => k8s.io/cri-api v0.26.3
+	k8s.io/csi-translation-lib v0.0.0 => k8s.io/csi-translation-lib v0.26.3
+	k8s.io/kube-aggregator v0.0.0 => k8s.io/kube-aggregator v0.26.3
+	k8s.io/kube-controller-manager v0.0.0 => k8s.io/kube-controller-manager v0.26.3
+	k8s.io/kube-proxy v0.0.0 => k8s.io/kube-proxy v0.26.3
+	k8s.io/kube-scheduler v0.0.0 => k8s.io/kube-scheduler v0.26.3
+	k8s.io/kubectl v0.0.0 => k8s.io/kubectl v0.26.3
+	k8s.io/kubelet v0.0.0 => k8s.io/kubelet v0.26.3
+	k8s.io/kubernetes v0.0.0 => k8s.io/kubernetes v1.26.3
+	k8s.io/legacy-cloud-providers v0.0.0 => k8s.io/legacy-cloud-providers v0.26.3
+	k8s.io/metrics v0.0.0 => k8s.io/metrics v0.26.3
+	k8s.io/mount-utils v0.0.0 => k8s.io/mount-utils v0.26.3
+	k8s.io/pod-security-admission v0.0.0 => k8s.io/pod-security-admission v0.26.3
+	k8s.io/sample-apiserver v0.0.0 => k8s.io/sample-apiserver v0.26.3
 )
 
 require (
 	github.com/barkimedes/go-deepcopy v0.0.0-20220514131651-17c30cfc62df
+	github.com/creack/pty v1.1.18
 	github.com/docker/docker v20.10.23+incompatible
 	github.com/grpc-ecosystem/go-grpc-middleware v1.3.0
+	github.com/sirupsen/logrus v1.9.0
 	github.com/spf13/afero v1.9.4
 	github.com/stretchr/testify v1.8.2
 	go.etcd.io/etcd/client/v3 v3.5.7
@@ -42,12 +44,13 @@ require (
 	go.uber.org/zap v1.24.0
 	golang.org/x/crypto v0.6.0
 	golang.org/x/sync v0.1.0
+	golang.org/x/sys v0.5.0
 	google.golang.org/grpc v1.53.0
 	google.golang.org/protobuf v1.28.1
 	helm.sh/helm/v3 v3.11.1
-	k8s.io/api v0.26.1
-	k8s.io/apimachinery v0.26.1
-	k8s.io/client-go v0.26.1
+	k8s.io/api v0.26.3
+	k8s.io/apimachinery v0.26.3
+	k8s.io/client-go v0.26.3
 	k8s.io/cluster-bootstrap v0.0.0
 	k8s.io/kubectl v0.26.0
 	k8s.io/kubelet v0.0.0
@@ -142,7 +145,6 @@ require (
 	github.com/rubenv/sql-migrate v1.2.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/shopspring/decimal v1.2.0 // indirect
-	github.com/sirupsen/logrus v1.9.0 // indirect
 	github.com/spf13/cast v1.3.1 // indirect
 	github.com/spf13/cobra v1.6.1 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
@@ -157,7 +159,6 @@ require (
 	go.uber.org/multierr v1.6.0 // indirect
 	golang.org/x/net v0.7.0 // indirect
 	golang.org/x/oauth2 v0.4.0 // indirect
-	golang.org/x/sys v0.5.0 // indirect
 	golang.org/x/term v0.5.0 // indirect
 	golang.org/x/text v0.7.0 // indirect
 	golang.org/x/time v0.0.0-20220210224613-90d013bbcef8 // indirect
@@ -169,7 +170,7 @@ require (
 	k8s.io/apiextensions-apiserver v0.26.0 // indirect
 	k8s.io/apiserver v0.26.0 // indirect
 	k8s.io/cli-runtime v0.26.0 // indirect
-	k8s.io/component-base v0.26.1 // indirect
+	k8s.io/component-base v0.26.3 // indirect
 	k8s.io/klog/v2 v2.80.1 // indirect
 	k8s.io/kube-openapi v0.0.0-20221012153701-172d655c2280 // indirect
 	k8s.io/utils v0.0.0-20221107191617-1a15be271d1d // indirect
