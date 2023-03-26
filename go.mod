@@ -52,7 +52,7 @@ require (
 	k8s.io/apimachinery v0.26.3
 	k8s.io/client-go v0.26.3
 	k8s.io/cluster-bootstrap v0.0.0
-	k8s.io/kubectl v0.26.0
+	k8s.io/kubectl v0.26.3
 	k8s.io/kubelet v0.0.0
 	k8s.io/kubernetes v0.0.0
 	libvirt.org/go/libvirt v1.9000.0
