@@ -7,11 +7,14 @@ package kubernetes
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"os"
 	"strings"
 	"time"
 
+	"github.com/benschlueter/delegatio/agent/core"
+	"github.com/benschlueter/delegatio/agent/vmapi"
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/k8sapi"
 	"github.com/benschlueter/delegatio/internal/store"
@@ -28,6 +31,7 @@ type K8sAPI interface {
 // K8sAPIWrapper is the struct used to access kubernetes helpers.
 type K8sAPIWrapper struct {
 	Client *k8sapi.Client
+	API    *vmapi.API
 	logger *zap.Logger
 }
 
@@ -39,9 +43,16 @@ func NewK8sAPIWrapper(logger *zap.Logger) (*K8sAPIWrapper, error) {
 	if err != nil {
 		return nil, err
 	}
+	core, err := core.NewCore(logger)
+	if err != nil {
+		return nil, err
+	}
+	api := vmapi.New(logger, core, &net.Dialer{})
+
 	return &K8sAPIWrapper{
 		Client: client,
 		logger: logger,
+		API:    api,
 	}, nil
 }
 
@@ -66,7 +77,20 @@ func (k *K8sAPIWrapper) CreateAndWaitForRessources(ctx context.Context, conf *co
 
 // ExecuteCommandInPod executes a command in the specified pod.
 func (k *K8sAPIWrapper) ExecuteCommandInPod(ctx context.Context, conf *config.KubeExecConfig) error {
-	return k.Client.CreateExecInPod(ctx, conf.Namespace, conf.PodName, conf.Command, conf.Communication, conf.Communication, conf.Communication, conf.WinQueue, conf.Tty)
+	service, err := k.Client.GetService(ctx, conf.Namespace, fmt.Sprintf("%s-service", conf.UserIdentifier))
+	if err != nil {
+		k.logger.Error("failed to get service", zap.Error(err))
+		return err
+	}
+	k.logger.Info("cluster ip", zap.String("ip", service.Spec.ClusterIP))
+
+	pod, err := k.Client.GetPod(ctx, conf.Namespace, fmt.Sprintf("%s-statefulset-0", conf.UserIdentifier))
+	if err != nil {
+		k.logger.Error("failed to get pod", zap.Error(err))
+		return err
+	}
+	k.logger.Info("pod ip", zap.String("ip", pod.Status.PodIP))
+	return k.API.CreateExecInPodgRPC(ctx, net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(config.AgentPort)), conf)
 }
 
 // CreatePodPortForward creates a port forward on the specified pod.

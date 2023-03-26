@@ -1,8 +1,21 @@
-FROM	 archlinux:latest
-RUN	 pacman -Syy
-RUN	 pacman -S --noconfirm openssh go git gcc make cmake libvirt
+FROM golang:1.20.1-bullseye
 
-# Generate host keys
-#RUN  /usr/bin/ssh-keygen -A
-# Add password to root user
-RUN	 echo 'root:root' | chpasswd
+COPY go.mod /delegatio/
+COPY go.sum /delegatio/
+
+WORKDIR /delegatio
+RUN go mod download
+
+COPY ./ /delegatio
+
+WORKDIR /delegatio/agent
+RUN go build -o agent .
+
+
+FROM archlinux:latest
+
+COPY --from=0 /delegatio/agent/agent /
+RUN	 pacman -Syy
+RUN	 pacman -S --noconfirm go git gcc make cmake libvirt
+
+CMD ["/agent", "--container", "--debug"]
