@@ -13,7 +13,6 @@ import (
 
 	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
 	"github.com/creack/pty"
-	"github.com/sirupsen/logrus"
 	"go.uber.org/zap"
 	"golang.org/x/sys/unix"
 	"google.golang.org/grpc/codes"
@@ -56,10 +55,10 @@ func (a *API) ttyCmd(execCmd *exec.Cmd, stdin io.Reader, stdout io.WriteCloser, 
 	err = execCmd.Wait()
 
 	if stdinErr != nil {
-		logrus.Warnf("Stdin copy error: %v", stdinErr)
+		a.logger.Error("stdin copy error", zap.Error(stdinErr))
 	}
 	if stdoutErr != nil {
-		logrus.Warnf("Stdout copy error: %v", stdoutErr)
+		a.logger.Error("stdout copy error", zap.Error(stdoutErr))
 	}
 
 	return err
@@ -145,14 +144,11 @@ func (a *API) ExecCommandStream(srv vmproto.API_ExecCommandStreamServer) error {
 			a.logger.Error("command start exited with error", zap.Error(err))
 			return status.Errorf(codes.Internal, "command exited with error code: %v", err)
 		}
-
-		if err := execCommand.Wait(); err != nil {
-			a.logger.Error("command wait exited with error", zap.Error(err))
-			return status.Errorf(codes.Internal, "command exited with error code: %v", err)
-		}
+		cmdErr = execCommand.Wait()
 	}
+	a.logger.Error("command execution exited", zap.Error(cmdErr))
 
-	return cmdErr
+	return status.Error(codes.OK, "command finished")
 }
 
 // ExecCommandReturnStream executes a command in the VM and streams the output to the caller.

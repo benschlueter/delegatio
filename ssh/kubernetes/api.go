@@ -91,6 +91,8 @@ func (k *K8sAPIWrapper) ExecuteCommandInPod(ctx context.Context, conf *config.Ku
 		return err
 	}
 	k.logger.Info("pod ip", zap.String("ip", pod.Status.PodIP))
+	// TODO: there is a race condition, where the pod is ready, but we can't connect to the endpoint yet.
+	// Probably should do a vmapi.dial until it succeeds here.
 	return k.API.CreateExecInPodgRPC(ctx, net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(config.AgentPort)), conf)
 }
 
