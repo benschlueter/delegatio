@@ -31,12 +31,12 @@ type ChallengeInformation struct{}
 
 // KubeExecConfig holds the configuration parsed to the execCommand function.
 type KubeExecConfig struct {
-	Namespace     string
-	PodName       string
-	Command       string
-	Communication ssh.Channel
-	WinQueue      remotecommand.TerminalSizeQueue
-	Tty           bool
+	Namespace      string
+	UserIdentifier string
+	Command        string
+	Communication  ssh.Channel
+	WinQueue       remotecommand.TerminalSizeQueue
+	Tty            bool
 }
 
 // KubeForwardConfig holds the configuration parsed to the forwardCommand function.

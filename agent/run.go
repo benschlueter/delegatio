@@ -24,10 +24,15 @@ import (
 
 var version = "0.0.0"
 
-func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger,
-) {
+func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger, containerMode *bool) {
 	defer func() { _ = zapLoggerCore.Sync() }()
 	zapLoggerCore.Info("starting delegatio agent", zap.String("version", version), zap.String("commit", config.Commit))
+
+	if *containerMode {
+		zapLoggerCore.Info("running in container mode")
+	} else {
+		zapLoggerCore.Info("running in qemu mode")
+	}
 
 	core, err := core.NewCore(zapLoggerCore)
 	if err != nil {
@@ -35,7 +40,6 @@ func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger
 	}
 
 	vapi := vmapi.New(zapLoggerCore.Named("vmapi"), core, dialer)
-
 	zapLoggergRPC := zapLoggerCore.Named("gRPC")
 	grpcServer := grpc.NewServer(
 		grpc.Creds(insecure.NewCredentials()),

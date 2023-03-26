@@ -36,8 +36,8 @@ func HeadlessService(identifier *config.KubeRessourceIdentifier) *coreAPI.Servic
 				{
 					Name:       "agent",
 					Protocol:   coreAPI.ProtocolTCP,
-					TargetPort: intstr.FromInt(28),
-					Port:       28,
+					TargetPort: intstr.FromInt(config.AgentPort),
+					Port:       config.AgentPort,
 				},
 			},
 		},

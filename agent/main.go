@@ -19,6 +19,7 @@ func main() {
 	cfg := zap.NewDevelopmentConfig()
 
 	logLevelUser := flag.Bool("debug", false, "enables gRPC debug output")
+	containerMode := flag.Bool("container", false, "signals that the agent is running in a container")
 	flag.Parse()
 	cfg.Level.SetLevel(zap.DebugLevel)
 
@@ -37,5 +38,5 @@ func main() {
 	bindPort = config.PublicAPIport
 	dialer := &net.Dialer{}
 
-	run(dialer, bindIP, bindPort, zapLoggerCore)
+	run(dialer, bindIP, bindPort, zapLoggerCore, containerMode)
 }

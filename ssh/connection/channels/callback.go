@@ -54,12 +54,12 @@ func (rd *callbackData) handleShell(ctx context.Context) {
 	}
 
 	execConf := config.KubeExecConfig{
-		Namespace:     rd.GetNamespace(),
-		PodName:       fmt.Sprintf("%s-statefulset-0", rd.GetAuthenticatedUserID()),
-		Command:       "bash",
-		Communication: rd.channel,
-		WinQueue:      rd.terminalResizer,
-		Tty:           tty,
+		Namespace:      rd.GetNamespace(),
+		UserIdentifier: rd.GetAuthenticatedUserID(),
+		Command:        "bash",
+		Communication:  rd.channel,
+		WinQueue:       rd.terminalResizer,
+		Tty:            tty,
 	}
 	rd.log.Info("executeCommandInPod", zap.Any("config", execConf))
 	if err := rd.ExecuteCommandInPod(ctx, &execConf); err != nil {
@@ -91,12 +91,12 @@ func (rd *callbackData) handleSubsystem(ctx context.Context, cmd string) {
 	}
 
 	execConf := config.KubeExecConfig{
-		Namespace:     rd.GetNamespace(),
-		PodName:       fmt.Sprintf("%s-statefulset-0", rd.GetAuthenticatedUserID()),
-		Command:       parsedSubsystem,
-		Communication: rd.channel,
-		WinQueue:      rd.terminalResizer,
-		Tty:           false,
+		Namespace:      rd.GetNamespace(),
+		UserIdentifier: fmt.Sprintf("%s-statefulset-0", rd.GetAuthenticatedUserID()),
+		Command:        parsedSubsystem,
+		Communication:  rd.channel,
+		WinQueue:       rd.terminalResizer,
+		Tty:            false,
 	}
 	err := rd.ExecuteCommandInPod(ctx, &execConf)
 	if err != nil {
