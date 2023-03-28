@@ -42,7 +42,7 @@ require (
 	go.etcd.io/etcd/client/v3 v3.5.7
 	go.uber.org/goleak v1.2.1
 	go.uber.org/zap v1.24.0
-	golang.org/x/crypto v0.6.0
+	golang.org/x/crypto v0.7.0
 	golang.org/x/sync v0.1.0
 	golang.org/x/sys v0.6.0
 	google.golang.org/grpc v1.54.0
