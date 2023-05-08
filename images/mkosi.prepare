@@ -1,10 +1,10 @@
 #!/usr/bin/env bash
 
 DOWNLOAD_DIR="/usr/bin"
-CNI_PLUGINS_VERSION="v1.1.1"
-CRICTL_VERSION="v1.25.0"
+CNI_PLUGINS_VERSION="v1.2.0"
+CRICTL_VERSION="v1.26.0"
 DEST="/opt/cni/bin"
-RELEASE=v1.26.3 #"$(curl -sSL https://dl.k8s.io/release/stable.txt)"
+RELEASE=v1.27.1 #"$(curl -sSL https://dl.k8s.io/release/stable.txt)"
 ARCH="amd64"
 
 mkdir -p "$DEST"
