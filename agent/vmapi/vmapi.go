@@ -7,8 +7,11 @@ package vmapi
 import (
 	"context"
 	"errors"
+	"fmt"
 	"io"
 	"net"
+	"strconv"
+	"syscall"
 
 	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
 	"github.com/benschlueter/delegatio/internal/config"
@@ -98,9 +101,9 @@ func (a *API) CreateExecInPodgRPC(ctx context.Context, endpoint string, conf *co
 	g.Go(func() error {
 		return a.termSizeHandler(ctx, resp, conf.WinQueue)
 	})
-	a.logger.Info("waiting for exec to finish")
+	a.logger.Debug("waiting for exec to finish")
 	err = g.Wait()
-	a.logger.Info("g wait returned")
+	a.logger.Debug("g wait returned")
 	return err
 }
 
@@ -152,7 +155,6 @@ func (a *API) receiver(ctx context.Context, cancel context.CancelFunc, resp vmpr
 			return ctx.Err()
 		default:
 			data, err := resp.Recv()
-			a.logger.Info("after blocking call to resp.Recv")
 			if err == io.EOF {
 				return nil
 			}
@@ -166,17 +168,20 @@ func (a *API) receiver(ctx context.Context, cancel context.CancelFunc, resp vmpr
 			if len(data.GetStdout()) > 0 {
 				stdout.Write(data.GetStdout())
 			}
-			if data.GetDone() {
-				a.logger.Info("received done from agent")
+			if errNumString := data.GetErr(); len(errNumString) > 0 {
+				a.logger.Info("received done from agent, closing connection", zap.String("errNum", errNumString))
 				cancel()
-				return nil
+				if errNumInt, err := strconv.Atoi(errNumString); errNumInt >= 0 && err == nil {
+					return syscall.Errno(errNumInt)
+				}
+				return fmt.Errorf("internal error: invalid error number: %s", errNumString)
 			}
 		}
 	}
 }
 
-// sender should not signal error if we fail to send something to the server.
-// The reader will pull the remaining data from the server and will return the errorcode.
+// we don't need to cancel the context. If we fail to send something receiving will either return EOF or an error.
+// Thus the receiver will stop and cancel the context.
 func (a *API) sender(ctx context.Context, resp vmproto.API_ExecCommandStreamClient, stdin io.Reader) error {
 	// g, _ := errgroup.WithContext(ctx)
 	errChan := make(chan error, 1)
@@ -187,7 +192,6 @@ func (a *API) sender(ctx context.Context, resp vmproto.API_ExecCommandStreamClie
 		copier := make([]byte, 4096)
 		for {
 			n, err := stdin.Read(copier)
-			a.logger.Info("after blocking call to stdin Read", zap.ByteString("copier", copier[:n]))
 			if err == io.EOF {
 				a.logger.Info("received EOF from stdin")
 				errChan <- err
@@ -215,10 +219,10 @@ func (a *API) sender(ctx context.Context, resp vmproto.API_ExecCommandStreamClie
 	for {
 		select {
 		case <-ctx.Done():
-			return nil
-		case <-errChan:
+			return ctx.Err()
+		case err := <-errChan:
 			close(errChan)
-			return nil
+			return err
 		}
 	}
 }
