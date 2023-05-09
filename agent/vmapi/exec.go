@@ -147,7 +147,13 @@ func (a *API) ExecCommandStream(srv vmproto.API_ExecCommandStreamServer) error {
 		cmdErr = execCommand.Wait()
 	}
 	a.logger.Error("command execution exited", zap.Error(cmdErr))
-
+	if err := srv.Send(&vmproto.ExecCommandStreamResponse{
+		Content: &vmproto.ExecCommandStreamResponse_Done{
+			Done: true,
+		},
+	}); err != nil {
+		a.logger.Error("error sending done", zap.Error(err))
+	}
 	return status.Error(codes.OK, "command finished")
 }
 
