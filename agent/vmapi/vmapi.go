@@ -87,9 +87,10 @@ func (a *API) CreateExecInPodgRPC(ctx context.Context, endpoint string, conf *co
 		return err
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
 	g, ctx := errgroup.WithContext(ctx)
 	g.Go(func() error {
-		return a.receiver(ctx, resp, conf.Communication, conf.Communication)
+		return a.receiver(ctx, cancel, resp, conf.Communication, conf.Communication)
 	})
 	g.Go(func() error {
 		return a.sender(ctx, resp, conf.Communication)
@@ -142,7 +143,9 @@ func (a *API) termSizeHandler(ctx context.Context, resp vmproto.API_ExecCommandS
 	}
 }
 
-func (a *API) receiver(ctx context.Context, resp vmproto.API_ExecCommandStreamClient, stdout io.Writer, stderr io.Writer) error {
+// receiver is called from the agent.
+// It receives data from the agent and writes it to the SSH Client (end-user).
+func (a *API) receiver(ctx context.Context, cancel context.CancelFunc, resp vmproto.API_ExecCommandStreamClient, stdout io.Writer, stderr io.Writer) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -163,6 +166,11 @@ func (a *API) receiver(ctx context.Context, resp vmproto.API_ExecCommandStreamCl
 			if len(data.GetStdout()) > 0 {
 				stdout.Write(data.GetStdout())
 			}
+			if data.GetDone() {
+				a.logger.Info("received done from agent")
+				cancel()
+				return nil
+			}
 		}
 	}
 }
@@ -179,7 +187,7 @@ func (a *API) sender(ctx context.Context, resp vmproto.API_ExecCommandStreamClie
 		copier := make([]byte, 4096)
 		for {
 			n, err := stdin.Read(copier)
-			a.logger.Info("after blocking call to stdin Read")
+			a.logger.Info("after blocking call to stdin Read", zap.ByteString("copier", copier[:n]))
 			if err == io.EOF {
 				a.logger.Info("received EOF from stdin")
 				errChan <- err
@@ -202,6 +210,8 @@ func (a *API) sender(ctx context.Context, resp vmproto.API_ExecCommandStreamClie
 			}
 		}
 	}()
+	// We need the goroutine because stdin.Read(copier) is blocking.
+	// Thus we cannot select on ctx.Done() since the ongoing call blocks.
 	for {
 		select {
 		case <-ctx.Done():

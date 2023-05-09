@@ -25,6 +25,7 @@ message ExecCommandStreamResponse {
   oneof content {
     bytes stdout = 1;
     bytes stderr = 2;
+    bool done = 3;
   }
 }
 
