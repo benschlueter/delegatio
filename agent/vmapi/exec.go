@@ -7,6 +7,7 @@ package vmapi
 import (
 	"bytes"
 	"context"
+	"errors"
 	"fmt"
 	"io"
 	"os/exec"
@@ -107,14 +108,14 @@ func (a *API) ExecCommandStream(srv vmproto.API_ExecCommandStreamServer) error {
 		for {
 			in, err := srv.Recv()
 			if err != nil {
-				a.logger.Error("error receiving stdin", zap.Error(err))
+				a.logger.Error("receiving stdin", zap.Error(err))
 				writer.CloseWithError(err)
 				return
 			}
 			if input := in.GetStdin(); input != nil {
 				_, err = writer.Write(input)
 				if err != nil {
-					a.logger.Error("error writing stdin", zap.Error(err))
+					a.logger.Error("writing stdin", zap.Error(err))
 					writer.CloseWithError(err)
 					return
 				}
@@ -132,6 +133,8 @@ func (a *API) ExecCommandStream(srv vmproto.API_ExecCommandStreamServer) error {
 	}()
 
 	var cmdErr error
+	var exitCode int
+	var exitErr *exec.ExitError
 	if command.Tty {
 		cmdErr = a.ttyCmd(execCommand, reader, stdoutStreamWrtier, sizeHandler)
 	} else {
@@ -146,14 +149,26 @@ func (a *API) ExecCommandStream(srv vmproto.API_ExecCommandStreamServer) error {
 		}
 		cmdErr = execCommand.Wait()
 	}
-	a.logger.Error("command execution exited", zap.Error(cmdErr))
+	a.logger.Error("", zap.Error(cmdErr))
+	if errors.As(cmdErr, &exitErr) {
+		a.logger.Info("command exec done with non zero exit code", zap.Int("exit code", exitErr.ExitCode()))
+		exitCode = exitErr.ExitCode()
+	} else if cmdErr == nil {
+		a.logger.Info("command exec done ", zap.Error(cmdErr))
+		exitCode = 0
+	} else {
+		a.logger.Info("command exec done; internal error", zap.Error(err))
+		exitCode = -1
+	}
+	// Instead of done we should return the exit code of the command.
 	if err := srv.Send(&vmproto.ExecCommandStreamResponse{
-		Content: &vmproto.ExecCommandStreamResponse_Done{
-			Done: true,
+		Content: &vmproto.ExecCommandStreamResponse_Err{
+			Err: fmt.Sprint(exitCode),
 		},
 	}); err != nil {
-		a.logger.Error("error sending done", zap.Error(err))
+		a.logger.Error("sending exitcode to server", zap.Error(err))
 	}
+	// TODO: Double check if the return error is really used or if we can omit it.
 	return status.Error(codes.OK, "command finished")
 }
 
@@ -202,7 +217,6 @@ type streamWriterWrapper struct {
 }
 
 func (sw *streamWriterWrapper) Write(p []byte) (int, error) {
-	fmt.Println("write")
 	if err := sw.forwardFunc(p); err != nil {
 		return 0, err
 	}

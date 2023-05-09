@@ -64,7 +64,7 @@ func (rd *callbackData) handleShell(ctx context.Context) {
 	rd.log.Info("executeCommandInPod", zap.Any("config", execConf))
 	if err := rd.ExecuteCommandInPod(ctx, &execConf); err != nil {
 		rd.log.Error("executeCommandInPod exited", zap.Error(err))
-		_, _ = rd.channel.Write([]byte(fmt.Sprintf("closing connection, reason: %v\n", err)))
+		_, _ = rd.channel.Write([]byte(fmt.Sprintf("closing connection, reason: %v | ", err)))
 		return
 	}
 	rd.log.Debug("executeCommandInPod exited")
