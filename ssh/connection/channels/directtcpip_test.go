@@ -51,6 +51,7 @@ func TestDirectTCPIP(t *testing.T) {
 			assert := assert.New(t)
 			require := require.New(t)
 
+			startupDone := make(chan struct{})
 			requests := make(chan *ssh.Request, len(tc.requests)+1)
 			stubChannel := &stubChannel{reqChan: requests}
 			log := zap.NewNop()
@@ -93,6 +94,7 @@ func TestDirectTCPIP(t *testing.T) {
 			builder.SetOnStartup(
 				func(ctx context.Context, rd *callbackData) {
 					reqStartupCnt++
+					startupDone <- struct{}{}
 				},
 			)
 
@@ -116,6 +118,7 @@ func TestDirectTCPIP(t *testing.T) {
 				}
 			}
 			// Wait for all goroutines to finish
+			<-startupDone
 			handler.reqData.wg.Wait()
 			if tc.expectCloseErr {
 				assert.Error(stubChannel.Close())
