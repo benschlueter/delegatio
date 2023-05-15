@@ -8,13 +8,17 @@ RUN go mod download
 
 COPY ./ /delegatio
 
-WORKDIR /delegatio/agent
+WORKDIR /delegatio/agent/server
 RUN go build -o agent .
+
+WORKDIR /delegatio/agent/user
+RUN go build -o agent-user .
 
 
 FROM archlinux:latest
 
-COPY --from=0 /delegatio/agent/agent /
+COPY --from=0 /delegatio/agent/server/agent /
+COPY --from=0 /delegatio/agent/user/agent-user /
 RUN	 pacman -Syy
 RUN	 pacman -S --noconfirm go git gcc make cmake libvirt
 

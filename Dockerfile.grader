@@ -1,0 +1,16 @@
+FROM golang:1.20.1-bullseye
+# Copy Repo
+COPY go.mod /delegatio/
+COPY go.sum /delegatio/
+
+WORKDIR /delegatio
+RUN go mod download
+
+COPY ./ /delegatio
+
+WORKDIR /delegatio/grader
+RUN go build -o grader .
+
+CMD /delegatio/grader/grader
+
+

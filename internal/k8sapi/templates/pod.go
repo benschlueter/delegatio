@@ -8,7 +8,6 @@ import (
 	"github.com/benschlueter/delegatio/internal/config"
 	coreAPI "k8s.io/api/core/v1"
 	v1 "k8s.io/api/core/v1"
-	"k8s.io/apimachinery/pkg/api/resource"
 )
 
 // Pod creates a Pod template.
@@ -29,12 +28,12 @@ func Pod(identifier *config.KubeRessourceIdentifier) *coreAPI.PodSpec {
 						},
 					},
 				},
-				Resources: coreAPI.ResourceRequirements{
+				/* 				Resources: coreAPI.ResourceRequirements{
 					Limits: coreAPI.ResourceList{
 						coreAPI.ResourceCPU:    resource.MustParse("1"),
 						coreAPI.ResourceMemory: resource.MustParse("1Gi"),
 					},
-				},
+				}, */
 				Name:  "archlinux-container-ssh",
 				Image: config.UserContainerImage,
 				TTY:   true,

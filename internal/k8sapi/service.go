@@ -20,9 +20,16 @@ func (k *Client) CreateHeadlessService(ctx context.Context, identifier *config.K
 	return err
 }
 
-// CreateService creates a service.
-func (k *Client) CreateService(ctx context.Context, namespace, serviceName string) error {
-	serv := templates.Service(namespace, serviceName)
+// CreateServiceLoadBalancer creates a LoadBalancer service.
+func (k *Client) CreateServiceLoadBalancer(ctx context.Context, namespace, serviceName string, portNum int) error {
+	serv := templates.ServiceLoadBalancer(namespace, serviceName, portNum)
+	_, err := k.Client.CoreV1().Services(namespace).Create(ctx, serv, metav1.CreateOptions{})
+	return err
+}
+
+// CreateServiceClusterIP creates a ClusterIP service.
+func (k *Client) CreateServiceClusterIP(ctx context.Context, namespace, serviceName string, portNum int) error {
+	serv := templates.ServiceClusterIP(namespace, serviceName, portNum)
 	_, err := k.Client.CoreV1().Services(namespace).Create(ctx, serv, metav1.CreateOptions{})
 	return err
 }

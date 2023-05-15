@@ -44,8 +44,8 @@ func HeadlessService(identifier *config.KubeRessourceIdentifier) *coreAPI.Servic
 	}
 }
 
-// Service creates a service template.
-func Service(namespace, serviceName string) *coreAPI.Service {
+// ServiceLoadBalancer creates a LB-Service template.
+func ServiceLoadBalancer(namespace, serviceName string, portNum int) *coreAPI.Service {
 	return &coreAPI.Service{
 		TypeMeta: v1.TypeMeta{
 			Kind:       "Service",
@@ -65,10 +65,41 @@ func Service(namespace, serviceName string) *coreAPI.Service {
 			},
 			Ports: []coreAPI.ServicePort{
 				{
-					Name:       "ssh",
+					Name:       serviceName + "-port",
 					Protocol:   coreAPI.ProtocolTCP,
-					Port:       2200,
-					TargetPort: intstr.IntOrString{IntVal: 2200},
+					Port:       int32(portNum),
+					TargetPort: intstr.IntOrString{IntVal: int32(portNum)},
+				},
+			},
+		},
+	}
+}
+
+// ServiceClusterIP creates a ClusterIP-Service template.
+func ServiceClusterIP(namespace, serviceName string, portNum int) *coreAPI.Service {
+	return &coreAPI.Service{
+		TypeMeta: v1.TypeMeta{
+			Kind:       "Service",
+			APIVersion: coreAPI.SchemeGroupVersion.Version,
+		},
+		ObjectMeta: v1.ObjectMeta{
+			Name:      fmt.Sprintf("%s-service", serviceName),
+			Namespace: namespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/name": serviceName,
+			},
+		},
+		Spec: coreAPI.ServiceSpec{
+			Type: coreAPI.ServiceTypeClusterIP,
+			Selector: map[string]string{
+				"app.kubernetes.io/name": serviceName,
+			},
+			Ports: []coreAPI.ServicePort{
+				{
+					Name:       serviceName + "-port",
+					Protocol:   coreAPI.ProtocolTCP,
+					Port:       int32(portNum),
+					TargetPort: intstr.IntOrString{IntVal: int32(portNum)},
 				},
 			},
 		},
