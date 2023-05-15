@@ -17,8 +17,6 @@ import (
 	"go.uber.org/zap"
 )
 
-const sshNamespaceName = "ssh"
-
 // Installer is the interface for the installer. It is used to install all the kubernetes applications.
 type Installer interface {
 	InstallKubernetesApplications(context.Context, *config.EtcdCredentials, *config.UserConfiguration) error
@@ -60,7 +58,11 @@ func (k *installer) InstallKubernetesApplications(ctx context.Context, creds *co
 		return err
 	}
 	if err := k.initializeSSH(ctx); err != nil {
-		k.logger.With(zap.Error(err)).Error("failed to deploy ssh config")
+		k.logger.With(zap.Error(err)).Error("failed to deploy ssh server")
+		return err
+	}
+	if err := k.initializeGrader(ctx); err != nil {
+		k.logger.With(zap.Error(err)).Error("failed to deploy grader")
 		return err
 	}
 	return nil
@@ -146,11 +148,11 @@ func (k *installer) initalizeChallenges(ctx context.Context, userConfig *config.
 
 // initializeSSH initializes the SSH application.
 func (k *installer) initializeSSH(ctx context.Context) error {
-	if err := k.client.CreateNamespace(ctx, sshNamespaceName); err != nil {
+	if err := k.client.CreateNamespace(ctx, config.SSHNamespaceName); err != nil {
 		k.logger.With(zap.Error(err)).Error("failed to create namespace")
 		return err
 	}
-	if err := k.createConfigMapAndPutData(ctx, sshNamespaceName, "etcd-credentials", k.sshData); err != nil {
+	if err := k.createConfigMapAndPutData(ctx, config.SSHNamespaceName, "etcd-credentials", k.sshData); err != nil {
 		k.logger.With(zap.Error(err)).Error("failed to createConfigMapAndPutData")
 		return err
 	}
@@ -162,23 +164,45 @@ func (k *installer) initializeSSH(ctx context.Context) error {
 		return err
 	}
 	k.logger.Info("uploaded ssh server private key")
-	if err := k.client.CreateServiceAccount(ctx, sshNamespaceName, "development"); err != nil {
+	if err := k.client.CreateServiceAccount(ctx, config.SSHNamespaceName, config.SSHServiceAccountName); err != nil {
 		return err
 	}
-	if err := k.client.CreateClusterRoleBinding(ctx, sshNamespaceName, "development"); err != nil {
+	if err := k.client.CreateClusterRoleBinding(ctx, config.SSHNamespaceName, config.SSHServiceAccountName); err != nil {
 		return err
 	}
 
-	if err := k.client.CreateDeployment(ctx, sshNamespaceName, "ssh-relay", int32(config.ClusterConfiguration.NumberOfWorkers)); err != nil {
+	if err := k.client.CreateSSHDeployment(ctx, config.SSHNamespaceName, "ssh-relay", int32(config.ClusterConfiguration.NumberOfWorkers)); err != nil {
 		return err
 	}
-	if err := k.client.CreateService(ctx, sshNamespaceName, "ssh-relay"); err != nil {
+	if err := k.client.CreateServiceLoadBalancer(ctx, config.SSHNamespaceName, "ssh-relay", config.SSHPort); err != nil {
 		return err
 	}
-	if err := k.client.CreateIngress(ctx, sshNamespaceName); err != nil {
+	if err := k.client.CreateIngress(ctx, config.SSHNamespaceName); err != nil {
 		return err
 	}
 	k.logger.Info("init ssh success")
+	return nil
+}
+
+// initializeGrader initializes the grader application.
+func (k *installer) initializeGrader(ctx context.Context) error {
+	if err := k.client.CreateNamespace(ctx, config.GraderNamespaceName); err != nil {
+		k.logger.With(zap.Error(err)).Error("check namespace status")
+		return err
+	}
+	k.logger.Info("create namespace", zap.String("namespace", config.GraderNamespaceName))
+
+	if err := k.client.CreateGraderDeployment(ctx, config.GraderNamespaceName, "grader", int32(config.ClusterConfiguration.NumberOfWorkers)); err != nil {
+		return err
+	}
+	if err := k.client.CreateServiceClusterIP(ctx, config.GraderNamespaceName, "grader", config.GradeAPIport); err != nil {
+		return err
+	}
+	// Not needed as long as we run on-prem
+	/* 	if err := k.client.CreateIngress(ctx, graderNamespaceName); err != nil {
+		return err
+	} */
+	k.logger.Info("init grader success")
 	return nil
 }
 

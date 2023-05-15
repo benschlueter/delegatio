@@ -13,3 +13,4 @@
 /images/*.cmdline
 /images/.cache/**
 /build
+/3rdParty

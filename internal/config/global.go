@@ -35,6 +35,8 @@ const (
 	DefaultIP = "0.0.0.0"
 	// PublicAPIport is the port where we can access the public API.
 	PublicAPIport = "9000"
+	// GradeAPIport is the port where a client can request grading of the exercises.
+	GradeAPIport = 9027
 	// DefaultTimeout for the API.
 	DefaultTimeout = 2 * time.Minute
 	// AuthenticatedUserID key for a hash map, where the sha256 fingerprint of the public key is saved.
@@ -43,12 +45,22 @@ const (
 	UserContainerImage = "ghcr.io/benschlueter/delegatio/archimage:0.1"
 	// SSHContainerImage is the image used for the ssh containers.
 	SSHContainerImage = "ghcr.io/benschlueter/delegatio/ssh:0.1"
+	// GradingContainerImage is the image used for the grading containers.
+	GradingContainerImage = "ghcr.io/benschlueter/delegatio/grader:0.1"
 	// UserNamespace is the namespace where the user containers are running.
 	UserNamespace = "users"
 	// NodeNameEnvVariable is the environment variable name of the node a user-pod is running on.
 	NodeNameEnvVariable = "NODE_NAME"
 	// AgentPort is the port where the agent is listening.
 	AgentPort = 9000
+	// SSHServiceAccountName is the name of the Kubernetes ssh service account with cluster access.
+	SSHServiceAccountName = "development-ssh"
+	// SSHPort is the port where the ssh server is listening.
+	SSHPort = 2200
+	// SSHNamespaceName is the namespace where the ssh containers are running.
+	SSHNamespaceName = "ssh"
+	// GraderNamespaceName is the namespace where the grader containers are running.
+	GraderNamespaceName = "grader"
 )
 
 // GetExampleConfig writes an example config to config.json.

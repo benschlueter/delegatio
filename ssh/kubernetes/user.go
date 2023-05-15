@@ -12,11 +12,11 @@ import (
 
 // K8sAPIUser is the interface used to access kubernetes helpers and user data.
 type K8sAPIUser interface {
-	K8sAPI
 	GetUserInformation() *config.KubeRessourceIdentifier
 	GetNamespace() string
 	GetAuthenticatedUserID() string
 	GetNodeName() string
+	K8sAPI
 }
 
 // K8sAPIUserWrapper is the struct used to access kubernetes helpers and user data.

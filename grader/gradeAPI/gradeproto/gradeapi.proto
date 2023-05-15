@@ -1,0 +1,21 @@
+syntax = "proto3";
+
+package gradeapi;
+
+option go_package = "github.com/benschlueter/delegatio/grader/gradeAPI/gradeproto";
+
+
+service API {
+  rpc RequestGrading(RequestGradingRequest) returns (RequestGradingResponse);
+}
+
+message RequestGradingRequest {
+    int32 id = 1;
+    string nonce = 2;
+    bytes solution = 3;
+    bool submit = 4;
+}
+
+message RequestGradingResponse {
+    int32 points = 1;
+}

@@ -15,8 +15,8 @@ import (
 
 var automountServiceAccountToken = true
 
-// CreateDeployment creates a deployment.
-func (k *Client) CreateDeployment(ctx context.Context, namespace, deploymentName string, replicas int32) error {
+// CreateSSHDeployment creates a SSH Server deployment.
+func (k *Client) CreateSSHDeployment(ctx context.Context, namespace, deploymentName string, replicas int32) error {
 	deployment := appsAPI.Deployment{
 		TypeMeta: metaAPI.TypeMeta{
 			Kind:       "Deployment",
@@ -45,13 +45,13 @@ func (k *Client) CreateDeployment(ctx context.Context, namespace, deploymentName
 					},
 				},
 				Spec: coreAPI.PodSpec{
-					ServiceAccountName:           "development",
+					ServiceAccountName:           config.SSHServiceAccountName,
 					AutomountServiceAccountToken: &automountServiceAccountToken,
 					// Somehow needed, otherwise nginx wont connect to the pods.
 					HostNetwork: true,
 					Containers: []coreAPI.Container{
 						{
-							Name:  "ssh-relay",
+							Name:  deploymentName,
 							Image: config.SSHContainerImage,
 							TTY:   true,
 							LivenessProbe: &coreAPI.Probe{
@@ -73,6 +73,70 @@ func (k *Client) CreateDeployment(ctx context.Context, namespace, deploymentName
 								{
 									Name:          "ssh",
 									ContainerPort: 2200,
+									Protocol:      coreAPI.ProtocolTCP,
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+	}
+
+	_, err := k.Client.AppsV1().Deployments(namespace).Create(ctx, &deployment, metaAPI.CreateOptions{})
+	if err != nil {
+		return err
+	}
+	return nil
+}
+
+// CreateGraderDeployment creates a Grade Server deployment.
+func (k *Client) CreateGraderDeployment(ctx context.Context, namespace, deploymentName string, replicas int32) error {
+	deployment := appsAPI.Deployment{
+		TypeMeta: metaAPI.TypeMeta{
+			Kind:       "Deployment",
+			APIVersion: appsAPI.SchemeGroupVersion.Version,
+		},
+		ObjectMeta: metaAPI.ObjectMeta{
+			Name:      deploymentName + "-deployment",
+			Namespace: namespace,
+			Labels: map[string]string{
+				"app.kubernetes.io/name": deploymentName,
+			},
+		},
+		Spec: appsAPI.DeploymentSpec{
+			Selector: &metaAPI.LabelSelector{
+				MatchLabels: map[string]string{
+					"app.kubernetes.io/name": deploymentName,
+				},
+			},
+			Replicas: &replicas,
+			Template: coreAPI.PodTemplateSpec{
+				ObjectMeta: metaAPI.ObjectMeta{
+					Name:      deploymentName + "-pod",
+					Namespace: namespace,
+					Labels: map[string]string{
+						"app.kubernetes.io/name": deploymentName,
+					},
+				},
+				Spec: coreAPI.PodSpec{
+					Containers: []coreAPI.Container{
+						{
+							Name:  deploymentName,
+							Image: config.GradingContainerImage,
+							TTY:   true,
+							LivenessProbe: &coreAPI.Probe{
+								ProbeHandler: coreAPI.ProbeHandler{
+									Exec: &coreAPI.ExecAction{
+										Command: []string{"whoami"},
+									},
+								},
+							},
+							ImagePullPolicy: coreAPI.PullAlways,
+							Ports: []coreAPI.ContainerPort{
+								{
+									Name:          "graderapi",
+									ContainerPort: config.GradeAPIport,
 									Protocol:      coreAPI.ProtocolTCP,
 								},
 							},

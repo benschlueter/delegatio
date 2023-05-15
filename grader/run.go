@@ -10,9 +10,8 @@ import (
 	"net"
 	"sync"
 
-	"github.com/benschlueter/delegatio/agent/core"
-	"github.com/benschlueter/delegatio/agent/vmapi"
-	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
+	gradeapi "github.com/benschlueter/delegatio/grader/gradeAPI"
+	"github.com/benschlueter/delegatio/grader/gradeAPI/gradeproto"
 	"github.com/benschlueter/delegatio/internal/config"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -24,23 +23,13 @@ import (
 
 var version = "0.0.0"
 
-func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger, containerMode *bool) {
+func run(dialer gradeapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger) {
 	defer func() { _ = zapLoggerCore.Sync() }()
-	zapLoggerCore.Info("starting delegatio agent", zap.String("version", version), zap.String("commit", config.Commit))
+	zapLoggerCore.Info("starting delegatio grader", zap.String("version", version), zap.String("commit", config.Commit))
 
-	if *containerMode {
-		zapLoggerCore.Info("running in container mode")
-	} else {
-		zapLoggerCore.Info("running in qemu mode")
-	}
-
-	core, err := core.NewCore(zapLoggerCore)
-	if err != nil {
-		zapLoggerCore.Fatal("failed to create core", zap.Error(err))
-	}
-
-	vapi := vmapi.New(zapLoggerCore.Named("vmapi"), core, dialer)
+	gapi := gradeapi.New(zapLoggerCore.Named("gradeapi"), dialer)
 	zapLoggergRPC := zapLoggerCore.Named("gRPC")
+
 	grpcServer := grpc.NewServer(
 		grpc.Creds(insecure.NewCredentials()),
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
@@ -52,7 +41,7 @@ func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger
 			grpc_zap.UnaryServerInterceptor(zapLoggergRPC),
 		)),
 	)
-	vmproto.RegisterAPIServer(grpcServer, vapi)
+	gradeproto.RegisterAPIServer(grpcServer, gapi)
 
 	lis, err := net.Listen("tcp", net.JoinHostPort(bindIP, bindPort))
 	if err != nil {
