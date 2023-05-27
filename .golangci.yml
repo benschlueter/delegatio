@@ -38,7 +38,6 @@ issues:
   include:
     - EXC0012
     - EXC0014
-  exclude-rules:
 
 linters-settings:
   errcheck:
@@ -46,3 +45,7 @@ linters-settings:
     # See https://github.com/kisielk/errcheck#excluding-functions for details.
     exclude-functions:
       - (*google.golang.org/grpc.Server).Serve
+  staticcheck:
+    checks:
+      - all
+      - '-SA1019' # disable the rule SA1019
