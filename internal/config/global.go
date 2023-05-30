@@ -74,6 +74,8 @@ const (
 	SandboxPath = "/sandbox"
 	// UUIDEnvVariable is the environment variable name of the uuid of the user.
 	UUIDEnvVariable = "GraderUUID"
+	// TerraformLogFile is the file name of the Terraform log file.
+	TerraformLogFile = "terraform.log"
 )
 
 // GetExampleConfig writes an example config to config.json.

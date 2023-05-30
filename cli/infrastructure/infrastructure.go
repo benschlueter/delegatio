@@ -28,3 +28,8 @@ func NewQemu(log *zap.Logger, imagePath string) (Infrastructure, error) {
 	}
 	return instance, nil
 }
+
+// NewCloud creates a new Terraform Infrastructure.
+func NewCloud(log *zap.Logger) (Infrastructure, error) {
+	return nil, nil
+}
