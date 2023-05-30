@@ -37,7 +37,7 @@ require (
 	github.com/docker/docker v20.10.24+incompatible
 	github.com/grpc-ecosystem/go-grpc-middleware v1.4.0
 	github.com/spf13/afero v1.9.5
-	github.com/stretchr/testify v1.8.3
+	github.com/stretchr/testify v1.8.4
 	go.etcd.io/etcd/client/v3 v3.5.9
 	go.uber.org/goleak v1.2.1
 	go.uber.org/zap v1.24.0
