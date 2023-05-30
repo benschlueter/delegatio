@@ -17,9 +17,13 @@ RUN go build -o agent-user .
 
 FROM archlinux:latest
 
+RUN useradd -d /home/user -s /bin/bash -u 1001 user
+
 COPY --from=0 /delegatio/agent/server/agent /
 COPY --from=0 /delegatio/agent/user/agent-user /
 RUN	 pacman -Syy
 RUN	 pacman -S --noconfirm go git gcc make cmake libvirt
+
+USER user
 
 CMD ["/agent", "--container", "--debug"]
