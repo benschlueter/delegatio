@@ -81,6 +81,7 @@ func (u *Uploader) Upload(ctx context.Context, req *osimage.UploadRequest) (map[
 	if err != nil {
 		return nil, fmt.Errorf("creating image: %w", err)
 	}
+	fmt.Println("imageRef", imageRef)
 	return map[string]string{
 		req.Variant: imageRef,
 	}, nil

@@ -5,12 +5,16 @@
 # Unignore all dirs
 !*/
 
+*.tfstate
+
 !/images/mkosi.skeleton/**
 /images/mkosi.skeleton/usr/bin/delegatio-agent
 !/container/sshd_config
 
 /images/*qcow2*
 /images/*.cmdline
+/images/mkosi.cache/**
 /images/.cache/**
 /build
 /3rdParty
+/cli/infrastructure/terraform/gcp/delegatio.json
