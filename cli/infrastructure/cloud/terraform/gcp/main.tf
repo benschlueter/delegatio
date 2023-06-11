@@ -8,6 +8,19 @@ terraform {
 }
 
 provider "google" {
+  project = var.project
+  region  = var.region
+  zone    = var.zone
+}
+
+provider "google-beta" {
+  project = var.project
+  region  = var.region
+  zone    = var.zone
+}
+
+/* 
+provider "google" {
   credentials = file("delegatio.json")
 
   project = "delegatio"
@@ -22,7 +35,7 @@ provider "google-beta" {
   project = "delegatio"
   region  = "europe-west6"
   zone    = "europe-west6-a"
-}
+} */
 
 locals {
   uid                   = random_id.uid.hex

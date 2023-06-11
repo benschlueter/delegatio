@@ -45,3 +45,18 @@ variable "image_id" {
   default     = "https://www.googleapis.com/compute/v1/projects/delegatio/global/images/gcp-0-0-0-test"
   description = "The GCP image to use for the cluster nodes."
 }
+
+variable "project" {
+  type        = string
+  description = "The GCP project to deploy the cluster in."
+}
+
+variable "region" {
+  type        = string
+  description = "The GCP region to deploy the cluster in."
+}
+
+variable "zone" {
+  type        = string
+  description = "The GCP zone to deploy the cluster in."
+}
