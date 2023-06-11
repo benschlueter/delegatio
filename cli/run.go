@@ -6,6 +6,7 @@ package main
 
 import (
 	"context"
+	"fmt"
 
 	"github.com/benschlueter/delegatio/cli/bootstrapper"
 	"github.com/benschlueter/delegatio/cli/infrastructure"
@@ -37,11 +38,17 @@ func run(ctx context.Context, log *zap.Logger, imageLocation string) error {
 		}
 	}(log, lInstance)
 	// --- infrastructure ---
-	nodes, err := createInfrastructure(ctx, log, lInstance)
-	if err != nil {
-		log.With(zap.Error(err)).DPanic("create infrastructure")
-	}
+	/* 	nodes, err := createInfrastructure(ctx, log, lInstance)
+	   	if err != nil {
+	   		log.With(zap.Error(err)).DPanic("create infrastructure")
+	   	} */
 	log.Info("finished infrastructure initialization")
+	nodes := &config.NodeInformation{
+		Masters: map[string]string{
+			"master1": "34.117.25.173",
+		},
+	}
+	fmt.Println(nodes)
 	/// --- kubernetes ---
 	creds, err := bootstrapKubernetes(ctx, log, nodes)
 	if err != nil {

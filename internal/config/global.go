@@ -61,6 +61,8 @@ const (
 	SSHNamespaceName = "ssh"
 	// GraderNamespaceName is the namespace where the grader containers are running.
 	GraderNamespaceName = "grader"
+	// TerraformLogFile is the file name of the Terraform log file.
+	TerraformLogFile = "terraform.log"
 )
 
 // GetExampleConfig writes an example config to config.json.

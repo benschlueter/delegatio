@@ -18,3 +18,12 @@
 /build
 /3rdParty
 /cli/infrastructure/terraform/gcp/delegatio.json
+
+# Terraform
+*.tfstate
+*.tfstate.backup
+.terraform
+.terraform.tfstate.lock.info
+*.tfvars
+terraform.log
+delegatio.json
