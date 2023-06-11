@@ -15,42 +15,95 @@ provider "google" {
   zone    = "europe-west6-a"
 }
 
-/* resource "google_compute_image" "example" {
-  name = "example-image"
-
-  raw_disk {
-    source = "https://storage.cloud.google.com/delegatio-image-23-05-23/image.raw"
-  }
-} */
-
-resource "google_compute_instance" "default" {
-  name         = "test"
-  machine_type = "e2-medium"
-
-  tags = ["foo", "bar"]
-
-  boot_disk {
-    initialize_params {
-      image = "https://storage.cloud.google.com/delegatio-image-23-05-23/image.raw"
-      labels = {
-        my_label = "value"
-      }
-    }
-  }
-
-  network_interface {
-    network = "default"
-    access_config {
-      // Ephemeral public IP
-    }
-  }
-
-  metadata = {
-    foo = "bar"
-  }
+locals {
+  uid                   = random_id.uid.hex
+  name                  = "${var.name}-${local.uid}"
+  labels                = { delegatio-uid = local.uid }
+  ports_node_range      = "30000-32767"
+  ports_kubernetes      = "6443"
+  ports_bootstrapper    = "9000"
+  ports_ssh             = "22"
+  cidr_vpc_subnet_nodes = "192.168.178.0/24"
+  cidr_vpc_subnet_pods  = "10.10.0.0/16"
+  kube_env              = "AUTOSCALER_ENV_VARS: kube_reserved=cpu=1060m,memory=1019Mi,ephemeral-storage=41Gi;node_labels=;os=linux;evictionHard="
 }
 
+resource "random_id" "uid" {
+  byte_length = 4
+}
 
 resource "google_compute_network" "vpc_network" {
-  name = "terraform-network"
+  name                    = local.name
+  description             = "Delegatio VPC network"
+  auto_create_subnetworks = false
+  mtu                     = 8896
+}
+
+resource "google_compute_subnetwork" "vpc_subnetwork" {
+  name          = local.name
+  description   = "Delegatio VPC subnetwork"
+  network       = google_compute_network.vpc_network.id
+  ip_cidr_range = local.cidr_vpc_subnet_nodes
+  secondary_ip_range = [
+    {
+      range_name    = local.name,
+      ip_cidr_range = local.cidr_vpc_subnet_pods,
+    }
+  ]
+}
+
+resource "google_compute_router" "vpc_router" {
+  name        = local.name
+  description = "Delegatio VPC router"
+  network     = google_compute_network.vpc_network.id
+}
+
+resource "google_compute_router_nat" "vpc_router_nat" {
+  name                               = local.name
+  router                             = google_compute_router.vpc_router.name
+  nat_ip_allocate_option             = "AUTO_ONLY"
+  source_subnetwork_ip_ranges_to_nat = "ALL_SUBNETWORKS_ALL_IP_RANGES"
+}
+
+resource "google_compute_firewall" "firewall_external" {
+  name          = local.name
+  description   = "Delegatio VPC firewall"
+  network       = google_compute_network.vpc_network.id
+  source_ranges = ["0.0.0.0/0"]
+  direction     = "INGRESS"
+
+  allow {
+    protocol = "tcp"
+    ports = flatten([
+      local.ports_node_range,
+      local.ports_bootstrapper,
+      local.ports_kubernetes,
+      var.debug ? [local.ports_ssh] : [],
+    ])
+  }
+
+}
+
+resource "google_compute_firewall" "firewall_internal_nodes" {
+  name          = "${local.name}-nodes"
+  description   = "Constellation VPC firewall"
+  network       = google_compute_network.vpc_network.id
+  source_ranges = [local.cidr_vpc_subnet_nodes]
+  direction     = "INGRESS"
+
+  allow { protocol = "tcp" }
+  allow { protocol = "udp" }
+  allow { protocol = "icmp" }
+}
+
+resource "google_compute_firewall" "firewall_internal_pods" {
+  name          = "${local.name}-pods"
+  description   = "Constellation VPC firewall"
+  network       = google_compute_network.vpc_network.id
+  source_ranges = [local.cidr_vpc_subnet_pods]
+  direction     = "INGRESS"
+
+  allow { protocol = "tcp" }
+  allow { protocol = "udp" }
+  allow { protocol = "icmp" }
 }
