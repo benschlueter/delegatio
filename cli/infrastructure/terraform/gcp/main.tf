@@ -15,6 +15,15 @@ provider "google" {
   zone    = "europe-west6-a"
 }
 
+
+provider "google-beta" {
+  credentials = file("delegatio.json")
+
+  project = "delegatio"
+  region  = "europe-west6"
+  zone    = "europe-west6-a"
+}
+
 locals {
   uid                   = random_id.uid.hex
   name                  = "${var.name}-${local.uid}"
@@ -106,4 +115,27 @@ resource "google_compute_firewall" "firewall_internal_pods" {
   allow { protocol = "tcp" }
   allow { protocol = "udp" }
   allow { protocol = "icmp" }
+}
+
+
+module "instance_group_control_plane" {
+  source              = "./modules/instance_group"
+  name                = local.name
+  role                = "ControlPlane"
+  uid                 = local.uid
+  instance_type       = var.instance_type
+  instance_count      = var.control_plane_count
+  image_id            = var.image_id
+  disk_size           = var.state_disk_size
+  disk_type           = var.state_disk_type
+  network             = google_compute_network.vpc_network.id
+  subnetwork          = google_compute_subnetwork.vpc_subnetwork.id
+  alias_ip_range_name = google_compute_subnetwork.vpc_subnetwork.secondary_ip_range[0].range_name
+  kube_env            = local.kube_env
+  debug               = var.debug
+  named_ports = flatten([
+    { name = "kubernetes", port = local.ports_kubernetes },
+    { name = "bootstrapper", port = local.ports_bootstrapper },
+  ])
+  labels           = local.labels
 }
