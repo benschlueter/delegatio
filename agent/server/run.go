@@ -24,6 +24,11 @@ import (
 
 var version = "0.0.0"
 
+/*
+ * This will run on the VM's bare matel. We try to contact the control plane
+ * via the loadbalancerIPAddr to give us the join token. At the same time
+ * we are waiting for the init-request from a user *only* if we are a control plane.
+ */
 func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger, containerMode *bool, loadbalancerIPAddr string) {
 	defer func() { _ = zapLoggerCore.Sync() }()
 	zapLoggerCore.Info("starting delegatio agent", zap.String("version", version), zap.String("commit", config.Commit))

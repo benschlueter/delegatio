@@ -1,17 +1,24 @@
 /* SPDX-License-Identifier: AGPL-3.0-only
  * Copyright (c) Benedict Schlueter
+ * Copyright (c) Edgeless Systems GmbH
  */
 
 package core
 
 import (
+	"context"
 	"errors"
 	"fmt"
 	"net"
 	"os"
+	"path/filepath"
 	"time"
 
+	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/internal/config"
 	"go.uber.org/zap"
+	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials/insecure"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -113,4 +120,54 @@ func (c *Core) GetJoinToken(ttl time.Duration) (*kubeadm.BootstrapTokenDiscovery
 		APIServerEndpoint: net.JoinHostPort(c.masterLoadbalancerIP, "6443"),
 		CACertHashes:      publicKeyPins,
 	}, nil
+}
+
+// JoinCluster joins the Kube Cluster.
+// TODO: Authentication checks.
+func (c *Core) JoinCluster(ctx context.Context) error {
+	conn, err := grpc.DialContext(ctx, net.JoinHostPort(c.masterLoadbalancerIP, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	client := vmproto.NewAPIClient(conn)
+	joinData, err := client.GetJoinDataKube(ctx, &vmproto.GetJoinDataKubeRequest{})
+	if err != nil {
+		return err
+	}
+
+	for _, file := range joinData.Files {
+		err := os.WriteFile(filepath.Join(kubeconstants.KubernetesDir, file.GetName()), file.GetContent(), 0o644)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// GetControlPlaneCertificatesAndKeys loads the Kubernetes CA certificates and keys.
+func (c *Core) GetControlPlaneCertificatesAndKeys() (map[string][]byte, error) {
+	c.zaplogger.Info("Loading control plane certificates and keys")
+	controlPlaneFiles := make(map[string][]byte)
+
+	filenames := []string{
+		kubeconstants.CAKeyName,
+		kubeconstants.ServiceAccountPrivateKeyName,
+		kubeconstants.FrontProxyCAKeyName,
+		kubeconstants.EtcdCAKeyName,
+		kubeconstants.CACertName,
+		kubeconstants.ServiceAccountPublicKeyName,
+		kubeconstants.FrontProxyCACertName,
+		kubeconstants.EtcdCACertName,
+	}
+
+	for _, filename := range filenames {
+		key, err := os.ReadFile(filepath.Join(kubeconstants.KubernetesDir, kubeconstants.DefaultCertificateDir, filename))
+		if err != nil {
+			return nil, err
+		}
+		controlPlaneFiles[filename] = key
+	}
+
+	return controlPlaneFiles, nil
 }

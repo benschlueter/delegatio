@@ -79,9 +79,20 @@ message Log {
 message GetJoinDataKubeRequest {
 }
 
+message JoinToken {
+  string token = 1;
+  string caCertHash = 2;
+  string apiServerEndpoint = 3;
+}
+
+message File {
+  string name = 1;
+  bytes content = 2;
+}
+
 message GetJoinDataKubeResponse {
-  string joinconfig = 1;
-  string certs = 2;
+  JoinToken joinToken = 1;
+  repeated File files = 2;
 }
 
 message InitFirstMasterRequest {
