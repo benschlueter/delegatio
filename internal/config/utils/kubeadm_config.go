@@ -79,7 +79,8 @@ func initConfiguration() KubeadmInitYAML {
 			},
 			Etcd: kubeadm.Etcd{
 				Local: &kubeadm.LocalEtcd{
-					ExtraArgs: []kubeadm.Arg{},
+					ExtraArgs:      []kubeadm.Arg{},
+					ServerCertSANs: []string{"127.0.0.1"},
 				},
 			},
 		},
@@ -100,6 +101,7 @@ func (k *KubeadmInitYAML) SetCertSANs(certSANs []string) {
 			continue
 		}
 		k.ClusterConfiguration.APIServer.CertSANs = append(k.ClusterConfiguration.APIServer.CertSANs, certSAN)
+		k.ClusterConfiguration.Etcd.Local.ServerCertSANs = append(k.ClusterConfiguration.Etcd.Local.ServerCertSANs, certSAN)
 	}
 }
 

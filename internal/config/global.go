@@ -14,8 +14,8 @@ import (
 // Infrastructure and Kubernetes configdata is stored here.
 var (
 	ClusterConfiguration = ClusterConfig{
-		NumberOfWorkers: 2,
-		NumberOfMasters: 1,
+		NumberOfWorkers: 3,
+		NumberOfMasters: 3,
 	}
 	// CleanUpTimeout is the timeout after which the save-state function is canceled when ctrl+c is pressed in the cli.
 	CleanUpTimeout = 10 * time.Second

@@ -41,7 +41,8 @@ func NewK8sAPIWrapper(logger *zap.Logger) (*K8sAPIWrapper, error) {
 	if err != nil {
 		return nil, err
 	}
-	core, err := core.NewCore(logger)
+	// TODO: split core and vmapi into multiple packages / services
+	core, err := core.NewCore(logger, "")
 	if err != nil {
 		return nil, err
 	}
