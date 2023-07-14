@@ -95,7 +95,7 @@ func (a *Bootstrapper) joinCluster(ctx context.Context, id, ip string, joinToken
 
 func (a *Bootstrapper) executeKubeadm(ctx context.Context, client vmproto.APIClient) (output []byte, err error) {
 	a.log.Info("execute executeKubeadm")
-	resp, err := client.ExecCommandReturnStream(ctx, &vmproto.ExecCommandRequest{
+	resp, err := client.InitFirstMaster(ctx, &vmproto.InitFirstMasterRequest{
 		Command: "/usr/bin/kubeadm",
 		Args: []string{
 			"init",

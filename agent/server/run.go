@@ -7,6 +7,7 @@
 package main
 
 import (
+	"context"
 	"net"
 	"sync"
 
@@ -65,6 +66,8 @@ func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger
 		zapLoggergRPC.Fatal("failed to create listener", zap.Error(err))
 	}
 	zapLoggergRPC.Info("server listener created", zap.String("address", lis.Addr().String()))
+
+	go core.TryJoinCluster(context.Background())
 
 	var wg sync.WaitGroup
 	defer wg.Wait()

@@ -19,6 +19,9 @@ import (
 
 // GetJoinDataKube returns the join data for the kubernetes cluster. This function will be used by all master nodes except the first one and all worker nodes.
 func (a *API) GetJoinDataKube(_ context.Context, _ *vmproto.GetJoinDataKubeRequest) (*vmproto.GetJoinDataKubeResponse, error) {
+	if !a.core.IsInReadyState() {
+		return nil, status.Errorf(codes.FailedPrecondition, "cluster is not ready")
+	}
 	token, err := a.core.GetJoinToken(5 * time.Minute)
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "get join token %v", err)

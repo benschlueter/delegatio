@@ -15,4 +15,5 @@ type Core interface {
 	ConnectToKubernetes() error
 	GetJoinToken(time.Duration) (*kubeadm.BootstrapTokenDiscovery, error)
 	GetControlPlaneCertificatesAndKeys() (map[string][]byte, error)
+	IsInReadyState() bool
 }

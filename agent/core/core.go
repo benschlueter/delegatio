@@ -12,6 +12,7 @@ import (
 	"net"
 	"os"
 	"path/filepath"
+	"sync"
 	"time"
 
 	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
@@ -36,6 +37,7 @@ import (
 // of the VM-agent. Currently we do not need any state.
 type Core struct {
 	zaplogger            *zap.Logger
+	mux                  sync.Mutex
 	client               clientset.Interface
 	masterLoadbalancerIP string
 }
@@ -45,6 +47,7 @@ func NewCore(zapLogger *zap.Logger, loadbalancerIP string) (*Core, error) {
 	c := &Core{
 		zaplogger:            zapLogger,
 		masterLoadbalancerIP: loadbalancerIP,
+		mux:                  sync.Mutex{},
 		client:               nil,
 	}
 	return c, nil
@@ -125,24 +128,60 @@ func (c *Core) GetJoinToken(ttl time.Duration) (*kubeadm.BootstrapTokenDiscovery
 // JoinCluster joins the Kube Cluster.
 // TODO: Authentication checks.
 func (c *Core) JoinCluster(ctx context.Context) error {
-	conn, err := grpc.DialContext(ctx, net.JoinHostPort(c.masterLoadbalancerIP, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()))
+	c.mux.Lock()
+	defer c.mux.Unlock()
+	c.zaplogger.Info("dial master")
+	conn, err := grpc.DialContext(ctx, net.JoinHostPort(c.masterLoadbalancerIP, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
 	if err != nil {
 		return err
 	}
 	defer conn.Close()
 	client := vmproto.NewAPIClient(conn)
+	c.zaplogger.Info("grpc call to master")
 	joinData, err := client.GetJoinDataKube(ctx, &vmproto.GetJoinDataKubeRequest{})
 	if err != nil {
 		return err
 	}
 
+	c.zaplogger.Info("writing files")
 	for _, file := range joinData.Files {
-		err := os.WriteFile(filepath.Join(kubeconstants.KubernetesDir, file.GetName()), file.GetContent(), 0o644)
+		err := os.WriteFile(filepath.Join(kubeconstants.KubernetesDir, kubeconstants.DefaultCertificateDir, file.GetName()), file.GetContent(), 0o644)
 		if err != nil {
 			return err
 		}
 	}
+	c.zaplogger.Info("connecting to kubernetes")
+
+	if err := c.ConnectToKubernetes(); err != nil {
+		return err
+	}
+
 	return nil
+}
+
+// TryJoinCluster tries to join the cluster every 5 seconds until it succeeds.
+func (c *Core) TryJoinCluster(ctx context.Context) {
+	ticker := time.NewTicker(5 * time.Second)
+	defer ticker.Stop()
+	for {
+		select {
+		case <-ticker.C:
+			if c.client != nil {
+				return
+			}
+			c.zaplogger.Info("before joining cluster")
+			if err := c.JoinCluster(ctx); err != nil {
+				c.zaplogger.Info("Failed to join cluster, retrying in 5 seconds")
+			}
+		case <-ctx.Done():
+			return
+		}
+	}
+}
+
+// IsInReadyState returns true if the Core is in a ready state.
+func (c *Core) IsInReadyState() bool {
+	return c.client != nil
 }
 
 // GetControlPlaneCertificatesAndKeys loads the Kubernetes CA certificates and keys.

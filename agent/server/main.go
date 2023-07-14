@@ -39,10 +39,28 @@ func main() {
 	bindPort = config.PublicAPIport
 	dialer := &net.Dialer{}
 
-	ipAddr, err := metadata.Get("loadbalancer")
+	ipAddr, err := metadata.InstanceAttributeValue("loadbalancer")
 	if err != nil {
 		zapLoggerCore.Info("failed to get loadbalancer ip from metadata | not running in cloud", zap.Error(err))
 	}
+
+	localIP, err := metadata.InternalIP()
+	if err != nil {
+		zapLoggerCore.Fatal("failed to get local ip from metadata", zap.Error(err))
+	}
+	zapLoggerCore.Info("local ip", zap.String("ip", localIP))
+
+	attr, err := metadata.ProjectAttributes()
+	if err != nil {
+		zapLoggerCore.Fatal("failed to get project attributes from metadata", zap.Error(err))
+	}
+	zapLoggerCore.Info("project attributes", zap.Any("attributes", attr))
+
+	iattr, err := metadata.InstanceAttributes()
+	if err != nil {
+		zapLoggerCore.Fatal("failed to get instance attributes from metadata", zap.Error(err))
+	}
+	zapLoggerCore.Info("instance attributes", zap.Any("attributes", iattr))
 
 	run(dialer, bindIP, bindPort, zapLoggerCore, containerMode, ipAddr)
 }
