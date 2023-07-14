@@ -12,13 +12,13 @@ variable "debug" {
 
 variable "control_plane_count" {
   type        = number
-  default     = 2
+  default     = 1
   description = "The number of control plane nodes to deploy."
 }
 
 variable "worker_count" {
   type        = number
-  default     = 2
+  default     = 1
   description = "The number of worker nodes to deploy."
 }
 
@@ -30,7 +30,7 @@ variable "state_disk_size" {
 
 variable "instance_type" {
   type        = string
-  default     = "g1-small"
+  default     = "e2-standard-2"
   description = "The GCP instance type to deploy."
 }
 
@@ -49,14 +49,17 @@ variable "image_id" {
 variable "project" {
   type        = string
   description = "The GCP project to deploy the cluster in."
+  default     = "delegatio"
 }
 
 variable "region" {
   type        = string
   description = "The GCP region to deploy the cluster in."
+  default = "europe-west6"
 }
 
 variable "zone" {
   type        = string
   description = "The GCP zone to deploy the cluster in."
+  default   = "europe-west6-a"
 }

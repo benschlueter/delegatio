@@ -13,6 +13,7 @@ import (
 	"github.com/benschlueter/delegatio/cli/installer"
 	"github.com/benschlueter/delegatio/cli/terminate"
 	"github.com/benschlueter/delegatio/internal/config"
+	"github.com/benschlueter/delegatio/internal/config/definitions"
 	"github.com/benschlueter/delegatio/internal/config/utils"
 
 	"go.uber.org/zap"
@@ -38,17 +39,13 @@ func run(ctx context.Context, log *zap.Logger, imageLocation string) error {
 		}
 	}(log, lInstance)
 	// --- infrastructure ---
-	/* 	nodes, err := createInfrastructure(ctx, log, lInstance)
-	   	if err != nil {
-	   		log.With(zap.Error(err)).DPanic("create infrastructure")
-	   	} */
-	log.Info("finished infrastructure initialization")
-	nodes := &config.NodeInformation{
-		Masters: map[string]string{
-			"master1": "34.117.25.173",
-		},
+	nodes, err := createInfrastructure(ctx, log, lInstance)
+	if err != nil {
+		log.With(zap.Error(err)).DPanic("create infrastructure")
 	}
+	log.Info("finished infrastructure initialization")
 	fmt.Println(nodes)
+	nodes.Workers = nil
 	/// --- kubernetes ---
 	creds, err := bootstrapKubernetes(ctx, log, nodes)
 	if err != nil {
@@ -66,7 +63,7 @@ func run(ctx context.Context, log *zap.Logger, imageLocation string) error {
 }
 
 func bootstrapKubernetes(ctx context.Context, log *zap.Logger, nodes *config.NodeInformation) (*config.EtcdCredentials, error) {
-	kubeConf, err := utils.GetKubeInitConfig("")
+	kubeConf, err := utils.GetKubeInitConfig(definitions.NetworkXMLConfig.IPs[0].Address)
 	if err != nil {
 		log.With(zap.Error(err)).DPanic("failed to get kubeConfig")
 	}

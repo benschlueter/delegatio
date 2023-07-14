@@ -27,6 +27,8 @@ type APIClient interface {
 	ExecCommand(ctx context.Context, in *ExecCommandRequest, opts ...grpc.CallOption) (*ExecCommandResponse, error)
 	WriteFile(ctx context.Context, in *WriteFileRequest, opts ...grpc.CallOption) (*WriteFileResponse, error)
 	ReadFile(ctx context.Context, in *ReadFileRequest, opts ...grpc.CallOption) (*ReadFileResponse, error)
+	GetJoinDataKube(ctx context.Context, in *GetJoinDataKubeRequest, opts ...grpc.CallOption) (*GetJoinDataKubeResponse, error)
+	InitFirstMaster(ctx context.Context, in *InitFirstMasterRequest, opts ...grpc.CallOption) (API_InitFirstMasterClient, error)
 }
 
 type aPIClient struct {
@@ -127,6 +129,47 @@ func (c *aPIClient) ReadFile(ctx context.Context, in *ReadFileRequest, opts ...g
 	return out, nil
 }
 
+func (c *aPIClient) GetJoinDataKube(ctx context.Context, in *GetJoinDataKubeRequest, opts ...grpc.CallOption) (*GetJoinDataKubeResponse, error) {
+	out := new(GetJoinDataKubeResponse)
+	err := c.cc.Invoke(ctx, "/vmapi.API/GetJoinDataKube", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
+func (c *aPIClient) InitFirstMaster(ctx context.Context, in *InitFirstMasterRequest, opts ...grpc.CallOption) (API_InitFirstMasterClient, error) {
+	stream, err := c.cc.NewStream(ctx, &API_ServiceDesc.Streams[2], "/vmapi.API/InitFirstMaster", opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &aPIInitFirstMasterClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type API_InitFirstMasterClient interface {
+	Recv() (*InitFirstMasterResponse, error)
+	grpc.ClientStream
+}
+
+type aPIInitFirstMasterClient struct {
+	grpc.ClientStream
+}
+
+func (x *aPIInitFirstMasterClient) Recv() (*InitFirstMasterResponse, error) {
+	m := new(InitFirstMasterResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 // APIServer is the server API for API service.
 // All implementations must embed UnimplementedAPIServer
 // for forward compatibility
@@ -136,6 +179,8 @@ type APIServer interface {
 	ExecCommand(context.Context, *ExecCommandRequest) (*ExecCommandResponse, error)
 	WriteFile(context.Context, *WriteFileRequest) (*WriteFileResponse, error)
 	ReadFile(context.Context, *ReadFileRequest) (*ReadFileResponse, error)
+	GetJoinDataKube(context.Context, *GetJoinDataKubeRequest) (*GetJoinDataKubeResponse, error)
+	InitFirstMaster(*InitFirstMasterRequest, API_InitFirstMasterServer) error
 	mustEmbedUnimplementedAPIServer()
 }
 
@@ -157,6 +202,12 @@ func (UnimplementedAPIServer) WriteFile(context.Context, *WriteFileRequest) (*Wr
 }
 func (UnimplementedAPIServer) ReadFile(context.Context, *ReadFileRequest) (*ReadFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReadFile not implemented")
+}
+func (UnimplementedAPIServer) GetJoinDataKube(context.Context, *GetJoinDataKubeRequest) (*GetJoinDataKubeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetJoinDataKube not implemented")
+}
+func (UnimplementedAPIServer) InitFirstMaster(*InitFirstMasterRequest, API_InitFirstMasterServer) error {
+	return status.Errorf(codes.Unimplemented, "method InitFirstMaster not implemented")
 }
 func (UnimplementedAPIServer) mustEmbedUnimplementedAPIServer() {}
 
@@ -272,6 +323,45 @@ func _API_ReadFile_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _API_GetJoinDataKube_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetJoinDataKubeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).GetJoinDataKube(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vmapi.API/GetJoinDataKube",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).GetJoinDataKube(ctx, req.(*GetJoinDataKubeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
+func _API_InitFirstMaster_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(InitFirstMasterRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(APIServer).InitFirstMaster(m, &aPIInitFirstMasterServer{stream})
+}
+
+type API_InitFirstMasterServer interface {
+	Send(*InitFirstMasterResponse) error
+	grpc.ServerStream
+}
+
+type aPIInitFirstMasterServer struct {
+	grpc.ServerStream
+}
+
+func (x *aPIInitFirstMasterServer) Send(m *InitFirstMasterResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 // API_ServiceDesc is the grpc.ServiceDesc for API service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -291,6 +381,10 @@ var API_ServiceDesc = grpc.ServiceDesc{
 			MethodName: "ReadFile",
 			Handler:    _API_ReadFile_Handler,
 		},
+		{
+			MethodName: "GetJoinDataKube",
+			Handler:    _API_GetJoinDataKube_Handler,
+		},
 	},
 	Streams: []grpc.StreamDesc{
 		{
@@ -302,6 +396,11 @@ var API_ServiceDesc = grpc.ServiceDesc{
 		{
 			StreamName:    "ExecCommandReturnStream",
 			Handler:       _API_ExecCommandReturnStream_Handler,
+			ServerStreams: true,
+		},
+		{
+			StreamName:    "InitFirstMaster",
+			Handler:       _API_InitFirstMaster_Handler,
 			ServerStreams: true,
 		},
 	},

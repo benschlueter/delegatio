@@ -31,6 +31,16 @@ resource "google_compute_health_check" "health" {
       request_path = "/readyz"
     }
   }
+
+  dynamic "grpc_health_check" {
+    for_each = var.health_check == "GRPC" ? [1] : []
+    
+    content {
+      grpc_service_name = "wip"
+      port = var.port
+    }
+
+  }
 }
 
 resource "google_compute_backend_service" "backend" {

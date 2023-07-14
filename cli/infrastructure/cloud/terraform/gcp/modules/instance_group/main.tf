@@ -42,8 +42,9 @@ resource "google_compute_instance_template" "template" {
   }
 
   metadata = {
-    kube-env                       = var.kube_env
-    serial-port-enable             = "TRUE"
+    kube-env           = var.kube_env
+    loadbalancer       = var.coordinator_loadbalancer
+    serial-port-enable = "TRUE"
   }
 
   network_interface {
@@ -55,9 +56,9 @@ resource "google_compute_instance_template" "template" {
     }
   }
 
-  scheduling {
+/*   scheduling {
     on_host_maintenance = "TERMINATE"
-  }
+  } */
 
   service_account {
     scopes = [

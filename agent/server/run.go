@@ -7,10 +7,12 @@
 package main
 
 import (
+	"context"
 	"net"
 	"sync"
 
 	"github.com/benschlueter/delegatio/agent/core"
+	"github.com/benschlueter/delegatio/agent/core/state"
 	"github.com/benschlueter/delegatio/agent/vmapi"
 	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
 	"github.com/benschlueter/delegatio/internal/config"
@@ -24,7 +26,12 @@ import (
 
 var version = "0.0.0"
 
-func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger, containerMode *bool) {
+/*
+ * This will run on the VM's bare matel. We try to contact the control plane
+ * via the loadbalancerIPAddr to give us the join token. At the same time
+ * we are waiting for the init-request from a user *only* if we are a control plane.
+ */
+func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger, containerMode *bool, loadbalancerIPAddr string) {
 	defer func() { _ = zapLoggerCore.Sync() }()
 	zapLoggerCore.Info("starting delegatio agent", zap.String("version", version), zap.String("commit", config.Commit))
 
@@ -34,7 +41,7 @@ func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger
 		zapLoggerCore.Info("running in qemu mode")
 	}
 
-	core, err := core.NewCore(zapLoggerCore)
+	core, err := core.NewCore(zapLoggerCore, loadbalancerIPAddr)
 	if err != nil {
 		zapLoggerCore.Fatal("failed to create core", zap.Error(err))
 	}
@@ -60,6 +67,8 @@ func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger
 		zapLoggergRPC.Fatal("failed to create listener", zap.Error(err))
 	}
 	zapLoggergRPC.Info("server listener created", zap.String("address", lis.Addr().String()))
+	core.State.Advance(state.AcceptingInit)
+	go core.TryJoinCluster(context.Background())
 
 	var wg sync.WaitGroup
 	defer wg.Wait()

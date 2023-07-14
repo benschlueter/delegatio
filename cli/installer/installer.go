@@ -79,7 +79,9 @@ func (k *installer) connectToEtcd(_ context.Context, creds *config.EtcdCredentia
 	if err != nil {
 		return err
 	}
-	if err := k.client.ConnectToStoreExternal(creds, []string{net.JoinHostPort(host, "2379")}); err != nil {
+	etcdEndpoint := net.JoinHostPort(host, "2379")
+	k.logger.Info("etcd endpoint", zap.String("etcd", etcdEndpoint))
+	if err := k.client.ConnectToStoreExternal(creds, []string{etcdEndpoint}); err != nil {
 		k.logger.With(zap.Error(err)).Error("failed to connect to store")
 		return err
 	}
