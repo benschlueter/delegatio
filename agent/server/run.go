@@ -24,7 +24,7 @@ import (
 
 var version = "0.0.0"
 
-func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger, containerMode *bool) {
+func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger, containerMode *bool, loadbalancerIPAddr string) {
 	defer func() { _ = zapLoggerCore.Sync() }()
 	zapLoggerCore.Info("starting delegatio agent", zap.String("version", version), zap.String("commit", config.Commit))
 

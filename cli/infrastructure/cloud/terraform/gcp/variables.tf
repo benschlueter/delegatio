@@ -49,14 +49,17 @@ variable "image_id" {
 variable "project" {
   type        = string
   description = "The GCP project to deploy the cluster in."
+  default     = "delegatio"
 }
 
 variable "region" {
   type        = string
   description = "The GCP region to deploy the cluster in."
+  default = "europe-west6"
 }
 
 variable "zone" {
   type        = string
   description = "The GCP zone to deploy the cluster in."
+  default   = "europe-west6-a"
 }

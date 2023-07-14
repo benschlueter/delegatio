@@ -27,6 +27,7 @@ type APIClient interface {
 	ExecCommand(ctx context.Context, in *ExecCommandRequest, opts ...grpc.CallOption) (*ExecCommandResponse, error)
 	WriteFile(ctx context.Context, in *WriteFileRequest, opts ...grpc.CallOption) (*WriteFileResponse, error)
 	ReadFile(ctx context.Context, in *ReadFileRequest, opts ...grpc.CallOption) (*ReadFileResponse, error)
+	GetJoinDataKube(ctx context.Context, in *GetJoinDataKubeRequest, opts ...grpc.CallOption) (*GetJoinDataKubeResponse, error)
 }
 
 type aPIClient struct {
@@ -127,6 +128,15 @@ func (c *aPIClient) ReadFile(ctx context.Context, in *ReadFileRequest, opts ...g
 	return out, nil
 }
 
+func (c *aPIClient) GetJoinDataKube(ctx context.Context, in *GetJoinDataKubeRequest, opts ...grpc.CallOption) (*GetJoinDataKubeResponse, error) {
+	out := new(GetJoinDataKubeResponse)
+	err := c.cc.Invoke(ctx, "/vmapi.API/getJoinDataKube", in, out, opts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // APIServer is the server API for API service.
 // All implementations must embed UnimplementedAPIServer
 // for forward compatibility
@@ -136,6 +146,7 @@ type APIServer interface {
 	ExecCommand(context.Context, *ExecCommandRequest) (*ExecCommandResponse, error)
 	WriteFile(context.Context, *WriteFileRequest) (*WriteFileResponse, error)
 	ReadFile(context.Context, *ReadFileRequest) (*ReadFileResponse, error)
+	GetJoinDataKube(context.Context, *GetJoinDataKubeRequest) (*GetJoinDataKubeResponse, error)
 	mustEmbedUnimplementedAPIServer()
 }
 
@@ -157,6 +168,9 @@ func (UnimplementedAPIServer) WriteFile(context.Context, *WriteFileRequest) (*Wr
 }
 func (UnimplementedAPIServer) ReadFile(context.Context, *ReadFileRequest) (*ReadFileResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method ReadFile not implemented")
+}
+func (UnimplementedAPIServer) GetJoinDataKube(context.Context, *GetJoinDataKubeRequest) (*GetJoinDataKubeResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetJoinDataKube not implemented")
 }
 func (UnimplementedAPIServer) mustEmbedUnimplementedAPIServer() {}
 
@@ -272,6 +286,24 @@ func _API_ReadFile_Handler(srv interface{}, ctx context.Context, dec func(interf
 	return interceptor(ctx, in, info, handler)
 }
 
+func _API_GetJoinDataKube_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetJoinDataKubeRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(APIServer).GetJoinDataKube(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: "/vmapi.API/getJoinDataKube",
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(APIServer).GetJoinDataKube(ctx, req.(*GetJoinDataKubeRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // API_ServiceDesc is the grpc.ServiceDesc for API service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -290,6 +322,10 @@ var API_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "ReadFile",
 			Handler:    _API_ReadFile_Handler,
+		},
+		{
+			MethodName: "getJoinDataKube",
+			Handler:    _API_GetJoinDataKube_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

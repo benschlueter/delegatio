@@ -9,6 +9,7 @@ import (
 	"log"
 	"net"
 
+	"cloud.google.com/go/compute/metadata"
 	"github.com/benschlueter/delegatio/internal/config"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	"go.uber.org/zap"
@@ -38,5 +39,10 @@ func main() {
 	bindPort = config.PublicAPIport
 	dialer := &net.Dialer{}
 
-	run(dialer, bindIP, bindPort, zapLoggerCore, containerMode)
+	ipAddr, err := metadata.Get("loadbalancer")
+	if err != nil {
+		zapLoggerCore.Info("failed to get loadbalancer ip from metadata | not running in cloud", zap.Error(err))
+	}
+
+	run(dialer, bindIP, bindPort, zapLoggerCore, containerMode, ipAddr)
 }

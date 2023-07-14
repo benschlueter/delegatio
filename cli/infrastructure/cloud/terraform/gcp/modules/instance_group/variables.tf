@@ -79,3 +79,9 @@ variable "alias_ip_range_name" {
   type        = string
   description = "Name of the alias IP range to use."
 }
+
+variable "coordinator_loadbalancer" {
+  type        = string
+  default     = false
+  description = "Loadbalancer that balances between the master nodes."
+}

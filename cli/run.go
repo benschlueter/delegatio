@@ -45,7 +45,7 @@ func run(ctx context.Context, log *zap.Logger, imageLocation string) error {
 	log.Info("finished infrastructure initialization")
 	nodes := &config.NodeInformation{
 		Masters: map[string]string{
-			"master1": "34.117.25.173",
+			"master1": "34.120.237.27",
 		},
 	}
 	fmt.Println(nodes)
