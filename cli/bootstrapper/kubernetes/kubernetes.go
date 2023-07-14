@@ -68,7 +68,7 @@ func (a *Bootstrapper) configureKubernetes(ctx context.Context) (*v1beta3.Bootst
 	if err := a.establishClientGoConnection(); err != nil {
 		return nil, err
 	}
-	a.log.Info("client-go connection establishedw")
+	a.log.Info("client-go connection established")
 	caFileContentPem, err := a.getKubernetesRootCert(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("loading ca.crt file: %w", err)
