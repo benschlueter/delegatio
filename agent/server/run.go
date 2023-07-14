@@ -34,7 +34,7 @@ func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger
 		zapLoggerCore.Info("running in qemu mode")
 	}
 
-	core, err := core.NewCore(zapLoggerCore)
+	core, err := core.NewCore(zapLoggerCore, loadbalancerIPAddr)
 	if err != nil {
 		zapLoggerCore.Fatal("failed to create core", zap.Error(err))
 	}

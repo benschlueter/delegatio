@@ -11,7 +11,8 @@ service API {
   rpc ExecCommand(ExecCommandRequest) returns (ExecCommandResponse);
   rpc WriteFile(WriteFileRequest) returns (WriteFileResponse);
   rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
-  rpc getJoinDataKube(GetJoinDataKubeRequest) returns (GetJoinDataKubeResponse);
+  rpc GetJoinDataKube(GetJoinDataKubeRequest) returns (GetJoinDataKubeResponse);
+  rpc InitFirstMaster(InitFirstMasterRequest) returns (stream InitFirstMasterResponse);
 }
 
 message ExecCommandStreamRequest {
@@ -81,4 +82,18 @@ message GetJoinDataKubeRequest {
 message GetJoinDataKubeResponse {
   string joinconfig = 1;
   string certs = 2;
+}
+
+message InitFirstMasterRequest {
+  string command = 1;
+  repeated string args = 2;
+  bool tty = 3;
+}
+
+
+message InitFirstMasterResponse {
+  oneof content {
+    bytes output = 1;
+    Log log = 2;
+  }
 }

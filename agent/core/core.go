@@ -7,17 +7,17 @@ package core
 import (
 	"errors"
 	"fmt"
+	"net"
 	"os"
 	"time"
 
-	"github.com/docker/cli/kubernetes/client/clientset"
 	"go.uber.org/zap"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
+	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
 	certutil "k8s.io/client-go/util/cert"
 	bootstraputil "k8s.io/cluster-bootstrap/token/util"
 	bootstraptoken "k8s.io/kubernetes/cmd/kubeadm/app/apis/bootstraptoken/v1"
-	"k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm"
 	kubeadm "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
 	kubeconstants "k8s.io/kubernetes/cmd/kubeadm/app/constants"
 	tokenphase "k8s.io/kubernetes/cmd/kubeadm/app/phases/bootstraptoken/node"
@@ -28,17 +28,35 @@ import (
 // Core is responsible for maintaining state information
 // of the VM-agent. Currently we do not need any state.
 type Core struct {
-	zaplogger *zap.Logger
-	client    clientset.Interface
+	zaplogger            *zap.Logger
+	client               clientset.Interface
+	masterLoadbalancerIP string
 }
 
 // NewCore creates and initializes a new Core object.
-func NewCore(zapLogger *zap.Logger) (*Core, error) {
+func NewCore(zapLogger *zap.Logger, loadbalancerIP string) (*Core, error) {
 	c := &Core{
-		zaplogger: zapLogger,
+		zaplogger:            zapLogger,
+		masterLoadbalancerIP: loadbalancerIP,
+		client:               nil,
 	}
-
 	return c, nil
+}
+
+// ConnectToKubernetes connects to the Kubernetes API server.
+func (c *Core) ConnectToKubernetes() error {
+	c.zaplogger.Info("Connecting to Kubernetes")
+	config, err := clientcmd.BuildConfigFromFlags("", "/etc/kubernetes/admin.conf")
+	if err != nil {
+		return fmt.Errorf("creating Kubernetes client config: %w", err)
+	}
+	client, err := clientset.NewForConfig(config)
+	if err != nil {
+		return fmt.Errorf("creating Kubernetes client: %w", err)
+	}
+	c.zaplogger.Info("Connected to Kubernetes")
+	c.client = client
+	return nil
 }
 
 // GetJoinToken creates a new bootstrap (join) token, which a node can use to join the cluster.
@@ -62,7 +80,7 @@ func (c *Core) GetJoinToken(ttl time.Duration) (*kubeadm.BootstrapTokenDiscovery
 
 	// create the token in Kubernetes
 	// k.log.Infof("Creating bootstrap token in Kubernetes")
-	if err := tokenphase.CreateNewTokens(k.client, []bootstraptoken.BootstrapToken{token}); err != nil {
+	if err := tokenphase.CreateNewTokens(c.client, []bootstraptoken.BootstrapToken{token}); err != nil {
 		return nil, fmt.Errorf("creating bootstrap token: %w", err)
 	}
 
@@ -92,7 +110,7 @@ func (c *Core) GetJoinToken(ttl time.Duration) (*kubeadm.BootstrapTokenDiscovery
 	// k.log.Infof("Join token creation successful")
 	return &kubeadm.BootstrapTokenDiscovery{
 		Token:             tokenStr.String(),
-		APIServerEndpoint: k.apiServerEndpoint,
+		APIServerEndpoint: net.JoinHostPort(c.masterLoadbalancerIP, "6443"),
 		CACertHashes:      publicKeyPins,
 	}, nil
 }
