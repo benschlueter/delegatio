@@ -55,6 +55,7 @@ func (r *rollbackerTerraform) rollback(ctx context.Context, logLevel LogLevel) e
 	return r.client.CleanUpWorkspace()
 }
 
+// CreateGCP creates a GCP cluster.
 func CreateGCP(ctx context.Context, cl terraformClient) (retErr error) {
 	tfLogLevel := LogLevelDebug
 	vars := GCPClusterVariables{
@@ -68,7 +69,7 @@ func CreateGCP(ctx context.Context, cl terraformClient) (retErr error) {
 		Region:          "europe-west6",
 		Zone:            "europe-west6-a",
 		CredentialsFile: "/home/bschlueter/University/Github/delegatio/build/delegatio.json",
-		InstanceType:    "g1-small",
+		InstanceType:    "e2-standard-2",
 		StateDiskType:   "pd-standard",
 		ImageID:         "https://www.googleapis.com/compute/v1/projects/delegatio/global/images/gcp-0-0-0-test",
 		Debug:           true,

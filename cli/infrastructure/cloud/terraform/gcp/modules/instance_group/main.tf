@@ -56,9 +56,9 @@ resource "google_compute_instance_template" "template" {
     }
   }
 
-  scheduling {
+/*   scheduling {
     on_host_maintenance = "TERMINATE"
-  }
+  } */
 
   service_account {
     scopes = [

@@ -12,13 +12,13 @@ variable "debug" {
 
 variable "control_plane_count" {
   type        = number
-  default     = 2
+  default     = 1
   description = "The number of control plane nodes to deploy."
 }
 
 variable "worker_count" {
   type        = number
-  default     = 2
+  default     = 1
   description = "The number of worker nodes to deploy."
 }
 
@@ -30,7 +30,7 @@ variable "state_disk_size" {
 
 variable "instance_type" {
   type        = string
-  default     = "g1-small"
+  default     = "e2-standard-2"
   description = "The GCP instance type to deploy."
 }
 

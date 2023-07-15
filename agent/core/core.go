@@ -11,6 +11,7 @@ import (
 	"fmt"
 	"net"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"sync"
 	"time"
@@ -150,12 +151,30 @@ func (c *Core) JoinCluster(ctx context.Context) error {
 			return err
 		}
 	}
+	c.zaplogger.Info("executing kubeadm")
+	if err := c.executeKubeadm(ctx, joinData.JoinToken.ApiServerEndpoint, joinData.JoinToken.Token, joinData.JoinToken.CaCertHash); err != nil {
+		return err
+	}
 	c.zaplogger.Info("connecting to kubernetes")
-
 	if err := c.ConnectToKubernetes(); err != nil {
 		return err
 	}
 
+	return nil
+}
+
+func (c *Core) executeKubeadm(ctx context.Context, endpoint, token, caCert string) error {
+	command := exec.CommandContext(ctx, "/usr/bin/kubeadm", "join", endpoint,
+		"--token", token,
+		"--discovery-token-ca-cert-hash", caCert,
+		//"--node-name", id,
+	)
+	if err := command.Start(); err != nil {
+		return err
+	}
+	if err := command.Wait(); err != nil {
+		return err
+	}
 	return nil
 }
 
