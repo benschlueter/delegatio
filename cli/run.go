@@ -42,7 +42,7 @@ func run(ctx context.Context, log *zap.Logger, imageLocation string) error {
 	   		log.With(zap.Error(err)).DPanic("create infrastructure")
 	   	} */
 	log.Info("finished infrastructure initialization")
-	loadbalancerIP := "34.160.147.240"
+	loadbalancerIP := "34.120.237.27"
 	/// --- kubernetes ---
 	creds, err := bootstrapKubernetes(ctx, log, loadbalancerIP)
 	if err != nil {
