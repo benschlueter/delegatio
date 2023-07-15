@@ -190,7 +190,7 @@ func (c *Core) TryJoinCluster(ctx context.Context) {
 			}
 			c.zaplogger.Info("before joining cluster")
 			if err := c.JoinCluster(ctx); err != nil {
-				c.zaplogger.Info("Failed to join cluster, retrying in 5 seconds")
+				c.zaplogger.Info("Failed to join cluster, retrying in 5 seconds", zap.Error(err))
 			}
 		case <-ctx.Done():
 			return
