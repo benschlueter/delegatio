@@ -67,7 +67,9 @@ func initConfiguration() KubeadmInitYAML {
 			},
 			Etcd: kubeadm.Etcd{
 				Local: &kubeadm.LocalEtcd{
-					ExtraArgs: map[string]string{},
+					ExtraArgs: map[string]string{
+						//	"listen-client-urls ": "https://0.0.0.0:2379",
+					},
 				},
 			},
 		},
