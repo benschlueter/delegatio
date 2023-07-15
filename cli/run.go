@@ -6,7 +6,6 @@ package main
 
 import (
 	"context"
-	"fmt"
 
 	"github.com/benschlueter/delegatio/cli/bootstrapper"
 	"github.com/benschlueter/delegatio/cli/infrastructure"
@@ -43,14 +42,9 @@ func run(ctx context.Context, log *zap.Logger, imageLocation string) error {
 	   		log.With(zap.Error(err)).DPanic("create infrastructure")
 	   	} */
 	log.Info("finished infrastructure initialization")
-	nodes := &config.NodeInformation{
-		Masters: map[string]string{
-			"master1": "34.160.147.240",
-		},
-	}
-	fmt.Println(nodes)
+	loadbalancerIP := "34.107.192.240"
 	/// --- kubernetes ---
-	creds, err := bootstrapKubernetes(ctx, log, nodes)
+	creds, err := bootstrapKubernetes(ctx, log, loadbalancerIP)
 	if err != nil {
 		log.With(zap.Error(err)).DPanic("bootstrap kubernetes")
 	}
@@ -65,12 +59,12 @@ func run(ctx context.Context, log *zap.Logger, imageLocation string) error {
 	return handleTermination(log, creds)
 }
 
-func bootstrapKubernetes(ctx context.Context, log *zap.Logger, nodes *config.NodeInformation) (*config.EtcdCredentials, error) {
-	kubeConf, err := utils.GetKubeInitConfig()
+func bootstrapKubernetes(ctx context.Context, log *zap.Logger, loadbalancerIP string) (*config.EtcdCredentials, error) {
+	kubeConf, err := utils.GetKubeInitConfig(loadbalancerIP)
 	if err != nil {
 		log.With(zap.Error(err)).DPanic("failed to get kubeConfig")
 	}
-	agent, err := bootstrapper.NewKubernetes(log, nodes, kubeConf)
+	agent, err := bootstrapper.NewKubernetes(log, loadbalancerIP, kubeConf)
 	if err != nil {
 		log.Error("failed to initialize bootstrapper", zap.Error(err))
 		return nil, err

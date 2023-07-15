@@ -12,21 +12,23 @@ import (
 )
 
 // GetKubeInitConfig returns the init config for kubernetes.
-func GetKubeInitConfig() ([]byte, error) {
+func GetKubeInitConfig(loadbalancerIP string) ([]byte, error) {
 	k8sConfig := initConfiguration()
+	k8sConfig.SetCertSANs([]string{loadbalancerIP})
+	k8sConfig.SetControlPlaneEndpoint(loadbalancerIP + ":6443")
 	return marshalK8SResources(&k8sConfig)
 }
 
-// kubeadmInitYAML groups multiple kubernetes config files into one struct.
-type kubeadmInitYAML struct {
+// KubeadmInitYAML groups multiple kubernetes config files into one struct.
+type KubeadmInitYAML struct {
 	InitConfiguration    kubeadm.InitConfiguration
 	ClusterConfiguration kubeadm.ClusterConfiguration
 	KubeletConfiguration kubeletconf.KubeletConfiguration
 }
 
 // initConfiguration sets the pre-defined values for kubernetes.
-func initConfiguration() kubeadmInitYAML {
-	return kubeadmInitYAML{
+func initConfiguration() KubeadmInitYAML {
+	return KubeadmInitYAML{
 		InitConfiguration: kubeadm.InitConfiguration{
 			TypeMeta: v1.TypeMeta{
 				APIVersion: kubeadm.SchemeGroupVersion.String(),
@@ -76,5 +78,22 @@ func initConfiguration() kubeadmInitYAML {
 			},
 			CgroupDriver: "systemd",
 		},
+	}
+}
+
+// SetCertSANs sets the certSANs for the kubernetes api server.
+func (k *KubeadmInitYAML) SetCertSANs(certSANs []string) {
+	for _, certSAN := range certSANs {
+		if certSAN == "" {
+			continue
+		}
+		k.ClusterConfiguration.APIServer.CertSANs = append(k.ClusterConfiguration.APIServer.CertSANs, certSAN)
+	}
+}
+
+// SetControlPlaneEndpoint sets the control plane endpoint if controlPlaneEndpoint is not empty.
+func (k *KubeadmInitYAML) SetControlPlaneEndpoint(controlPlaneEndpoint string) {
+	if controlPlaneEndpoint != "" {
+		k.ClusterConfiguration.ControlPlaneEndpoint = controlPlaneEndpoint
 	}
 }
