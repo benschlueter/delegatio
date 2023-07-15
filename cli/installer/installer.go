@@ -73,6 +73,7 @@ func (k *installer) connectToEtcd(_ context.Context, creds *config.EtcdCredentia
 	if err != nil {
 		return err
 	}
+	// get direct loadbalancer IP and place here.
 	k.logger.Info("endpoint", zap.String("api", u.Host))
 	host, _, err := net.SplitHostPort(u.Host)
 	if err != nil {

@@ -66,7 +66,7 @@ func run(ctx context.Context, log *zap.Logger, imageLocation string) error {
 }
 
 func bootstrapKubernetes(ctx context.Context, log *zap.Logger, nodes *config.NodeInformation) (*config.EtcdCredentials, error) {
-	kubeConf, err := utils.GetKubeInitConfig()
+	kubeConf, err := utils.GetKubeInitConfig("")
 	if err != nil {
 		log.With(zap.Error(err)).DPanic("failed to get kubeConfig")
 	}

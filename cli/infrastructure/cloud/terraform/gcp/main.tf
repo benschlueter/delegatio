@@ -44,6 +44,7 @@ locals {
   ports_node_range      = "30000-32767"
   ports_kubernetes      = "6443"
   ports_bootstrapper    = "9000"
+  ports_etcd            = "2379"
   ports_ssh             = "22"
   cidr_vpc_subnet_nodes = "192.168.178.0/24"
   cidr_vpc_subnet_pods  = "10.10.0.0/16"
@@ -198,4 +199,15 @@ module "loadbalancer_boot" {
   ip_address             = google_compute_global_address.loadbalancer_ip.self_link
   port                   = local.ports_bootstrapper
   frontend_labels        = merge(local.labels, { delegatio-use = "bootstrapper" })
+}
+
+module "loadbalancer_etcd" {
+  source                 = "./modules/loadbalancer"
+  name                   = local.name
+  health_check           = "TCP"
+  backend_port_name      = "etcd"
+  backend_instance_group = module.instance_group_control_plane.instance_group
+  ip_address             = google_compute_global_address.loadbalancer_ip.self_link
+  port                   = local.ports_etcd
+  frontend_labels        = merge(local.labels, { delegatio-use = "etcd" })
 }
