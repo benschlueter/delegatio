@@ -38,16 +38,11 @@ func run(ctx context.Context, log *zap.Logger, imageLocation string) error {
 		}
 	}(log, lInstance)
 	// --- infrastructure ---
-	/* 	nodes, err := createInfrastructure(ctx, log, lInstance)
-	   	if err != nil {
-	   		log.With(zap.Error(err)).DPanic("create infrastructure")
-	   	} */
-	log.Info("finished infrastructure initialization")
-	nodes := &config.NodeInformation{
-		Masters: map[string]string{
-			"master1": "34.160.147.240",
-		},
+	nodes, err := createInfrastructure(ctx, log, lInstance)
+	if err != nil {
+		log.With(zap.Error(err)).DPanic("create infrastructure")
 	}
+	log.Info("finished infrastructure initialization")
 	fmt.Println(nodes)
 	/// --- kubernetes ---
 	creds, err := bootstrapKubernetes(ctx, log, nodes)
