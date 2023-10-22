@@ -1,10 +1,12 @@
 #!/usr/bin/env bash
 
+if [ "$container" != "mkosi" ]; then
+    exec mkosi-chroot "$SCRIPT" "$@"
+fi
+
 systemctl enable systemd-networkd.service
 systemctl enable systemd-resolved.service
 systemctl enable crio.service
 systemctl enable startup-script.service
 systemctl enable delegatio-agent.service
 systemctl enable kubelet.service
-
-ln -rsf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
