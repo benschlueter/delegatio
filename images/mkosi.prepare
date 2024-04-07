@@ -1,9 +1,9 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-DOWNLOAD_DIR="/usr/bin"
+DOWNLOAD_DIR="${BUILDROOT}/usr/bin"
 CNI_PLUGINS_VERSION="v1.2.0"
 CRICTL_VERSION="v1.26.0"
-DEST="/opt/cni/bin"
+DEST="${BUILDROOT}/opt/cni/bin"
 RELEASE=v1.27.1 #"$(curl -sSL https://dl.k8s.io/release/stable.txt)"
 ARCH="amd64"
 
@@ -19,6 +19,6 @@ chmod +x {kubeadm,kubelet}
 
 
 RELEASE_VERSION="v0.4.0"
-curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubelet/lib/systemd/system/kubelet.service" | sed "s:/usr/bin:${DOWNLOAD_DIR}:g" | tee /etc/systemd/system/kubelet.service
-mkdir -p /etc/systemd/system/kubelet.service.d
-curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubeadm/10-kubeadm.conf" | sed "s:/usr/bin:${DOWNLOAD_DIR}:g" | tee /etc/systemd/system/kubelet.service.d/10-kubeadm.conf
+curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubelet/lib/systemd/system/kubelet.service" | sed "s:/usr/bin:${DOWNLOAD_DIR}:g" | tee ${BUILDROOT}/etc/systemd/system/kubelet.service
+mkdir -p ${BUILDROOT}/etc/systemd/system/kubelet.service.d
+curl -sSL "https://raw.githubusercontent.com/kubernetes/release/${RELEASE_VERSION}/cmd/kubepkg/templates/latest/deb/kubeadm/10-kubeadm.conf" | sed "s:/usr/bin:${DOWNLOAD_DIR}:g" | tee ${BUILDROOT}/etc/systemd/system/kubelet.service.d/10-kubeadm.conf

@@ -1,10 +1,17 @@
-#!/usr/bin/env bash
+#!/bin/bash
 
-systemctl enable systemd-networkd.service
-systemctl enable systemd-resolved.service
-systemctl enable crio.service
-systemctl enable startup-script.service
-systemctl enable delegatio-agent.service
-systemctl enable kubelet.service
+ln -s /usr/lib/systemd/system/systemd-networkd.service "${BUILDROOT}/etc/systemd/system/multi-user.target.wants/systemd-networkd.service"
+ln -s /usr/lib/systemd/system/systemd-resolved.service "${BUILDROOT}/etc/systemd/system/multi-user.target.wants/systemd-resolved.service"
+ln -s /usr/lib/systemd/system/crio.service "${BUILDROOT}/etc/systemd/system/multi-user.target.wants/crio.service"
+ln -s /usr/lib/systemd/system/startup-script.service "${BUILDROOT}/etc/systemd/system/multi-user.target.wants/startup-script.service"
+ln -s /usr/lib/systemd/system/delegatio-agent.service "${BUILDROOT}/etc/systemd/system/multi-user.target.wants/delegatio-agent.service"
+ln -s /usr/lib/systemd/system/kubelet.service "${BUILDROOT}/etc/systemd/system/multi-user.target.wants/kubelet.service"
 
-ln -rsf /run/systemd/resolve/stub-resolv.conf /etc/resolv.conf
+#systemctl enable systemd-networkd.service
+#systemctl enable systemd-resolved.service
+#systemctl enable crio.service
+#systemctl enable startup-script.service
+#systemctl enable delegatio-agent.service
+#systemctl enable kubelet.service
+
+ln -rsf /run/systemd/resolve/stub-resolv.conf ${BUILDROOT}/etc/resolv.conf
