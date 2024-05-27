@@ -1,6 +1,6 @@
 module github.com/benschlueter/delegatio
 
-go 1.20
+go 1.22
 
 replace (
 	k8s.io/api v0.0.0 => k8s.io/api v0.28.0
@@ -54,8 +54,8 @@ require (
 	k8s.io/kubectl v0.28.0
 	k8s.io/kubelet v0.0.0
 	k8s.io/kubernetes v0.0.0
-	libvirt.org/go/libvirt v1.9007.0
-	libvirt.org/go/libvirtxml v1.9004.0
+	libvirt.org/go/libvirt v1.10002.0
+	libvirt.org/go/libvirtxml v1.10001.0
 )
 
 require (

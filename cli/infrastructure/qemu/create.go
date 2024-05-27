@@ -26,9 +26,11 @@ func (l *LibvirtInstance) createInstance(number string, controlPlane bool) (err 
 	}
 	l.Log.Debug("creating instance", zap.String("num", number), zap.Bool("controlplane", controlPlane))
 	if err := l.createBootImage(prefix + number); err != nil {
+		l.Log.Error("error creating boot image", zap.Error(err))
 		return err
 	}
 	if err := l.createDomain(prefix + number); err != nil {
+		l.Log.Error("error creating domain image", zap.Error(err))
 		return err
 	}
 	l.Log.Debug("creating instance success", zap.String("num", number), zap.Bool("controlplane", controlPlane))
@@ -67,7 +69,7 @@ func (l *LibvirtInstance) createBaseImage(ctx context.Context) error {
 	if err != nil {
 		return err
 	}
-	defer func() { _ = storagePool.Free() }()
+	// defer func() { _ = storagePool.Free() }()
 	l.Log.Info("creating base storage image")
 	volumeBaseObject, err := storagePool.StorageVolCreateXML(volumeBaseXMLString, 0)
 	if err != nil {
@@ -91,6 +93,7 @@ func (l *LibvirtInstance) createBootImage(id string) error {
 	}
 	storagePool, err := l.Conn.LookupStoragePoolByTargetPath(definitions.LibvirtStoragePoolPath)
 	if err != nil {
+		l.Log.Error("error looking up storage pool", zap.Error(err))
 		return err
 	}
 	defer func() { _ = storagePool.Free() }()
@@ -111,6 +114,7 @@ func (l *LibvirtInstance) createNetwork() error {
 	}
 	l.Log.Info("creating network")
 	network, err := l.Conn.NetworkCreateXML(networkXMLString)
+	//_, err = l.Conn.NetworkCreateXML(networkXMLString)
 	if err != nil {
 		return err
 	}

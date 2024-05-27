@@ -181,5 +181,6 @@ type network interface {
 type stream interface {
 	Abort() error
 	Free() error
+	Finish() error
 	Send(p []byte) (int, error)
 }

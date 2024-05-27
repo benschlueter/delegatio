@@ -31,11 +31,11 @@ func (l *LibvirtInstance) uploadBaseImage(ctx context.Context, baseVolume storag
 	defer func() {
 		err = errors.Join(err, file.Close())
 	}()
-
 	fi, err := file.Stat()
 	if err != nil {
 		return err
 	}
+	l.Log.Info("uploading image", zap.String("image", l.ImagePath), zap.Int64("size", fi.Size()))
 	if err := baseVolume.Upload(stream, 0, uint64(fi.Size()), 0); err != nil {
 		return err
 	}
@@ -67,9 +67,9 @@ loop:
 			transferredBytes += num
 		}
 	}
-	/* 	if err := stream.Finish(); err != nil {
+	if err := stream.Finish(); err != nil {
 		return err
-	} */
+	}
 	if transferredBytes < int(fi.Size()) {
 		return fmt.Errorf("only send %d out of %d bytes", transferredBytes, fi.Size())
 	}

@@ -20,6 +20,7 @@ Packages=
          iptables-nft
          runc
          cri-o
+         linux
 
          nfs-utils
 

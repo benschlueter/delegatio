@@ -257,9 +257,10 @@ func (s *stubStoragePool) Free() error {
 }
 
 type stubStream struct {
-	abortErr error
-	freeErr  error
-	sendErr  error
+	abortErr  error
+	freeErr   error
+	sendErr   error
+	finishErr error
 }
 
 func (s *stubStream) Abort() error {
@@ -267,6 +268,10 @@ func (s *stubStream) Abort() error {
 }
 
 func (s *stubStream) Free() error {
+	return s.freeErr
+}
+
+func (s *stubStream) Finish() error {
 	return s.freeErr
 }
 
