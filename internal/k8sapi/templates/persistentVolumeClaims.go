@@ -28,7 +28,7 @@ func PersistentVolumeClaim(identifier *config.KubeRessourceIdentifier) *coreAPI.
 			},
 			VolumeName:       identifier.UserIdentifier,
 			StorageClassName: &identifier.StorageClass,
-			Resources: coreAPI.ResourceRequirements{
+			Resources: coreAPI.VolumeResourceRequirements{
 				Requests: coreAPI.ResourceList{
 					coreAPI.ResourceStorage: resource.MustParse("10Gi"),
 				},

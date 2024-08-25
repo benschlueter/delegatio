@@ -14,8 +14,8 @@ import (
 	"os"
 	"testing"
 
-	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
+	"github.com/docker/docker/api/types/image"
 	"github.com/docker/docker/client"
 	"github.com/stretchr/testify/require"
 )
@@ -34,7 +34,7 @@ func TestEtcdStore(t *testing.T) {
 	require.NoError(err)
 	defer dockerClient.Close()
 
-	pullReader, err := dockerClient.ImagePull(ctx, etcdImageName, types.ImagePullOptions{})
+	pullReader, err := dockerClient.ImagePull(ctx, etcdImageName, image.PullOptions{})
 	require.NoError(err)
 	_, err = io.Copy(os.Stdout, pullReader)
 	require.NoError(err)
@@ -58,9 +58,9 @@ func TestEtcdStore(t *testing.T) {
 	t.Log("create etcd container...")
 	createResp, err := dockerClient.ContainerCreate(ctx, etcdContainerConfig, etcdHostConfig, nil, nil, "etcd-storage-unittest")
 	require.NoError(err)
-	require.NoError(dockerClient.ContainerStart(ctx, createResp.ID, types.ContainerStartOptions{}))
+	require.NoError(dockerClient.ContainerStart(ctx, createResp.ID, container.StartOptions{}))
 
-	logReader, err := dockerClient.ContainerLogs(ctx, createResp.ID, types.ContainerLogsOptions{ShowStdout: true, Follow: true})
+	logReader, err := dockerClient.ContainerLogs(ctx, createResp.ID, container.LogsOptions{ShowStdout: true, Follow: true})
 	require.NoError(err)
 	go io.Copy(os.Stdout, logReader)
 
