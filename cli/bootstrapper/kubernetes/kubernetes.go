@@ -14,7 +14,7 @@ import (
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
-	"k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
+	"k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta4"
 )
 
 // Bootstrapper communicates with the agent inside the control-plane VM after Kubernetes was initialized.
@@ -60,7 +60,7 @@ func (a *Bootstrapper) BootstrapKubernetes(ctx context.Context) (*config.EtcdCre
 }
 
 // configureKubernetes configures the kubernetes cluster.
-func (a *Bootstrapper) configureKubernetes(ctx context.Context) (*v1beta3.BootstrapTokenDiscovery, error) {
+func (a *Bootstrapper) configureKubernetes(ctx context.Context) (*v1beta4.BootstrapTokenDiscovery, error) {
 	if err := a.writeKubeconfigToDisk(ctx); err != nil {
 		return nil, err
 	}

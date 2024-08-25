@@ -20,9 +20,9 @@ var (
 	// CleanUpTimeout is the timeout after which the save-state function is canceled when ctrl+c is pressed in the cli.
 	CleanUpTimeout = 10 * time.Second
 	// CiliumPath is the path to the cilium helm chart.
-	CiliumPath = "https://github.com/cilium/charts/raw/master/cilium-1.12.5.tgz"
+	CiliumPath = "https://github.com/cilium/charts/raw/master/cilium-1.16.1.tgz"
 	// Cilium256Hash is the sha256 hash of the cilium helm chart.
-	Cilium256Hash = "a9211be3d0d43b91aaaece1191a69c1c676a6226194bec7d806111086e620ab8"
+	Cilium256Hash = "406c5bba515262c52e53b859af31af412cd8d2c332e277e98ec3e5f14382ecbf"
 	// TetratePath is the path to the tetrate helm chart.
 	TetratePath = "https://github.com/cilium/tetragon/releases/download/v0.8.3/tetra-linux-amd64.tar.gz"
 	// Tetragon256Hash is the sha256 hash of the tetrate helm chart.

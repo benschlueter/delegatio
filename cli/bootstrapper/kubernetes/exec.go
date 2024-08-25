@@ -16,7 +16,7 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	kubeadm "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
+	kubeadm "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta4"
 )
 
 // InstallKubernetes initializes a kubernetes cluster using the gRPC API.

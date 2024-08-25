@@ -1,0 +1,6 @@
+enable systemd-networkd.service
+enable systemd-resolved.service
+enable crio.service
+enable startup-script.service
+enable delegatio-agent.service
+enable kubelet.service
