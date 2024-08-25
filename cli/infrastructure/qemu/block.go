@@ -39,7 +39,7 @@ func (l *LibvirtInstance) blockUntilInstanceReady(ctx context.Context, number st
 }
 
 func (l *LibvirtInstance) blockUntilNetworkIsReady(ctx context.Context, id string) (string, error) {
-	ctx, cancel := context.WithTimeout(ctx, 3000*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 300*time.Second)
 	defer cancel()
 	domain, err := l.Conn.LookupDomainByName(id)
 	if err != nil {
@@ -75,7 +75,7 @@ func (l *LibvirtInstance) blockUntilNetworkIsReady(ctx context.Context, id strin
 }
 
 func (l *LibvirtInstance) blockUntilDelegatioAgentIsReady(ctx context.Context, id string) error {
-	ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+	ctx, cancel := context.WithTimeout(ctx, 30000*time.Second)
 	defer cancel()
 	domain, err := l.Conn.LookupDomainByName(id)
 	if err != nil {
@@ -113,7 +113,8 @@ func (l *LibvirtInstance) blockUntilDelegatioAgentIsReady(ctx context.Context, i
 			return ctx.Err()
 		default:
 			_, err := client.ExecCommand(ctx, &vmproto.ExecCommandRequest{
-				Command: "whoami",
+				Command: "hostnamectl",
+				Args:    []string{"set-hostname", id},
 			})
 			if err == nil {
 				return nil

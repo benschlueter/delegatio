@@ -114,7 +114,6 @@ func (l *LibvirtInstance) createNetwork() error {
 	}
 	l.Log.Info("creating network")
 	network, err := l.Conn.NetworkCreateXML(networkXMLString)
-	//_, err = l.Conn.NetworkCreateXML(networkXMLString)
 	if err != nil {
 		return err
 	}

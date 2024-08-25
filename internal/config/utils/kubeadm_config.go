@@ -8,7 +8,7 @@ package utils
 import (
 	v1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	kubeletconf "k8s.io/kubelet/config/v1beta1"
-	kubeadm "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta3"
+	kubeadm "k8s.io/kubernetes/cmd/kubeadm/app/apis/kubeadm/v1beta4"
 )
 
 // GetKubeInitConfig returns the init config for kubernetes.
@@ -34,8 +34,11 @@ func initConfiguration() kubeadmInitYAML {
 			},
 			NodeRegistration: kubeadm.NodeRegistrationOptions{
 				CRISocket: "unix:///var/run/crio/crio.sock",
-				KubeletExtraArgs: map[string]string{
-					"cloud-provider": "external",
+				KubeletExtraArgs: []kubeadm.Arg{
+					{
+						Name:  "cloud-provider",
+						Value: "external",
+					},
 				},
 			},
 			LocalAPIEndpoint: kubeadm.APIEndpoint{
@@ -57,15 +60,22 @@ func initConfiguration() kubeadmInitYAML {
 				CertSANs: []string{"127.0.0.1"},
 			},
 			ControllerManager: kubeadm.ControlPlaneComponent{
-				ExtraArgs: map[string]string{
-					"flex-volume-plugin-dir": "/opt/libexec/kubernetes/kubelet-plugins/volume/exec/",
-					"cloud-provider":         "external",
-					"configure-cloud-routes": "false",
+				ExtraArgs: []kubeadm.Arg{
+					{
+						Name:  "flex-volume-plugin-dir",
+						Value: "/opt/libexec/kubernetes/kubelet-plugins/volume/exec/",
+					}, {
+						Name:  "cloud-provider",
+						Value: "external",
+					}, {
+						Name:  "configure-cloud-routes",
+						Value: "false",
+					},
 				},
 			},
 			Etcd: kubeadm.Etcd{
 				Local: &kubeadm.LocalEtcd{
-					ExtraArgs: map[string]string{},
+					ExtraArgs: []kubeadm.Arg{},
 				},
 			},
 		},

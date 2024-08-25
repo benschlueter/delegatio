@@ -103,7 +103,7 @@ func (k *installer) installCilium(ctx context.Context) error {
 		return err
 	}
 	vals := map[string]interface{}{
-		"kubeProxyReplacement": "strict",
+		"kubeProxyReplacement": "true",
 		"k8sServicePort":       "6443",
 		"k8sServiceHost":       host,
 		/* 		"prometheus.enabled":          "true",

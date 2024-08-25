@@ -166,6 +166,9 @@ var (
 				Machine: "q35",
 				Type:    "hvm",
 			},
+			Kernel:  "/home/bschlueter/University/Github/delegatio/images/image.vmlinuz",
+			Initrd:  "/home/bschlueter/University/Github/delegatio/images/image.initrd",
+			Cmdline: "console=ttyS0 root=/dev/vda2 rw",
 		},
 		Devices: &libvirtxml.DomainDeviceList{
 			Emulator: "/usr/bin/qemu-system-x86_64",

@@ -1,4 +1,4 @@
-FROM golang:1.20.1-bullseye
+FROM golang:1.23.1-bullseye
 
 COPY go.mod /delegatio/
 COPY go.sum /delegatio/
@@ -20,6 +20,8 @@ FROM archlinux:latest
 COPY --from=0 /delegatio/agent/server/agent /
 COPY --from=0 /delegatio/agent/user/agent-user /
 RUN	 pacman -Syy
-RUN	 pacman -S --noconfirm go git gcc make cmake libvirt
+#RUN	 pacman -Sy --noconfirm archlinux-keyring
+#RUN	 pacman-key --refresh-keys
+#RUN	 pacman -S --noconfirm go git gcc make cmake libvirt
 
 CMD ["/agent", "--container", "--debug"]

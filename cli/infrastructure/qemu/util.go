@@ -36,7 +36,7 @@ func (l *LibvirtInstance) uploadBaseImage(ctx context.Context, baseVolume storag
 		return err
 	}
 	l.Log.Info("uploading image", zap.String("image", l.ImagePath), zap.Int64("size", fi.Size()))
-	if err := baseVolume.Upload(stream, 0, uint64(fi.Size()), 0); err != nil {
+	if err := baseVolume.Upload(stream, 0, uint64(fi.Size()*2), 0); err != nil {
 		return err
 	}
 	transferredBytes := 0
