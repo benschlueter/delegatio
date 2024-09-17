@@ -14,6 +14,14 @@ import (
 	"go.uber.org/zap"
 )
 
+/*
+ * main is run in every docker container to allow agents to communicate with it.
+ * It sets up the gRPC server and listens for incoming connections.
+ * The SSH agents uses the stream exec to forward its incomming requests
+ *
+ * The same binary is also used in the VM to allow bootstrapping to take place via
+ * CLI rpc calls.
+ */
 func main() {
 	var bindIP, bindPort string
 	cfg := zap.NewDevelopmentConfig()

@@ -329,3 +329,7 @@ func (k *stubK8sHelper) ExecuteCommandInPod(context.Context, *config.KubeExecCon
 func (k *stubK8sHelper) CreateAndWaitForRessources(context.Context, *config.KubeRessourceIdentifier) error {
 	return nil
 }
+
+func (k *stubK8sHelper) WriteFileInPod(context.Context, *config.KubeFileWriteConfig) error {
+	return nil
+}

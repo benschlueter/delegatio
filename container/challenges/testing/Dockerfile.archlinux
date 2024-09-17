@@ -11,14 +11,14 @@ COPY ./ /delegatio
 WORKDIR /delegatio/agent/server
 RUN go build -o agent .
 
-WORKDIR /delegatio/agent/user
+WORKDIR /delegatio/grader/user
 RUN go build -o agent-user .
 
 
 FROM archlinux:latest
 
 COPY --from=0 /delegatio/agent/server/agent /
-COPY --from=0 /delegatio/agent/user/agent-user /
+COPY --from=0 /delegatio/grader/user/agent-user /
 RUN	 pacman -Syy
 #RUN	 pacman -Sy --noconfirm archlinux-keyring
 #RUN	 pacman-key --refresh-keys

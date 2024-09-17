@@ -26,6 +26,7 @@ type K8sAPI interface {
 	CreateAndWaitForRessources(context.Context, *config.KubeRessourceIdentifier) error
 	ExecuteCommandInPod(context.Context, *config.KubeExecConfig) error
 	CreatePodPortForward(context.Context, *config.KubeForwardConfig) error
+	WriteFileInPod(ctx context.Context, conf *config.KubeFileWriteConfig) error
 }
 
 // K8sAPIWrapper is the struct used to access kubernetes helpers.
@@ -96,28 +97,50 @@ func (k *K8sAPIWrapper) ExecuteCommandInPod(ctx context.Context, conf *config.Ku
 	return k.API.CreateExecInPodgRPC(ctx, net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(config.AgentPort)), conf)
 }
 
+func (k *K8sAPIWrapper) WriteFileInPod(ctx context.Context, conf *config.KubeFileWriteConfig) error {
+	service, err := k.Client.GetService(ctx, conf.Namespace, fmt.Sprintf("%s-service", conf.UserIdentifier))
+	if err != nil {
+		k.logger.Error("failed to get service", zap.Error(err))
+		return err
+	}
+	k.logger.Info("cluster ip", zap.String("ip", service.Spec.ClusterIP))
+
+	pod, err := k.Client.GetPod(ctx, conf.Namespace, fmt.Sprintf("%s-statefulset-0", conf.UserIdentifier))
+	if err != nil {
+		k.logger.Error("failed to get pod", zap.Error(err))
+		return err
+	}
+	k.logger.Info("pod ip", zap.String("ip", pod.Status.PodIP))
+	// TODO: there is a race condition, where the pod is ready, but we can't connect to the endpoint yet.
+	// Probably should do a vmapi.dial until it succeeds here.
+	return k.API.WriteFileInPodgRPC(ctx, net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(config.AgentPort)), conf)
+}
+
 // CreatePodPortForward creates a port forward on the specified pod.
 func (k *K8sAPIWrapper) CreatePodPortForward(ctx context.Context, conf *config.KubeForwardConfig) error {
 	return k.Client.CreatePodPortForward(ctx, conf.Namespace, conf.PodName, conf.Port, conf.Communication)
 }
 
-// GetStore returns a store backed by kube etcd.
+// GetStore returns a store backed by kube etcd. Its only supposed to used within a kubernetes pod.
 func (k *K8sAPIWrapper) GetStore() (store.Store, error) {
 	var err error
 	var ns string
-	_, present := os.LookupEnv("KUBECONFIG")
-	if !present {
+	if _, err := os.Stat(config.NameSpaceFilePath); errors.Is(err, os.ErrNotExist) {
 		// ns is not ready when container spawns
 		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
 		defer cancel()
 		ns, err = waitForNamespaceMount(ctx)
 		if err != nil {
-			k.logger.Error("failed to get namespace, assuming default namespace \"ssh\"", zap.Error(err))
-			ns = "ssh"
+			k.logger.Error("failed to get namespace after timeout", zap.Error(err))
+			return nil, err
 		}
 	} else {
 		// out of cluster mode currently assumes 'ssh' namespace
-		ns = "ssh"
+		if content, err := os.ReadFile(config.NameSpaceFilePath); err == nil {
+			ns = strings.TrimSpace(string(content))
+		} else {
+			return nil, err
+		}
 	}
 	k.logger.Info("namespace", zap.String("namespace", ns))
 	configData, err := k.Client.GetConfigMapData(context.Background(), ns, "etcd-credentials")

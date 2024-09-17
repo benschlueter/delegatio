@@ -120,6 +120,8 @@ func (k *Client) CreateGraderDeployment(ctx context.Context, namespace, deployme
 					},
 				},
 				Spec: coreAPI.PodSpec{
+					ServiceAccountName:           config.GraderServiceAccountName,
+					AutomountServiceAccountToken: &automountServiceAccountToken,
 					Containers: []coreAPI.Container{
 						{
 							Name:  deploymentName,

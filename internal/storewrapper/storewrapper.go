@@ -16,6 +16,7 @@ import (
 const (
 	challengeLocationPrefix = "challenge-"
 	publicKeyPrefix         = "publickey-"
+	uuidKeyPrefix           = "uuid-"
 	privKeyLocation         = "privkey-ssh"
 )
 
@@ -60,19 +61,19 @@ func (s StoreWrapper) ChallengeExists(challengeName string) (bool, error) {
 }
 
 // GetAllChallenges gets all challenge names.
-func (s StoreWrapper) GetAllChallenges() (map[string]config.ChallengeInformation, error) {
+func (s StoreWrapper) GetAllChallenges() (map[string]config.ContainerInformation, error) {
 	chIterator, err := s.Store.Iterator(challengeLocationPrefix)
 	if err != nil {
 		return nil, err
 	}
-	challenges := make(map[string]config.ChallengeInformation)
+	challenges := make(map[string]config.ContainerInformation)
 	for chIterator.HasNext() {
 		key, err := chIterator.GetNext()
 		if err != nil {
 			return nil, err
 		}
 		key = strings.TrimPrefix(key, challengeLocationPrefix)
-		var challenge config.ChallengeInformation
+		var challenge config.ContainerInformation
 		if err := s.GetChallengeData(key, &challenge); err != nil {
 			return nil, err
 		}
@@ -81,13 +82,22 @@ func (s StoreWrapper) GetAllChallenges() (map[string]config.ChallengeInformation
 	return challenges, nil
 }
 
-// PutPublicKeyData puts a publicKey and associated data of the key into the store.
-func (s StoreWrapper) PutPublicKeyData(pubkey string, target any) error {
+// PutDataIdxByPubKey puts a publicKey and associated data of the key into the store.
+func (s StoreWrapper) PutDataIdxByPubKey(pubkey string, target any) error {
 	publicKeyData, err := json.Marshal(target)
 	if err != nil {
 		return err
 	}
 	return s.Store.Put(publicKeyPrefix+pubkey, publicKeyData)
+}
+
+// PutDataIdxByUuid puts a uuid and associated data of the key into the store.
+func (s StoreWrapper) PutDataIdxByUuid(uuid string, target any) error {
+	publicKeyData, err := json.Marshal(target)
+	if err != nil {
+		return err
+	}
+	return s.Store.Put(uuidKeyPrefix+uuid, publicKeyData)
 }
 
 // GetPublicKeyData gets data associated with the publicKey.
@@ -99,10 +109,33 @@ func (s StoreWrapper) GetPublicKeyData(publickey string, target any) error {
 	return json.Unmarshal(publicKeyData, target)
 }
 
+// GetPublicKeyUuid gets data associated with the publicKey.
+func (s StoreWrapper) GetPublicKeyUuid(uuid string, target any) error {
+	uuidData, err := s.Store.Get(uuidKeyPrefix + uuid)
+	if err != nil {
+		return err
+	}
+	return json.Unmarshal(uuidData, target)
+}
+
 // PublicKeyExists checks whether the publicKey is in the store.
 func (s StoreWrapper) PublicKeyExists(publicKey string) (bool, error) {
+	var perr *store.ValueUnsetError
 	_, err := s.Store.Get(publicKeyPrefix + publicKey)
-	if errors.Is(err, &store.ValueUnsetError{}) {
+	if errors.As(err, &perr) {
+		return false, nil
+	}
+	if err != nil {
+		return false, err
+	}
+	return true, nil
+}
+
+// UuidExists checks whether the publicKey is in the store.
+func (s StoreWrapper) UuidExists(uuid string) (bool, error) {
+	var perr *store.ValueUnsetError
+	_, err := s.Store.Get(uuidKeyPrefix + uuid)
+	if errors.As(err, &perr) {
 		return false, nil
 	}
 	if err != nil {
@@ -149,7 +182,7 @@ func (s StoreWrapper) GetAllKeys() (keys []string, err error) {
 	return
 }
 
-// PutPrivKey puts a privKey  into the store.
+// PutPrivKey puts a privKey into the store.
 func (s StoreWrapper) PutPrivKey(privkey []byte) error {
 	return s.Store.Put(privKeyLocation, privkey)
 }

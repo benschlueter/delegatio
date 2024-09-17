@@ -10,8 +10,8 @@ import (
 	"net"
 	"sync"
 
-	gradeapi "github.com/benschlueter/delegatio/grader/gradeAPI"
-	"github.com/benschlueter/delegatio/grader/gradeAPI/gradeproto"
+	"github.com/benschlueter/delegatio/grader/gradeapi"
+	"github.com/benschlueter/delegatio/grader/gradeapi/gradeproto"
 	"github.com/benschlueter/delegatio/internal/config"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -27,7 +27,11 @@ func run(dialer gradeapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Log
 	defer func() { _ = zapLoggerCore.Sync() }()
 	zapLoggerCore.Info("starting delegatio grader", zap.String("version", version), zap.String("commit", config.Commit))
 
-	gapi := gradeapi.New(zapLoggerCore.Named("gradeapi"), dialer)
+	gapi, err := gradeapi.New(zapLoggerCore.Named("gradeapi"), dialer)
+	if err != nil {
+		zapLoggerCore.Fatal("failed to create gradeapi", zap.Error(err))
+	}
+
 	zapLoggergRPC := zapLoggerCore.Named("gRPC")
 
 	grpcServer := grpc.NewServer(

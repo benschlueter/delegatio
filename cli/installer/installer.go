@@ -130,18 +130,24 @@ func (k *installer) initalizeChallenges(ctx context.Context, userConfig *config.
 	}
 	stWrapper := storewrapper.StoreWrapper{Store: k.client.SharedStore}
 
-	for namespace := range userConfig.Challenges {
+	for namespace := range userConfig.Containers {
 		if err := stWrapper.PutChallengeData(namespace, nil); err != nil {
 			return err
 		}
 		k.logger.Info("added challenge to store", zap.String("challenge", namespace))
 	}
 
-	for publicKey, realName := range userConfig.PubKeyToUser {
-		if err := stWrapper.PutPublicKeyData(publicKey, realName); err != nil {
+	for uuid, userData := range userConfig.UUIDToUser {
+		if err := stWrapper.PutDataIdxByUuid(uuid, userData); err != nil {
 			return err
 		}
-		k.logger.Info("added user to store", zap.String("publicKey", publicKey), zap.Any("userinfo", realName))
+		k.logger.Info("added user to store", zap.String("uuid", uuid), zap.Any("userinfo", userData))
+	}
+	for pubkey, userData := range userConfig.PubKeyToUser {
+		if err := stWrapper.PutDataIdxByPubKey(pubkey, userData); err != nil {
+			return err
+		}
+		k.logger.Info("added user to store", zap.String("pubkey", pubkey), zap.Any("userinfo", userData))
 	}
 	return nil
 }
@@ -191,7 +197,16 @@ func (k *installer) initializeGrader(ctx context.Context) error {
 		return err
 	}
 	k.logger.Info("create namespace", zap.String("namespace", config.GraderNamespaceName))
-
+	if err := k.createConfigMapAndPutData(ctx, config.GraderNamespaceName, "etcd-credentials", k.sshData); err != nil {
+		k.logger.With(zap.Error(err)).Error("failed to createConfigMapAndPutData")
+		return err
+	}
+	if err := k.client.CreateServiceAccount(ctx, config.GraderNamespaceName, config.GraderServiceAccountName); err != nil {
+		return err
+	}
+	if err := k.client.CreateClusterRoleBinding(ctx, config.GraderNamespaceName, config.GraderServiceAccountName); err != nil {
+		return err
+	}
 	if err := k.client.CreateGraderDeployment(ctx, config.GraderNamespaceName, "grader", int32(config.ClusterConfiguration.NumberOfWorkers)); err != nil {
 		return err
 	}
@@ -199,6 +214,7 @@ func (k *installer) initializeGrader(ctx context.Context) error {
 		return err
 	}
 	// Not needed as long as we run on-prem
+	// Probably not needed at all? Since we access the gracer tthrough the ClusterServiceName?
 	/* 	if err := k.client.CreateIngress(ctx, graderNamespaceName); err != nil {
 		return err
 	} */

@@ -5,6 +5,7 @@
 package connection
 
 import (
+	"context"
 	"encoding/base64"
 	"errors"
 	"sync"
@@ -79,10 +80,11 @@ func (s *Builder) Build() (*Handler, error) {
 	}
 
 	userK8SAPI := kubernetes.NewK8sAPIUserWrapper(s.k8sHelper, &config.KubeRessourceIdentifier{
+		// Namespace will define the challenge / container we're using
 		Namespace:      config.UserNamespace,
 		UserIdentifier: userID,
 		// Currently unused, but required for later.
-		Challenge: s.connection.User(),
+		ContainerIdentifier: s.connection.User(),
 	})
 
 	return &Handler{
@@ -97,7 +99,21 @@ func (s *Builder) Build() (*Handler, error) {
 
 		newSessionHandler:     newSession,
 		newDirectTCPIPHandler: newDirectTCPIP,
+		writeFileToContainer:  writeFileToContainer,
 	}, nil
+}
+
+func writeFileToContainer(ctx context.Context, conn *ssh.ServerConn, api kubernetes.K8sAPIUser) error {
+	if conn.Permissions.Extensions[config.AuthenticationType] != "pw" {
+		return nil
+	}
+	return api.WriteFileInPod(ctx, &config.KubeFileWriteConfig{
+		Namespace:      config.UserNamespace,
+		UserIdentifier: conn.Permissions.Extensions[config.AuthenticatedUserID],
+		FileName:       "delegatio_priv_key",
+		FileData:       []byte(conn.Permissions.Extensions[config.AuthenticatedPrivKey]),
+		FilePath:       "/root/.ssh",
+	})
 }
 
 func newSession(log *zap.Logger, channel ssh.Channel, requests <-chan *ssh.Request, api kubernetes.K8sAPIUser) (channels.Channel, error) {

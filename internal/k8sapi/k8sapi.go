@@ -91,7 +91,7 @@ func (k *Client) GetStoreUserData() (data *config.UserConfiguration, err error) 
 	if err != nil {
 		return nil, err
 	}
-	data = &config.UserConfiguration{PubKeyToUser: userData, Challenges: challenges}
+	data = &config.UserConfiguration{UUIDToUser: userData, Containers: challenges}
 	return data, nil
 }
 

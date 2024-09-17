@@ -1,4 +1,4 @@
-FROM golang:1.20.1-bullseye
+FROM golang:1.23.1-bullseye
 # Copy Repo
 COPY go.mod /delegatio/
 COPY go.sum /delegatio/
@@ -8,9 +8,17 @@ RUN go mod download
 
 COPY ./ /delegatio
 
-WORKDIR /delegatio/grader
+COPY ./grader/gradeapi/graders/exercises /exercises
+
+WORKDIR /delegatio/grader/server
 RUN go build -o grader .
 
-CMD /delegatio/grader/grader
+FROM archlinux:latest
+COPY --from=0 /exercises /exercises
+COPY --from=0 /delegatio/grader/server/grader /delegatio/grader/server/grader
+RUN pacman -Syy
+RUN pacman -S python --noconfirm
+
+CMD /delegatio/grader/server/grader
 
 

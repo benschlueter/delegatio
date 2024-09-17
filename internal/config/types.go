@@ -17,17 +17,28 @@ type ClusterConfig struct {
 
 // UserConfiguration is the configuration for the user.
 type UserConfiguration struct {
+	UUIDToUser   map[string]UserInformation      `yaml:"uuidToUser" json:"uuidToUser"`
 	PubKeyToUser map[string]UserInformation      `yaml:"pubkeysToUser" json:"pubkeysToUser"`
-	Challenges   map[string]ChallengeInformation `yaml:"challenges" json:"challenges"`
+	Containers   map[string]ContainerInformation `yaml:"challenges" json:"challenges"`
 }
 
 // UserInformation holds the data for a user.
 type UserInformation struct {
-	RealName string
+	Username   string
+	RealName   string
+	Email      string
+	LegiNumber string
+	Uuid       string
+	Gender     string
+	PrivKey    []byte
+	PubKey     []byte
+	Points     map[string]int
 }
 
-// ChallengeInformation holds the data for a challenge.
-type ChallengeInformation struct{}
+// ContainerInformation holds the data for a challenge.
+type ContainerInformation struct {
+	ContainerName string
+}
 
 // KubeExecConfig holds the configuration parsed to the execCommand function.
 type KubeExecConfig struct {
@@ -37,6 +48,15 @@ type KubeExecConfig struct {
 	Communication  ssh.Channel
 	WinQueue       remotecommand.TerminalSizeQueue
 	Tty            bool
+}
+
+// KubeFileWriteConfig holds the data to write a file using the VMAPI.
+type KubeFileWriteConfig struct {
+	UserIdentifier string
+	Namespace      string
+	FileName       string
+	FilePath       string
+	FileData       []byte
 }
 
 // KubeForwardConfig holds the configuration parsed to the forwardCommand function.
@@ -49,11 +69,11 @@ type KubeForwardConfig struct {
 
 // KubeRessourceIdentifier holds the information to identify a kubernetes ressource.
 type KubeRessourceIdentifier struct {
-	Namespace      string
-	UserIdentifier string
-	Challenge      string
-	NodeName       string
-	StorageClass   string
+	UserIdentifier      string
+	Namespace           string
+	ContainerIdentifier string
+	NodeName            string
+	StorageClass        string
 }
 
 // EtcdCredentials contains the credentials for etcd.

@@ -12,25 +12,22 @@ import (
 	"log"
 	"net"
 	"runtime"
-	"strings"
 	"sync"
 	"sync/atomic"
 	"time"
 
+	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/store"
 	"github.com/benschlueter/delegatio/internal/storewrapper"
 	"github.com/benschlueter/delegatio/ssh/connection"
 	"github.com/benschlueter/delegatio/ssh/kubernetes"
+	"github.com/benschlueter/delegatio/ssh/ldap"
+	"github.com/benschlueter/delegatio/ssh/util"
 	"go.uber.org/zap"
 	"golang.org/x/crypto/ssh"
 )
 
-const (
-	authenticatedUserID = "sha256Fingerprint"
-)
-
 // TODO: Add support for multiple users
-
 // Server is a ssh server.
 type Server struct {
 	log                *zap.Logger
@@ -38,11 +35,12 @@ type Server struct {
 	handleConnWG       *sync.WaitGroup
 	currentConnections int64
 	backingStore       store.Store
+	ldap               *ldap.Ldap
 	privateKey         []byte
 }
 
 // NewServer returns a sshServer.
-func NewServer(client kubernetes.K8sAPI, log *zap.Logger, storage store.Store, privKey []byte) *Server {
+func NewServer(client kubernetes.K8sAPI, log *zap.Logger, storage store.Store, privKey []byte, ldap *ldap.Ldap) *Server {
 	return &Server{
 		k8sHelper:          client,
 		log:                log,
@@ -50,6 +48,7 @@ func NewServer(client kubernetes.K8sAPI, log *zap.Logger, storage store.Store, p
 		currentConnections: 0,
 		backingStore:       storage,
 		privateKey:         privKey,
+		ldap:               ldap,
 	}
 }
 
@@ -58,21 +57,62 @@ func (s *Server) Start(ctx context.Context) {
 	config := &ssh.ServerConfig{
 		// Function is called to determine if the user is allowed to connect with the ssh server
 		PublicKeyCallback: func(conn ssh.ConnMetadata, key ssh.PublicKey) (*ssh.Permissions, error) {
-			s.log.Info("publickeycallback called", zap.String("user", conn.User()), zap.Binary("session", conn.SessionID()))
-			if ok, err := s.data().ChallengeExists(conn.User()); err != nil || !ok {
-				return nil, fmt.Errorf("user %s not in database or internal store error %w", conn.User(), err)
-			}
+			var userData config.UserInformation
 			encodeKey := base64.StdEncoding.EncodeToString(key.Marshal())
-			compareKey := fmt.Sprintf("%s %s", key.Type(), encodeKey)
-			if ok, err := s.data().PublicKeyExists(compareKey); err != nil || !ok {
-				return nil, fmt.Errorf("pubkey %v not in database or internal store error %w", compareKey, err)
+			s.log.Debug("publickeycallback called", zap.String("user", conn.User()), zap.Binary("session", conn.SessionID()), zap.String("key", encodeKey))
+
+			err := s.data().GetPublicKeyData(string(ssh.MarshalAuthorizedKey(key)), &userData)
+			if err != nil {
+				s.log.Error("failed to obtain user data", zap.Error(err))
+				return nil, fmt.Errorf("failed to obtain user data: %w", err)
 			}
 			return &ssh.Permissions{
 				Extensions: map[string]string{
-					"authType":          "pk",
-					authenticatedUserID: strings.ToLower(ssh.FingerprintSHA256(key)[7:47]),
+					config.AuthenticationType:  "pk",
+					config.AuthenticatedUserID: userData.Uuid,
 				},
 			}, nil
+		},
+		PasswordCallback: func(conn ssh.ConnMetadata, password []byte) (*ssh.Permissions, error) {
+			s.log.Debug("passwordcallback called", zap.String("user", conn.User()), zap.Binary("session", conn.SessionID()))
+			userData, err := s.ldap.Search(conn.User(), string(password))
+			if err != nil {
+				return nil, fmt.Errorf("ldap search for user %s failed: %w", conn.User(), err)
+			}
+			exists, err := s.data().UuidExists(userData.Uuid)
+			if err != nil {
+				s.log.Error("error checking if uuid exists; likely due to etcd", zap.Error(err))
+				return nil, fmt.Errorf("error checking if uuid %s exists: %w", userData.Uuid, err)
+			}
+			// We assume that when an entry exists in the store it ALWAYS has a public/private key pair
+			if !exists {
+				privKey, pubKey, err := util.CreateSSHKeypair()
+				if err != nil {
+					return nil, fmt.Errorf("failed to create ssh keypair: %w", err)
+				}
+				userData.PrivKey = privKey
+				userData.PubKey = pubKey
+				err = s.data().PutDataIdxByUuid(userData.Uuid, userData)
+				if err != nil {
+					return nil, fmt.Errorf("failed to put data into store: %w", err)
+				}
+				err = s.data().PutDataIdxByPubKey(string(userData.PubKey), userData)
+				if err != nil {
+					return nil, fmt.Errorf("failed to put data into store: %w", err)
+				}
+				s.log.Debug("public key created and stored", zap.String("key", string(userData.PubKey)))
+			}
+			s.log.Debug("private key found", zap.String("key", string(userData.PrivKey)))
+			return &ssh.Permissions{
+				Extensions: map[string]string{
+					config.AuthenticationType:   "pw",
+					config.AuthenticatedPrivKey: string(userData.PrivKey),
+					config.AuthenticatedUserID:  userData.Uuid,
+				},
+			}, nil
+		},
+		BannerCallback: func(conn ssh.ConnMetadata) string {
+			return fmt.Sprintf("delegatio ssh server version %s\ncommit %s\n", config.Version, config.Commit)
 		},
 	}
 	// routine currently leaks
