@@ -6,7 +6,6 @@ package qemu
 
 import (
 	"errors"
-	"fmt"
 
 	"libvirt.org/go/libvirt"
 )
@@ -59,15 +58,6 @@ func (l *connectionWrapper) LookupDomainByName(id string) (domain, error) {
 }
 
 func (l *connectionWrapper) LookupStoragePoolByTargetPath(path string) (storagePool, error) {
-	pools, err := l.conn.ListStoragePools()
-	if err != nil {
-		fmt.Println("error listing pools")
-		return nil, err
-	}
-	for _, pool := range pools {
-		fmt.Println("pool path", pool)
-	}
-
 	pool, err := l.conn.LookupStoragePoolByTargetPath(path)
 	if err != nil {
 		return nil, err

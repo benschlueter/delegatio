@@ -30,7 +30,7 @@ var (
 )
 
 const (
-
+	Version = "0.0.1"
 	// DefaultIP is the default IP address to bind to.
 	DefaultIP = "0.0.0.0"
 	// PublicAPIport is the port where we can access the public API.
@@ -39,8 +39,12 @@ const (
 	GradeAPIport = 9027
 	// DefaultTimeout for the API.
 	DefaultTimeout = 2 * time.Minute
-	// AuthenticatedUserID key for a hash map, where the sha256 fingerprint of the public key is saved.
-	AuthenticatedUserID = "sha256Fingerprint"
+	// AuthenticatedUserID key for a hash map, where the uid is saved.
+	AuthenticatedUserID = "authenticated-uuid"
+	// AuthenticationType is the type of authentication used. (i.e. pw, pk)
+	AuthenticationType = "authType"
+	// AuthenticatedPrivKey is the private key used for authentication.
+	AuthenticatedPrivKey = "privateKey"
 	// UserContainerImage is the image used for the challenge containers.
 	UserContainerImage = "ghcr.io/benschlueter/delegatio/archimage:0.1"
 	// SSHContainerImage is the image used for the ssh containers.
@@ -61,19 +65,18 @@ const (
 	SSHNamespaceName = "ssh"
 	// GraderNamespaceName is the namespace where the grader containers are running.
 	GraderNamespaceName = "grader"
+	// GraderServiceAccountName is the name of the Kubernetes grader service account with cluster access.
+	GraderServiceAccountName = "development-grader"
+	// NameSpaceFilePath is the path to the file where the namespace is stored.
+	NameSpaceFilePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
 )
 
 // GetExampleConfig writes an example config to config.json.
 func GetExampleConfig() *UserConfiguration {
 	globalConfig := UserConfiguration{
-		Challenges: map[string]ChallengeInformation{
+		// Currently not used
+		Containers: map[string]ContainerInformation{
 			"testchallenge1": {},
-			"testchallenge2": {},
-			"testchallenge3": {},
-		},
-
-		PubKeyToUser: map[string]UserInformation{
-			"ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDLYDO+DPlwJTKYU+S9Q1YkgC7lUJgfsq+V6VxmzdP+omp2EmEIEUsB8WFtr3kAgtAQntaCejJ9ITgoLimkoPs7bV1rA7BZZgRTL2sF+F5zJ1uXKNZz1BVeGGDDXHW5X5V/ZIlH5Bl4kNaAWGx/S5PIszkhyNXEkE6GHsSU4dz69rlutjSbwQRFLx8vjgdAxP9+jUbJMh9u5Dg1SrXiMYpzplJWFt/jI13dDlNTrhWW7790xhHur4fiQbhrVzru29BKNQtSywC+3eH2XKTzobK6h7ECS5X75ghemRIDPw32SHbQP7or1xI+MjFCrZsGyZr1L0yBFNkNAsztpWAqE2FZ": {RealName: "Benedict Schlueter"},
 		},
 	}
 

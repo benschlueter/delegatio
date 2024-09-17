@@ -18,6 +18,9 @@ import (
 // WriteFile creates a file and writes output to it.
 func (a *API) WriteFile(_ context.Context, in *vmproto.WriteFileRequest) (*vmproto.WriteFileResponse, error) {
 	a.logger.Info("request to write file", zap.String("path", in.Filepath), zap.String("name", in.Filename))
+	if _, err := os.Stat(in.Filepath); os.IsNotExist(err) {
+		os.MkdirAll(in.Filepath, 0o700) // Create your file
+	}
 	if err := os.WriteFile(filepath.Join(in.Filepath, in.Filename), in.Content, os.ModeAppend); err != nil {
 		a.logger.Error("failed to write file", zap.String("path", in.Filepath), zap.String("name", in.Filename), zap.Error(err))
 		return nil, status.Errorf(codes.Internal, "file write failed exited with error code: %v", err)

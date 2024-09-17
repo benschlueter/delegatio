@@ -18,4 +18,5 @@ message RequestGradingRequest {
 
 message RequestGradingResponse {
     int32 points = 1;
+    bytes log = 2;
 }

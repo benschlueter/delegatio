@@ -13,6 +13,10 @@ import (
 	"go.uber.org/zap"
 )
 
+/*
+ * This binary is also part of the user docker container and used to communicate with the
+ * grader API. It sends a grading request and receives the points.
+ */
 func main() {
 	cfg := zap.NewDevelopmentConfig()
 

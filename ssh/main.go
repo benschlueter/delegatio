@@ -14,6 +14,7 @@ import (
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/storewrapper"
 	"github.com/benschlueter/delegatio/ssh/kubernetes"
+	"github.com/benschlueter/delegatio/ssh/ldap"
 	"go.uber.org/zap"
 )
 
@@ -49,7 +50,9 @@ func main() {
 		logger.With(zap.Error(err)).DPanic("gettign priv key for ssh server")
 	}
 	logger.Info("pulled private key from store")
-	server := NewServer(client, logger, store, privKey)
+	ldap := ldap.NewLdap(logger.Named("ldap"))
+	logger.Info("created ldap client")
+	server := NewServer(client, logger, store, privKey, ldap)
 	ctx, cancel := context.WithCancel(context.Background())
 	defer cancel()
 

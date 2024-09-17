@@ -290,6 +290,7 @@ type stubK8sAPIWrapper struct {
 	CreateAndWaitForRessourcesErr error
 	execFunc                      func(ctx context.Context, kec *config.KubeExecConfig) error
 	forwardFunc                   func(ctx context.Context, kec *config.KubeForwardConfig) error
+	writeFunc                     func(ctx context.Context, kec *config.KubeFileWriteConfig) error
 }
 
 func (k *stubK8sAPIWrapper) CreateAndWaitForRessources(_ context.Context, _ *config.KubeRessourceIdentifier) error {
@@ -302,4 +303,8 @@ func (k *stubK8sAPIWrapper) ExecuteCommandInPod(ctx context.Context, conf *confi
 
 func (k *stubK8sAPIWrapper) CreatePodPortForward(ctx context.Context, conf *config.KubeForwardConfig) error {
 	return k.forwardFunc(ctx, conf)
+}
+
+func (k *stubK8sAPIWrapper) WriteFileInPod(ctx context.Context, conf *config.KubeFileWriteConfig) error {
+	return k.writeFunc(ctx, conf)
 }

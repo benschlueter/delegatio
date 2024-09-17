@@ -29,6 +29,7 @@ type Handler struct {
 	keepAliveInterval     time.Duration
 	newDirectTCPIPHandler func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, kubernetes.K8sAPIUser, *payload.ForwardTCPChannelOpen) (channels.Channel, error)
 	newSessionHandler     func(*zap.Logger, ssh.Channel, <-chan *ssh.Request, kubernetes.K8sAPIUser) (channels.Channel, error)
+	writeFileToContainer  func(context.Context, *ssh.ServerConn, kubernetes.K8sAPIUser) error
 	// Also needed by channel handlers
 	kubernetes.K8sAPIUser
 }
@@ -37,6 +38,7 @@ type Handler struct {
 func (c *Handler) HandleGlobalConnection(ctx context.Context) {
 	// if the connection is dead terminate it.
 	defer func() {
+		// fails because channel close already closes the connection???
 		if err := c.connection.Close(); err != nil {
 			c.log.Error("failed to close connection", zap.Error(err))
 		}
@@ -66,6 +68,8 @@ func (c *Handler) HandleGlobalConnection(ctx context.Context) {
 		return
 	}
 	c.log.Info("ressources are ready, serving channels")
+
+	c.writeFileToContainer(ctx, c.connection, c.K8sAPIUser)
 	// handle channel requests
 	c.handleChannels(ctx)
 	c.log.Info("closed handleGlobalConnection gracefully")

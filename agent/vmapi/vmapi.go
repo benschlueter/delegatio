@@ -25,6 +25,7 @@ import (
 // VMAPI interface contains functions to access the agent.
 type VMAPI interface {
 	CreateExecInPodgRPC(context.Context, string, *config.KubeExecConfig) error
+	WriteFileInPodgRPC(context.Context, string, *config.KubeFileWriteConfig) error
 }
 
 // API is the API.
@@ -65,7 +66,29 @@ type Dialer interface {
 }
 
 // TODO: This code needs some refactoring / cleanup.
+// CreateExecInPodgRPC creates a new exec in pod using gRPC connection to the endpoint agent.
+func (a *API) WriteFileInPodgRPC(ctx context.Context, endpoint string, conf *config.KubeFileWriteConfig) error {
+	conn, err := a.dialInsecure(ctx, endpoint)
+	if err != nil {
+		return err
+	}
+	defer conn.Close()
+	client := vmproto.NewAPIClient(conn)
+	_, err = client.WriteFile(ctx,
+		&vmproto.WriteFileRequest{
+			Filepath: conf.FilePath,
+			Filename: conf.FileName,
+			Content:  conf.FileData,
+		})
+	if err != nil {
+		a.logger.Error("failed to write file in pod", zap.Error(err), zap.String("FileName", conf.FileName), zap.String("FilePath", conf.FilePath))
+		return err
+	}
+	a.logger.Debug("file written in pod", zap.String("FileName", conf.FileName), zap.String("FilePath", conf.FilePath))
+	return nil
+}
 
+// TODO: This code needs some refactoring / cleanup.
 // CreateExecInPodgRPC creates a new exec in pod using gRPC connection to the endpoint agent.
 func (a *API) CreateExecInPodgRPC(ctx context.Context, endpoint string, conf *config.KubeExecConfig) error {
 	conn, err := a.dialInsecure(ctx, endpoint)
