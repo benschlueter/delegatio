@@ -49,7 +49,7 @@ func TestHandleShell(t *testing.T) {
 			var execFunc func(ctx context.Context, kec *config.KubeExecConfig) error
 
 			if tc.closeByServer {
-				execFunc = func(ctx context.Context, kec *config.KubeExecConfig) error {
+				execFunc = func(_ context.Context, kec *config.KubeExecConfig) error {
 					kec.Communication.Close()
 					return tc.serverErr
 				}
@@ -138,7 +138,7 @@ func TestHandleSubsystem(t *testing.T) {
 			var execFunc func(ctx context.Context, kec *config.KubeExecConfig) error
 
 			if tc.closeByServer {
-				execFunc = func(ctx context.Context, kec *config.KubeExecConfig) error {
+				execFunc = func(_ context.Context, kec *config.KubeExecConfig) error {
 					kec.Communication.Close()
 					return tc.serverErr
 				}
@@ -227,7 +227,7 @@ func TestHandlePortForward(t *testing.T) {
 			var forwardFunc func(ctx context.Context, kec *config.KubeForwardConfig) error
 
 			if tc.closeByServer {
-				forwardFunc = func(ctx context.Context, kec *config.KubeForwardConfig) error {
+				forwardFunc = func(_ context.Context, kec *config.KubeForwardConfig) error {
 					kec.Communication.Close()
 					return tc.serverErr
 				}

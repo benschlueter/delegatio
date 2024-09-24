@@ -28,7 +28,7 @@ type UserInformation struct {
 	RealName   string
 	Email      string
 	LegiNumber string
-	Uuid       string
+	UUID       string
 	Gender     string
 	PrivKey    []byte
 	PubKey     []byte

@@ -17,11 +17,11 @@ import (
 func SessionBuilderSkeleton() *Builder {
 	builder := NewBuilder().WithChannelType("session")
 
-	builder.SetOnStartup(func(ctx context.Context, rd *callbackData) {
+	builder.SetOnStartup(func(_ context.Context, rd *callbackData) {
 		rd.log.Info("starting session handler")
 	})
 
-	builder.SetOnReqDefault(func(ctx context.Context, req *ssh.Request, rd *callbackData) {
+	builder.SetOnReqDefault(func(_ context.Context, req *ssh.Request, rd *callbackData) {
 		if err := req.Reply(false, nil); err != nil {
 			rd.log.Error("failled to respond to request", zap.Any("request", req), zap.Error(err))
 		}
@@ -51,7 +51,7 @@ func SessionBuilderSkeleton() *Builder {
 		}
 	})
 
-	builder.SetOnReqWinCh(func(ctx context.Context, req *ssh.Request, rd *callbackData) {
+	builder.SetOnReqWinCh(func(_ context.Context, req *ssh.Request, rd *callbackData) {
 		windowChange := payload.WindowChangeRequest{}
 		if err := ssh.Unmarshal(req.Payload, &windowChange); err != nil {
 			rd.log.Error("failled to unmarshal window-change request", zap.Error(err))
@@ -66,7 +66,7 @@ func SessionBuilderSkeleton() *Builder {
 		}
 	})
 
-	builder.SetOnReqPty(func(ctx context.Context, req *ssh.Request, rd *callbackData) {
+	builder.SetOnReqPty(func(_ context.Context, req *ssh.Request, rd *callbackData) {
 		ptyReq := payload.PtyRequest{}
 		if err := ssh.Unmarshal(req.Payload, &ptyReq); err != nil {
 			rd.log.Error("failled to unmarshal pty request", zap.Error(err))
@@ -79,7 +79,7 @@ func SessionBuilderSkeleton() *Builder {
 		}
 	})
 
-	builder.SetOnRequest(func(ctx context.Context, req *ssh.Request, rd *callbackData) {
+	builder.SetOnRequest(func(_ context.Context, req *ssh.Request, rd *callbackData) {
 		rd.log.Debug("request", zap.Any("data", req))
 	})
 	return builder
