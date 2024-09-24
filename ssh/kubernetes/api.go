@@ -97,6 +97,7 @@ func (k *K8sAPIWrapper) ExecuteCommandInPod(ctx context.Context, conf *config.Ku
 	return k.API.CreateExecInPodgRPC(ctx, net.JoinHostPort(pod.Status.PodIP, fmt.Sprint(config.AgentPort)), conf)
 }
 
+// WriteFileInPod writes a file in the specified pod on a remote agent.
 func (k *K8sAPIWrapper) WriteFileInPod(ctx context.Context, conf *config.KubeFileWriteConfig) error {
 	service, err := k.Client.GetService(ctx, conf.Namespace, fmt.Sprintf("%s-service", conf.UserIdentifier))
 	if err != nil {

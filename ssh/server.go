@@ -28,6 +28,7 @@ import (
 )
 
 // TODO: Add support for multiple users
+
 // Server is a ssh server.
 type Server struct {
 	log                *zap.Logger
@@ -69,7 +70,7 @@ func (s *Server) Start(ctx context.Context) {
 			return &ssh.Permissions{
 				Extensions: map[string]string{
 					config.AuthenticationType:  "pk",
-					config.AuthenticatedUserID: userData.Uuid,
+					config.AuthenticatedUserID: userData.UUID,
 				},
 			}, nil
 		},
@@ -79,10 +80,10 @@ func (s *Server) Start(ctx context.Context) {
 			if err != nil {
 				return nil, fmt.Errorf("ldap search for user %s failed: %w", conn.User(), err)
 			}
-			exists, err := s.data().UuidExists(userData.Uuid)
+			exists, err := s.data().UUIDExists(userData.UUID)
 			if err != nil {
 				s.log.Error("error checking if uuid exists; likely due to etcd", zap.Error(err))
-				return nil, fmt.Errorf("error checking if uuid %s exists: %w", userData.Uuid, err)
+				return nil, fmt.Errorf("error checking if uuid %s exists: %w", userData.UUID, err)
 			}
 			// We assume that when an entry exists in the store it ALWAYS has a public/private key pair
 			if !exists {
@@ -92,7 +93,7 @@ func (s *Server) Start(ctx context.Context) {
 				}
 				userData.PrivKey = privKey
 				userData.PubKey = pubKey
-				err = s.data().PutDataIdxByUuid(userData.Uuid, userData)
+				err = s.data().PutDataIdxByUUID(userData.UUID, userData)
 				if err != nil {
 					return nil, fmt.Errorf("failed to put data into store: %w", err)
 				}
@@ -102,17 +103,17 @@ func (s *Server) Start(ctx context.Context) {
 				}
 				s.log.Debug("public key created and stored", zap.String("key", string(userData.PubKey)))
 			}
-			s.log.Debug("private key found", zap.String("key", string(userData.PrivKey)))
+			s.log.Debug("private key", zap.String("key", string(userData.PrivKey)))
 			return &ssh.Permissions{
 				Extensions: map[string]string{
 					config.AuthenticationType:   "pw",
 					config.AuthenticatedPrivKey: string(userData.PrivKey),
-					config.AuthenticatedUserID:  userData.Uuid,
+					config.AuthenticatedUserID:  userData.UUID,
 				},
 			}, nil
 		},
 		BannerCallback: func(conn ssh.ConnMetadata) string {
-			return fmt.Sprintf("delegatio ssh server version %s\ncommit %s\n", config.Version, config.Commit)
+			return fmt.Sprintf("delegatio ssh server version %s\ncommit %s\nsession ID %s\n", config.Version, config.Commit, base64.StdEncoding.EncodeToString(conn.SessionID()))
 		},
 	}
 	// routine currently leaks

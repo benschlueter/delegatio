@@ -12,6 +12,7 @@ import (
 	"go.uber.org/zap"
 )
 
+// Ldap is a struct to interact with the LDAP server.
 type Ldap struct {
 	log        *zap.Logger
 	address    string
@@ -19,6 +20,7 @@ type Ldap struct {
 	attributes []string
 }
 
+// NewLdap creates a new Ldap struct.
 func NewLdap(logger *zap.Logger) *Ldap {
 	address := "ldaps://ldaps-rz-1.ethz.ch"
 	dn := "cn=%s,ou=users,ou=nethz,ou=id,ou=auth,o=ethz,c=ch"
@@ -59,6 +61,7 @@ func (l *Ldap) dial(username, password string) (*goLdap.Conn, error) {
 	return connection, nil
 }
 
+// Search searches for a user in the LDAP server and parses the data.
 func (l *Ldap) Search(username, password string) (*config.UserInformation, error) {
 	l.log.Info("searching for user", zap.String("username", username))
 	connection, err := l.dial(username, password)
@@ -76,7 +79,7 @@ func (l *Ldap) Search(username, password string) (*config.UserInformation, error
 		0,
 		0,
 		false,
-		fmt.Sprintf("(objectClass=*)"),
+		"(objectClass=*)",
 		l.attributes,
 		nil,
 	)
@@ -93,7 +96,7 @@ func (l *Ldap) Search(username, password string) (*config.UserInformation, error
 
 	return &config.UserInformation{
 		Username:   username,
-		Uuid:       username + "-" + sr.Entries[0].GetAttributeValue("swissEduPersonMatriculationNumber"),
+		UUID:       username + "-" + sr.Entries[0].GetAttributeValue("swissEduPersonMatriculationNumber"),
 		LegiNumber: sr.Entries[0].GetAttributeValue("swissEduPersonMatriculationNumber"),
 		Email:      sr.Entries[0].GetAttributeValue("swissEduPersonOrganizationalMail"),
 		RealName:   sr.Entries[0].GetAttributeValue("givenName") + " " + sr.Entries[0].GetAttributeValue("surname"),

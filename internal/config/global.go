@@ -30,6 +30,7 @@ var (
 )
 
 const (
+	// Version is the version of the project.
 	Version = "0.0.1"
 	// DefaultIP is the default IP address to bind to.
 	DefaultIP = "0.0.0.0"
@@ -41,7 +42,7 @@ const (
 	DefaultTimeout = 2 * time.Minute
 	// AuthenticatedUserID key for a hash map, where the uid is saved.
 	AuthenticatedUserID = "authenticated-uuid"
-	// AuthenticationType is the type of authentication used. (i.e. pw, pk)
+	// AuthenticationType is the type of authentication used. (i.e. pw, pk).
 	AuthenticationType = "authType"
 	// AuthenticatedPrivKey is the private key used for authentication.
 	AuthenticatedPrivKey = "privateKey"
@@ -69,6 +70,8 @@ const (
 	GraderServiceAccountName = "development-grader"
 	// NameSpaceFilePath is the path to the file where the namespace is stored.
 	NameSpaceFilePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+	// SandboxPath is the path to the sandbox directory.
+	SandboxPath = "/sandbox"
 )
 
 // GetExampleConfig writes an example config to config.json.

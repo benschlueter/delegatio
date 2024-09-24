@@ -25,7 +25,7 @@ func run(dialer gradeapi.Dialer, zapLoggerCore *zap.Logger) {
 		zapLoggerCore.Fatal("usage: delegatio-agent <solution file>")
 	}
 
-	api, err := gradeapi.New(zapLoggerCore, dialer)
+	api, err := gradeapi.New(zapLoggerCore, dialer, nil)
 	if err != nil {
 		zapLoggerCore.Fatal("failed to create gradeapi", zap.Error(err))
 	}

@@ -66,7 +66,8 @@ type Dialer interface {
 }
 
 // TODO: This code needs some refactoring / cleanup.
-// CreateExecInPodgRPC creates a new exec in pod using gRPC connection to the endpoint agent.
+
+// WriteFileInPodgRPC writes a file in a pod using gRPC connection to the endpoint agent.
 func (a *API) WriteFileInPodgRPC(ctx context.Context, endpoint string, conf *config.KubeFileWriteConfig) error {
 	conn, err := a.dialInsecure(ctx, endpoint)
 	if err != nil {
@@ -89,6 +90,7 @@ func (a *API) WriteFileInPodgRPC(ctx context.Context, endpoint string, conf *con
 }
 
 // TODO: This code needs some refactoring / cleanup.
+
 // CreateExecInPodgRPC creates a new exec in pod using gRPC connection to the endpoint agent.
 func (a *API) CreateExecInPodgRPC(ctx context.Context, endpoint string, conf *config.KubeExecConfig) error {
 	conn, err := a.dialInsecure(ctx, endpoint)

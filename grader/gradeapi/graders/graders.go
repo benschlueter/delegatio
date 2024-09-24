@@ -6,10 +6,16 @@ package graders
 
 import (
 	"context"
+	"crypto/sha256"
+	"encoding/base64"
+	"fmt"
 	"os"
 	"os/exec"
+	"path/filepath"
+	"syscall"
 	"time"
 
+	"github.com/benschlueter/delegatio/internal/config"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -37,7 +43,21 @@ func NewGraders(zapLogger *zap.Logger) (*Graders, error) {
 func (g *Graders) executeCommand(ctx context.Context, fileName string, arg ...string) ([]byte, error) {
 	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(g.singleExecTimeout))
 	defer cancel()
-	command := exec.CommandContext(ctx, fileName, arg...)
+	// cmd := exec.Command("/proc/self/exe", append([]string{"ns"}, os.Args[2:]...)...)
+	command := exec.CommandContext(ctx, "/proc/self/exe", append([]string{"--self", fileName}, arg...)...)
+	/*
+	 * Create new namespaces where possible (PID, NS, NET, IPC)
+	 * Mount is unnecessary as we are using chroot and all the stuff in mounted anyway
+	 * We would need a stub drop process to umount all the vulnerable dirs i.e., /var
+	 * A new NET / IPC namespace are created empty meaning no network and no IPC communication
+	 * PID namespace is created to prevent the process from seeing other processes
+	 *
+	 */
+	command.SysProcAttr = &syscall.SysProcAttr{
+		Cloneflags:   syscall.CLONE_NEWPID | syscall.CLONE_NEWNS | syscall.CLONE_NEWNET | syscall.CLONE_NEWIPC,
+		Unshareflags: syscall.CLONE_NEWNS,
+	}
+	// I think this here fails without an error????
 	output, err := command.Output()
 	if err != nil {
 		return nil, err
@@ -46,7 +66,9 @@ func (g *Graders) executeCommand(ctx context.Context, fileName string, arg ...st
 }
 
 func (g *Graders) writeFileToDisk(_ context.Context, solution []byte) (*os.File, error) {
-	f, err := os.CreateTemp("/tmp", "request-")
+	sha256sum := sha256.Sum256(solution)
+	sha256sumString := base64.StdEncoding.EncodeToString(sha256sum[:])
+	f, err := os.CreateTemp(filepath.Join(config.SandboxPath, "tmp"), fmt.Sprintf("solution-%s-", sha256sumString))
 	if err != nil {
 		g.logger.Error("failed to create content file", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to create content file")
@@ -58,7 +80,7 @@ func (g *Graders) writeFileToDisk(_ context.Context, solution []byte) (*os.File,
 		return nil, err
 	}
 	// make executable
-	if err := f.Chmod(0o700); err != nil {
+	if err := f.Chmod(0o777); err != nil {
 		g.logger.Error("failed to chmod content file", zap.Error(err))
 		return nil, err
 	}

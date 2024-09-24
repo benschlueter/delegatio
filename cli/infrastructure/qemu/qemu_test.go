@@ -272,7 +272,7 @@ func (s *stubStream) Free() error {
 }
 
 func (s *stubStream) Finish() error {
-	return s.freeErr
+	return s.finishErr
 }
 
 func (s *stubStream) Send(p []byte) (int, error) {

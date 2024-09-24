@@ -67,9 +67,11 @@ func (c *Handler) HandleGlobalConnection(ctx context.Context) {
 		)
 		return
 	}
+	if err := c.writeFileToContainer(ctx, c.connection, c.K8sAPIUser); err != nil {
+		c.log.Error("writing file to container", zap.Error(err))
+		return
+	}
 	c.log.Info("ressources are ready, serving channels")
-
-	c.writeFileToContainer(ctx, c.connection, c.K8sAPIUser)
 	// handle channel requests
 	c.handleChannels(ctx)
 	c.log.Info("closed handleGlobalConnection gracefully")

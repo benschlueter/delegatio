@@ -113,7 +113,7 @@ func TestSession(t *testing.T) {
 			builder.SetK8sUserAPI(
 				&kubernetes.K8sAPIUserWrapper{
 					K8sAPI: &stubK8sAPIWrapper{
-						execFunc: func(ctx context.Context, kec *config.KubeExecConfig) error { return nil },
+						execFunc: func(context.Context, *config.KubeExecConfig) error { return nil },
 					},
 					UserInformation: &config.KubeRessourceIdentifier{
 						Namespace:      "test-ns",
@@ -128,7 +128,7 @@ func TestSession(t *testing.T) {
 			reqMux := sync.Mutex{}
 			reqCnt := 0
 			builder.SetOnRequest(
-				func(ctx context.Context, r *ssh.Request, rq *callbackData) {
+				func(context.Context, *ssh.Request, *callbackData) {
 					reqMux.Lock()
 					reqCnt++
 					reqMux.Unlock()
@@ -136,31 +136,31 @@ func TestSession(t *testing.T) {
 			)
 			reqDefaultCnt := 0
 			builder.SetOnReqDefault(
-				func(ctx context.Context, r *ssh.Request, rq *callbackData) {
+				func(context.Context, *ssh.Request, *callbackData) {
 					reqDefaultCnt++
 				},
 			)
 			reqSubSysCnt := 0
 			builder.SetOnReqSubSys(
-				func(ctx context.Context, r *ssh.Request, rd *callbackData) {
+				func(context.Context, *ssh.Request, *callbackData) {
 					reqSubSysCnt++
 				},
 			)
 			reqPtyCnt := 0
 			builder.SetOnReqPty(
-				func(ctx context.Context, r *ssh.Request, rd *callbackData) {
+				func(context.Context, *ssh.Request, *callbackData) {
 					reqPtyCnt++
 				},
 			)
 			reqWinChCnt := 0
 			builder.SetOnReqWinCh(
-				func(ctx context.Context, r *ssh.Request, rd *callbackData) {
+				func(context.Context, *ssh.Request, *callbackData) {
 					reqWinChCnt++
 				},
 			)
 			reqShellCnt := 0
 			builder.SetOnReqShell(
-				func(ctx context.Context, r *ssh.Request, rd *callbackData) {
+				func(context.Context, *ssh.Request, *callbackData) {
 					reqShellCnt++
 				},
 			)
@@ -286,7 +286,7 @@ func TestSessionBlockingExec(t *testing.T) {
 			reqMux := sync.Mutex{}
 			reqCnt := 0
 			builder.SetOnRequest(
-				func(ctx context.Context, r *ssh.Request, rq *callbackData) {
+				func(context.Context, *ssh.Request, *callbackData) {
 					reqMux.Lock()
 					reqCnt++
 					reqMux.Unlock()
@@ -294,31 +294,31 @@ func TestSessionBlockingExec(t *testing.T) {
 			)
 			reqDefaultCnt := 0
 			builder.SetOnReqDefault(
-				func(ctx context.Context, r *ssh.Request, rq *callbackData) {
+				func(context.Context, *ssh.Request, *callbackData) {
 					reqDefaultCnt++
 				},
 			)
 			reqSubSysCnt := 0
 			builder.SetOnReqSubSys(
-				func(ctx context.Context, r *ssh.Request, rd *callbackData) {
+				func(context.Context, *ssh.Request, *callbackData) {
 					reqSubSysCnt++
 				},
 			)
 			reqPtyCnt := 0
 			builder.SetOnReqPty(
-				func(ctx context.Context, r *ssh.Request, rd *callbackData) {
+				func(context.Context, *ssh.Request, *callbackData) {
 					reqPtyCnt++
 				},
 			)
 			reqWinChCnt := 0
 			builder.SetOnReqWinCh(
-				func(ctx context.Context, r *ssh.Request, rd *callbackData) {
+				func(context.Context, *ssh.Request, *callbackData) {
 					reqWinChCnt++
 				},
 			)
 			reqShellCnt := 0
 			builder.SetOnReqShell(
-				func(ctx context.Context, r *ssh.Request, rd *callbackData) {
+				func(context.Context, *ssh.Request, *callbackData) {
 					reqShellCnt++
 				},
 			)
