@@ -15,14 +15,14 @@ import (
 func DirectTCPIPBuilderSkeleton() *Builder {
 	builder := NewBuilder().WithChannelType("direct-tcpip")
 
-	builder.SetOnReqDefault(func(ctx context.Context, req *ssh.Request, rd *callbackData) {
+	builder.SetOnReqDefault(func(_ context.Context, req *ssh.Request, rd *callbackData) {
 		if err := req.Reply(false, nil); err != nil {
 			rd.log.Error("failled to respond to request", zap.Any("request", req), zap.Error(err))
 		}
 		rd.log.Info("unimplemented request", zap.Any("request", req))
 	})
 
-	builder.SetOnRequest(func(ctx context.Context, req *ssh.Request, rd *callbackData) {
+	builder.SetOnRequest(func(_ context.Context, req *ssh.Request, rd *callbackData) {
 		rd.log.Debug("request", zap.Any("data", req))
 	})
 

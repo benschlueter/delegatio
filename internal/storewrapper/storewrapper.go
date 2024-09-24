@@ -91,8 +91,8 @@ func (s StoreWrapper) PutDataIdxByPubKey(pubkey string, target any) error {
 	return s.Store.Put(publicKeyPrefix+pubkey, publicKeyData)
 }
 
-// PutDataIdxByUuid puts a uuid and associated data of the key into the store.
-func (s StoreWrapper) PutDataIdxByUuid(uuid string, target any) error {
+// PutDataIdxByUUID puts a uuid and associated data of the key into the store.
+func (s StoreWrapper) PutDataIdxByUUID(uuid string, target any) error {
 	publicKeyData, err := json.Marshal(target)
 	if err != nil {
 		return err
@@ -109,8 +109,8 @@ func (s StoreWrapper) GetPublicKeyData(publickey string, target any) error {
 	return json.Unmarshal(publicKeyData, target)
 }
 
-// GetPublicKeyUuid gets data associated with the publicKey.
-func (s StoreWrapper) GetPublicKeyUuid(uuid string, target any) error {
+// GetUUIDData gets data associated with the uuid.
+func (s StoreWrapper) GetUUIDData(uuid string, target any) error {
 	uuidData, err := s.Store.Get(uuidKeyPrefix + uuid)
 	if err != nil {
 		return err
@@ -131,8 +131,8 @@ func (s StoreWrapper) PublicKeyExists(publicKey string) (bool, error) {
 	return true, nil
 }
 
-// UuidExists checks whether the publicKey is in the store.
-func (s StoreWrapper) UuidExists(uuid string) (bool, error) {
+// UUIDExists checks whether the publicKey is in the store.
+func (s StoreWrapper) UUIDExists(uuid string) (bool, error) {
 	var perr *store.ValueUnsetError
 	_, err := s.Store.Get(uuidKeyPrefix + uuid)
 	if errors.As(err, &perr) {

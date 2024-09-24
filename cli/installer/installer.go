@@ -138,7 +138,7 @@ func (k *installer) initalizeChallenges(ctx context.Context, userConfig *config.
 	}
 
 	for uuid, userData := range userConfig.UUIDToUser {
-		if err := stWrapper.PutDataIdxByUuid(uuid, userData); err != nil {
+		if err := stWrapper.PutDataIdxByUUID(uuid, userData); err != nil {
 			return err
 		}
 		k.logger.Info("added user to store", zap.String("uuid", uuid), zap.Any("userinfo", userData))

@@ -179,7 +179,7 @@ func TestHandleChannel(t *testing.T) {
 				newSessionHandler:     tc.sessionHandlerFunc,
 				newDirectTCPIPHandler: tc.directtcpIPHandlerFunc,
 				wg:                    &sync.WaitGroup{},
-				writeFileToContainer:  func(_ context.Context, _ *ssh.ServerConn, _ kubernetes.K8sAPIUser) error { return nil },
+				writeFileToContainer:  func(context.Context, *ssh.ServerConn, kubernetes.K8sAPIUser) error { return nil },
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
@@ -250,7 +250,7 @@ func TestHandleChannels(t *testing.T) {
 				log:                  observedLogger,
 				wg:                   &sync.WaitGroup{},
 				channel:              channelChan,
-				writeFileToContainer: func(_ context.Context, _ *ssh.ServerConn, _ kubernetes.K8sAPIUser) error { return nil },
+				writeFileToContainer: func(context.Context, *ssh.ServerConn, kubernetes.K8sAPIUser) error { return nil },
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
@@ -337,7 +337,7 @@ func TestHandleGlobalConnection(t *testing.T) {
 				wg:                   &sync.WaitGroup{},
 				keepAliveInterval:    time.Second,
 				channel:              channelChan,
-				writeFileToContainer: func(_ context.Context, _ *ssh.ServerConn, _ kubernetes.K8sAPIUser) error { return nil },
+				writeFileToContainer: func(context.Context, *ssh.ServerConn, kubernetes.K8sAPIUser) error { return nil },
 				K8sAPIUser: &kubernetes.K8sAPIUserWrapper{
 					K8sAPI: &stubK8sAPIWrapper{
 						CreateAndWaitForRessourcesErr: tc.createWfuncErr,
@@ -418,7 +418,7 @@ func TestKeepAlive(t *testing.T) {
 			handler := Handler{
 				keepAliveInterval: tc.interval,
 				log:               observedLogger,
-				writeFileToContainer: func(ctx context.Context, sc *ssh.ServerConn, ka kubernetes.K8sAPIUser) error {
+				writeFileToContainer: func(context.Context, *ssh.ServerConn, kubernetes.K8sAPIUser) error {
 					return nil
 				},
 			}
@@ -479,7 +479,7 @@ func TestGlobalRequests(t *testing.T) {
 			handler := Handler{
 				log:                  observedLogger,
 				globalRequests:       requests,
-				writeFileToContainer: func(ctx context.Context, sc *ssh.ServerConn, ka kubernetes.K8sAPIUser) error { return nil },
+				writeFileToContainer: func(context.Context, *ssh.ServerConn, kubernetes.K8sAPIUser) error { return nil },
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())

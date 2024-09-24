@@ -19,8 +19,9 @@ import (
  * Type 1 exercises take a program from the user and execute it on given input files.
  * The input files are stored in exercises/exerciseX/
  */
-// TODO: Put input files in exercises/exerciseX/input and have a json/yaml file with the expected output
+// TODO: Put input files in exercises/exerciseX/input and have a json/yaml file with the expected output. Abstract via interface.
 
+// GradeExerciseType1 grades an exercise of type 1.
 func (g *Graders) GradeExerciseType1(ctx context.Context, solution []byte, id int) (int, []byte, error) {
 	g.logger.Info("grading exercise type 1", zap.Int("id", id))
 	defer g.logger.Info("finished grading exercise type 1", zap.Int("id", id))

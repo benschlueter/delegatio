@@ -62,7 +62,7 @@ func TestDirectTCPIP(t *testing.T) {
 			builder.SetK8sUserAPI(
 				&kubernetes.K8sAPIUserWrapper{
 					K8sAPI: &stubK8sAPIWrapper{
-						forwardFunc: func(ctx context.Context, kec *config.KubeForwardConfig) error { return nil },
+						forwardFunc: func(context.Context, *config.KubeForwardConfig) error { return nil },
 					},
 					UserInformation: &config.KubeRessourceIdentifier{
 						Namespace:      "test-ns",
@@ -78,7 +78,7 @@ func TestDirectTCPIP(t *testing.T) {
 			reqMux := sync.Mutex{}
 			reqCnt := 0
 			builder.SetOnRequest(
-				func(ctx context.Context, r *ssh.Request, rq *callbackData) {
+				func(context.Context, *ssh.Request, *callbackData) {
 					reqMux.Lock()
 					reqCnt++
 					reqMux.Unlock()
@@ -86,13 +86,13 @@ func TestDirectTCPIP(t *testing.T) {
 			)
 			reqDefaultCnt := 0
 			builder.SetOnReqDefault(
-				func(ctx context.Context, r *ssh.Request, rq *callbackData) {
+				func(context.Context, *ssh.Request, *callbackData) {
 					reqDefaultCnt++
 				},
 			)
 			reqStartupCnt := 0
 			builder.SetOnStartup(
-				func(ctx context.Context, rd *callbackData) {
+				func(context.Context, *callbackData) {
 					reqStartupCnt++
 					startupDone <- struct{}{}
 				},

@@ -82,11 +82,15 @@ func (a *API) fileNameToBytes(fileName string) ([]byte, error) {
 	}
 	defer file.Close()
 
-	file.Seek(0, 0)
+	if _, err := file.Seek(0, 0); err != nil {
+		return nil, err
+	}
 	fileInfo, _ := file.Stat()
 	fileSize := fileInfo.Size()
 	bytes := make([]byte, fileSize)
-	file.Read(bytes)
+	if _, err := file.Read(bytes); err != nil {
+		return nil, err
+	}
 	return bytes, nil
 }
 

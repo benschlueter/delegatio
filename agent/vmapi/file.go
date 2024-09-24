@@ -19,7 +19,10 @@ import (
 func (a *API) WriteFile(_ context.Context, in *vmproto.WriteFileRequest) (*vmproto.WriteFileResponse, error) {
 	a.logger.Info("request to write file", zap.String("path", in.Filepath), zap.String("name", in.Filename))
 	if _, err := os.Stat(in.Filepath); os.IsNotExist(err) {
-		os.MkdirAll(in.Filepath, 0o700) // Create your file
+		if err := os.MkdirAll(in.Filepath, 0o700); err != nil {
+			a.logger.Error("failed to create directory", zap.String("path", in.Filepath), zap.Error(err))
+			return nil, status.Errorf(codes.Internal, "directory creation failed exited with error code: %v", err)
+		}
 	}
 	if err := os.WriteFile(filepath.Join(in.Filepath, in.Filename), in.Content, os.ModeAppend); err != nil {
 		a.logger.Error("failed to write file", zap.String("path", in.Filepath), zap.String("name", in.Filename), zap.Error(err))
