@@ -179,6 +179,7 @@ func TestHandleChannel(t *testing.T) {
 				newSessionHandler:     tc.sessionHandlerFunc,
 				newDirectTCPIPHandler: tc.directtcpIPHandlerFunc,
 				wg:                    &sync.WaitGroup{},
+				writeFileToContainer:  func(_ context.Context, _ *ssh.ServerConn, _ kubernetes.K8sAPIUser) error { return nil },
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
@@ -246,9 +247,10 @@ func TestHandleChannels(t *testing.T) {
 
 			channelChan := make(chan ssh.NewChannel)
 			handler := Handler{
-				log:     observedLogger,
-				wg:      &sync.WaitGroup{},
-				channel: channelChan,
+				log:                  observedLogger,
+				wg:                   &sync.WaitGroup{},
+				channel:              channelChan,
+				writeFileToContainer: func(_ context.Context, _ *ssh.ServerConn, _ kubernetes.K8sAPIUser) error { return nil },
 			}
 
 			ctx, cancel := context.WithCancel(context.Background())
@@ -331,10 +333,11 @@ func TestHandleGlobalConnection(t *testing.T) {
 
 			channelChan := make(chan ssh.NewChannel)
 			handler := Handler{
-				log:               observedLogger,
-				wg:                &sync.WaitGroup{},
-				keepAliveInterval: time.Second,
-				channel:           channelChan,
+				log:                  observedLogger,
+				wg:                   &sync.WaitGroup{},
+				keepAliveInterval:    time.Second,
+				channel:              channelChan,
+				writeFileToContainer: func(_ context.Context, _ *ssh.ServerConn, _ kubernetes.K8sAPIUser) error { return nil },
 				K8sAPIUser: &kubernetes.K8sAPIUserWrapper{
 					K8sAPI: &stubK8sAPIWrapper{
 						CreateAndWaitForRessourcesErr: tc.createWfuncErr,
@@ -412,7 +415,13 @@ func TestKeepAlive(t *testing.T) {
 			assert := assert.New(t)
 			observedZapCore, observedLogs := observer.New(zap.DebugLevel)
 			observedLogger := zap.New(observedZapCore)
-			handler := Handler{keepAliveInterval: tc.interval, log: observedLogger}
+			handler := Handler{
+				keepAliveInterval: tc.interval,
+				log:               observedLogger,
+				writeFileToContainer: func(ctx context.Context, sc *ssh.ServerConn, ka kubernetes.K8sAPIUser) error {
+					return nil
+				},
+			}
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
@@ -467,7 +476,11 @@ func TestGlobalRequests(t *testing.T) {
 			requests <- &ssh.Request{
 				WantReply: false,
 			}
-			handler := Handler{log: observedLogger, globalRequests: requests}
+			handler := Handler{
+				log:                  observedLogger,
+				globalRequests:       requests,
+				writeFileToContainer: func(ctx context.Context, sc *ssh.ServerConn, ka kubernetes.K8sAPIUser) error { return nil },
+			}
 
 			ctx, cancel := context.WithCancel(context.Background())
 			defer cancel()
