@@ -75,7 +75,7 @@ func (a *API) grpcWithDialer() grpc.DialOption {
 	})
 }
 
-func (a *API) fileNameToBytes(fileName string) ([]byte, error) {
+func (a *API) readFile(fileName string) ([]byte, error) {
 	file, err := os.Open(fileName)
 	if err != nil {
 		return nil, err
@@ -110,7 +110,7 @@ func (a *API) SendGradingRequest(ctx context.Context, fileName string) (int, err
 	_, nonceName := path.Split(f.Name())
 	a.logger.Info("create nonce file", zap.String("file", nonceName))
 
-	fileBytes, err := a.fileNameToBytes(fileName)
+	fileBytes, err := a.readFile(fileName)
 	if err != nil {
 		a.logger.Error("failed to read file", zap.String("file", fileName), zap.Error(err))
 	}

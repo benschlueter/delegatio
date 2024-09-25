@@ -8,6 +8,7 @@ import (
 	"context"
 	"os"
 	"os/exec"
+	"syscall"
 	"time"
 
 	"go.uber.org/zap"
@@ -38,6 +39,10 @@ func (g *Graders) executeCommand(ctx context.Context, fileName string, arg ...st
 	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(g.singleExecTimeout))
 	defer cancel()
 	command := exec.CommandContext(ctx, fileName, arg...)
+	command.SysProcAttr = &syscall.SysProcAttr{
+		Cloneflags:   syscall.CLONE_NEWUTS | syscall.CLONE_NEWPID | syscall.CLONE_NEWNS,
+		Unshareflags: syscall.CLONE_VM | syscall.CLONE_FILES | syscall.CLONE_FS,
+	}
 	output, err := command.Output()
 	if err != nil {
 		return nil, err
