@@ -103,7 +103,7 @@ func (s *Server) Start(ctx context.Context) {
 				}
 				s.log.Debug("public key created and stored", zap.String("key", string(userData.PubKey)))
 			}
-			s.log.Debug("private key found", zap.String("key", string(userData.PrivKey)))
+			s.log.Debug("private key", zap.String("key", string(userData.PrivKey)))
 			return &ssh.Permissions{
 				Extensions: map[string]string{
 					config.AuthenticationType:   "pw",

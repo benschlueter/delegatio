@@ -70,6 +70,8 @@ const (
 	GraderServiceAccountName = "development-grader"
 	// NameSpaceFilePath is the path to the file where the namespace is stored.
 	NameSpaceFilePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
+	// SandboxPath is the path to the sandbox directory.
+	SandboxPath = "/sandbox"
 )
 
 // GetExampleConfig writes an example config to config.json.

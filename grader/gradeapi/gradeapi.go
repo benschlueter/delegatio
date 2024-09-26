@@ -12,10 +12,7 @@ import (
 	"path"
 
 	"github.com/benschlueter/delegatio/grader/gradeapi/gradeproto"
-	"github.com/benschlueter/delegatio/grader/gradeapi/graders"
 	"github.com/benschlueter/delegatio/internal/config"
-	"github.com/benschlueter/delegatio/internal/store"
-	"github.com/benschlueter/delegatio/ssh/kubernetes"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -23,36 +20,18 @@ import (
 
 // API is the API.
 type API struct {
-	client kubernetes.K8sAPI
 	logger *zap.Logger
 	dialer Dialer
 	grader Graders
-	store  store.Store
 	gradeproto.UnimplementedAPIServer
 }
 
 // New creates a new API.
-func New(logger *zap.Logger, dialer Dialer) (*API, error) {
-	grader, err := graders.NewGraders(logger.Named("graders"))
-	if err != nil {
-		return nil, err
-	}
-	client, err := kubernetes.NewK8sAPIWrapper(logger.Named("k8sAPI"))
-	if err != nil {
-		logger.With(zap.Error(err)).DPanic("failed to create k8s client")
-	}
-
-	store, err := client.GetStore()
-	if err != nil {
-		logger.With(zap.Error(err)).DPanic("connecting to etcd")
-	}
-
+func New(logger *zap.Logger, dialer Dialer, grader Graders) (*API, error) {
 	return &API{
-		client: client,
 		logger: logger,
 		dialer: dialer,
 		grader: grader,
-		store:  store,
 	}, nil
 }
 

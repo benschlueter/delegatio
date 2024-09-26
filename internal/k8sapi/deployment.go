@@ -139,6 +139,7 @@ func (k *Client) CreateGraderDeployment(ctx context.Context, namespace, deployme
 								Capabilities: &coreAPI.Capabilities{
 									Add: []coreAPI.Capability{
 										"CAP_SYS_CHROOT",
+										"CAP_SYS_ADMIN",
 									},
 								},
 							},

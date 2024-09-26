@@ -27,24 +27,24 @@ func (g *Graders) GradeExerciseType1(ctx context.Context, solution []byte, id in
 	defer g.logger.Info("finished grading exercise type 1", zap.Int("id", id))
 	file, err := g.writeFileToDisk(ctx, solution)
 	if err != nil {
+		g.logger.Error("failed to write file to disk", zap.Error(err))
 		return 0, nil, err
 	}
 	defer func() {
 		file.Close()
 	}()
-	// TODO: Use Namespaces to run the code in a sandboxed environment
-
-	inputDir := filepath.Join("/exercises/", fmt.Sprintf("exercise%d", id))
+	inputDir := filepath.Join("/sandbox/exercises/", fmt.Sprintf("exercise%d", id))
 	files, err := os.ReadDir(inputDir)
 	if err != nil {
+		g.logger.Error("failed to read input directory", zap.String("dir", inputDir), zap.Error(err))
 		return 0, nil, err
 	}
 	ctx, cancel := context.WithDeadline(ctx, time.Now().Add(g.totalExecTimeout))
 	defer cancel()
 	for _, f := range files {
 		if !f.IsDir() {
-			inputFilePath := filepath.Join(inputDir, f.Name())
-			output, err := g.executeCommand(ctx, file.Name(), inputFilePath)
+			inputFilePath := filepath.Join(fmt.Sprintf("/exercises/exercise%d", id), f.Name())
+			output, err := g.executeCommand(ctx, "python3", []string{filepath.Join("/tmp", file.Name()), inputFilePath}...)
 			if err != nil {
 				g.logger.Error("failed to execute command", zap.String("command", file.Name()), zap.String("arg", inputFilePath), zap.Error(err), zap.Error(ctx.Err()))
 				return 0, nil, err
