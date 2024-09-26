@@ -15,6 +15,7 @@ import (
 
 func (a *API) updatePointsUser(_ context.Context, points int, user string) error {
 	a.logger.Info("updating points for user", zap.String("user", user), zap.Int("points", points))
+	// ToDO: Update points for user and add database connection / container
 	return nil
 }
 
