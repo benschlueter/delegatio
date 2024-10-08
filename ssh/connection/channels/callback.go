@@ -22,6 +22,7 @@ import (
 // callbackData is the data passed to the callbacks.
 type callbackData struct {
 	channel         ssh.Channel
+	cancel          context.CancelFunc
 	wg              *sync.WaitGroup
 	log             *zap.Logger
 	ptyReqData      *payload.PtyRequest
@@ -35,6 +36,7 @@ func (rd *callbackData) handleShell(ctx context.Context) {
 	rd.log.Info("handleShell", zap.Any("pty", rd.ptyReqData))
 
 	defer func() {
+		rd.cancel()
 		rd.wg.Done()
 	}()
 	// Fire up "kubectl exec" for this session
@@ -73,6 +75,7 @@ func (rd *callbackData) handleShell(ctx context.Context) {
 func (rd *callbackData) handleSubsystem(ctx context.Context, cmd string) {
 	rd.log.Info("handleSubsystem callback", zap.String("subsystem", cmd))
 	defer func() {
+		rd.cancel()
 		rd.wg.Done()
 	}()
 	subSysMap := map[string]string{
@@ -104,6 +107,7 @@ func (rd *callbackData) handlePortForward(ctx context.Context) {
 	rd.log.Info("handlePortForward callback", zap.Any("data", rd.directTCPIPData))
 
 	defer func() {
+		rd.cancel()
 		rd.wg.Done()
 	}()
 	forwardConf := config.KubeForwardConfig{
