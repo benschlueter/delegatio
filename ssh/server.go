@@ -117,7 +117,8 @@ func (s *Server) Start(ctx context.Context) {
 		},
 	}
 	// routine currently leaks
-	go s.periodicLogs(ctx)
+	periodicLogsDone := make(chan struct{})
+	go s.periodicLogs(ctx, periodicLogsDone)
 
 	private, err := ssh.ParsePrivateKey(s.privateKey)
 	if err != nil {
@@ -153,6 +154,8 @@ func (s *Server) Start(ctx context.Context) {
 	if err := listener.Close(); err != nil {
 		s.log.Error("failed to close listener", zap.Error(err))
 	}
+	s.log.Info("waiting for periodicLogs to stop")
+	<-periodicLogsDone
 	s.log.Info("waiting for all connections to terminate gracefully")
 	s.handleConnWG.Wait()
 	s.log.Info("closing program")
@@ -188,9 +191,12 @@ func (s *Server) validateAndProcessConnection(ctx context.Context, tcpConn net.C
 	sshConnHandler.HandleGlobalConnection(ctx)
 }
 
-func (s *Server) periodicLogs(ctx context.Context) {
+func (s *Server) periodicLogs(ctx context.Context, done chan<- struct{}) {
 	t := time.NewTicker(10 * time.Second)
-	defer t.Stop()
+	defer func() {
+		t.Stop()
+		done <- struct{}{}
+	}()
 	s.log.Debug("starting periodicLogs")
 	for {
 		select {
