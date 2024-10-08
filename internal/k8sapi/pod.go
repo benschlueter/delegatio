@@ -36,7 +36,7 @@ func (k *Client) GetPod(ctx context.Context, namespace, podName string) (*v1.Pod
 
 // WaitForPodRunning waits for a pod to be running.
 func (k *Client) WaitForPodRunning(ctx context.Context, namespace, podName string, timeout time.Duration) error {
-	return wait.PollWithContext(ctx, time.Second, timeout, isPodRunning(k.Client, podName, namespace))
+	return wait.PollUntilContextTimeout(ctx, time.Second, timeout, true, isPodRunning(k.Client, podName, namespace))
 }
 
 func isPodRunning(c kubernetes.Interface, podName, namespace string) wait.ConditionWithContextFunc {
