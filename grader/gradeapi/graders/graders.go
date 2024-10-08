@@ -60,6 +60,7 @@ func (g *Graders) executeCommand(ctx context.Context, fileName string, arg ...st
 	// I think this here fails without an error????
 	output, err := command.Output()
 	if err != nil {
+		g.logger.Error("failed to execute command", zap.Error(err))
 		return nil, err
 	}
 	return output, nil

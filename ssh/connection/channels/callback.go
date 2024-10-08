@@ -35,9 +35,6 @@ func (rd *callbackData) handleShell(ctx context.Context) {
 	rd.log.Info("handleShell", zap.Any("pty", rd.ptyReqData))
 
 	defer func() {
-		if err := rd.channel.Close(); err != nil {
-			rd.log.Error("failed to close channel", zap.Error(err))
-		}
 		rd.wg.Done()
 	}()
 	// Fire up "kubectl exec" for this session
@@ -76,9 +73,6 @@ func (rd *callbackData) handleShell(ctx context.Context) {
 func (rd *callbackData) handleSubsystem(ctx context.Context, cmd string) {
 	rd.log.Info("handleSubsystem callback", zap.String("subsystem", cmd))
 	defer func() {
-		if err := rd.channel.Close(); err != nil {
-			rd.log.Error("failed to close channel", zap.Error(err))
-		}
 		rd.wg.Done()
 	}()
 	subSysMap := map[string]string{
@@ -110,9 +104,6 @@ func (rd *callbackData) handlePortForward(ctx context.Context) {
 	rd.log.Info("handlePortForward callback", zap.Any("data", rd.directTCPIPData))
 
 	defer func() {
-		if err := rd.channel.Close(); err != nil {
-			rd.log.Error("failed to close channel", zap.Error(err))
-		}
 		rd.wg.Done()
 	}()
 	forwardConf := config.KubeForwardConfig{
