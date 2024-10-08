@@ -67,6 +67,7 @@ func (c *Handler) HandleGlobalConnection(ctx context.Context) {
 		)
 		return
 	}
+	// This has a huge delay on startup ~90s wonder why?
 	if err := c.writeFileToContainer(ctx, c.connection, c.K8sAPIUser); err != nil {
 		c.log.Error("writing file to container", zap.Error(err))
 		return
