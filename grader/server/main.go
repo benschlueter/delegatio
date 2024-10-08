@@ -75,7 +75,11 @@ func main() {
 			zapLogger.Error("setuid error", zap.Error(err))
 			return
 		}
-		cmd := exec.Command(args[0], args[1:]...)
+		/* 		if err := syscall.Exec(args[0], args[0:], os.Environ()); err != nil {
+			fmt.Println("exec error: ", err)
+		} */
+
+		cmd := exec.Command(args[0], args[0:]...)
 		cmd.Stdout = os.Stdout
 		cmd.Stderr = os.Stderr
 		cmd.Stdin = os.Stdin
