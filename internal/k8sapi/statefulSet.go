@@ -56,16 +56,17 @@ func (k *Client) CreateUserRessources(ctx context.Context, identifier *config.Ku
 
 // WaitForStatefulSet waits for a statefulSet to be active.
 func (k *Client) WaitForStatefulSet(ctx context.Context, namespace, statefulSetName string, timeout time.Duration) error {
-	return wait.PollImmediate(time.Second, timeout, isStatefulSetActive(ctx, k.Client, statefulSetName, namespace))
+	return wait.PollUntilContextTimeout(ctx, time.Second, timeout, true, isStatefulSetActive(k.Client, statefulSetName, namespace))
+	// return wait.PollImmediate(time.Second, timeout, isStatefulSetActive(ctx, k.Client, statefulSetName, namespace))
 }
 
 // UserRessourcesExist checks if the statefulset exists.
 func (k *Client) UserRessourcesExist(ctx context.Context, namespace, statefulSetName string) (bool, error) {
-	return isStatefulSetActive(ctx, k.Client, statefulSetName, namespace)()
+	return isStatefulSetActive(k.Client, statefulSetName, namespace)(ctx)
 }
 
-func isStatefulSetActive(ctx context.Context, c kubernetes.Interface, statefulSetName, namespace string) wait.ConditionFunc {
-	return func() (bool, error) {
+func isStatefulSetActive(c kubernetes.Interface, statefulSetName, namespace string) wait.ConditionWithContextFunc {
+	return func(ctx context.Context) (bool, error) {
 		_, err := c.AppsV1().StatefulSets(namespace).Get(ctx, fmt.Sprintf("%s-statefulset", statefulSetName), metaAPI.GetOptions{})
 		if errors.IsNotFound(err) {
 			return false, nil
