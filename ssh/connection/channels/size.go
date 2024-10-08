@@ -60,6 +60,6 @@ func (w *TerminalSizeHandler) Close() {
 var (
 	// ErrQueueFull is returned when the queue is full.
 	ErrQueueFull = errors.New("winsize: queue is full")
-	// ErrQueueClosed is returned when a channel is full.
+	// ErrQueueClosed is returned when a channel is closed.
 	ErrQueueClosed = errors.New("chan is closed, cannot append data")
 )

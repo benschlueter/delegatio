@@ -20,6 +20,9 @@ type Channel interface {
 // Serve starts the server. It will block until the context is canceled or s.requests is closed.
 func (h *Handler) Serve(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
+	// if one of the callbacks cancels the context, we want to stop the server
+	// this will cancel all callbacks and wait for each of them to finish
+	h.reqData.cancel = cancel
 	defer func() {
 		cancel()
 		h.reqData.wg.Wait()
