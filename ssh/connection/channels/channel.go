@@ -23,6 +23,9 @@ func (h *Handler) Serve(ctx context.Context) {
 	defer func() {
 		cancel()
 		h.reqData.wg.Wait()
+		if err := h.reqData.channel.Close(); err != nil {
+			h.log.Error("failed to close channel", zap.Error(err))
+		}
 		h.log.Debug("stopped channel serve")
 		h.serveCloseDone <- struct{}{}
 	}()
