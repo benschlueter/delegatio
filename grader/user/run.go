@@ -17,6 +17,7 @@ import (
 
 var version = "0.0.0"
 
+// Not really clean, giving the gradeapi nil here (should be done differently)
 func run(dialer gradeapi.Dialer, zapLoggerCore *zap.Logger) {
 	defer func() { _ = zapLoggerCore.Sync() }()
 	zapLoggerCore.Info("starting delegatio agent", zap.String("version", version), zap.String("commit", config.Commit))
@@ -25,7 +26,7 @@ func run(dialer gradeapi.Dialer, zapLoggerCore *zap.Logger) {
 		zapLoggerCore.Fatal("usage: delegatio-agent <solution file>")
 	}
 
-	api, err := gradeapi.New(zapLoggerCore, dialer, nil)
+	api, err := gradeapi.New(zapLoggerCore, dialer)
 	if err != nil {
 		zapLoggerCore.Fatal("failed to create gradeapi", zap.Error(err))
 	}

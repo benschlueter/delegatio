@@ -9,7 +9,6 @@ import (
 	"fmt"
 	"log"
 	"net"
-	"os"
 	"os/exec"
 	"syscall"
 
@@ -47,6 +46,8 @@ func main() {
 	dialer := &net.Dialer{}
 
 	if *selfExec {
+		// zaplogger prints are not visible in the final output but fmt.XXX are
+		fmt.Println("EXECUTING STUFF NOW 1.0: ")
 		zapLogger.Debug("self-execution enabled with args", zap.Strings("args", args))
 		if err := syscall.Chroot(config.SandboxPath); err != nil {
 			zapLogger.Error("chroot error", zap.Error(err))
@@ -56,13 +57,21 @@ func main() {
 			zapLogger.Error("chdir error", zap.Error(err))
 			return
 		}
-		/* 	if err := syscall.Mount("proc", "/proc", "proc", 0, ""); err != nil {
+		if err := syscall.Mount("proc", "/proc", "proc", 0, ""); err != nil {
+			fmt.Println("proc", err)
 			zapLogger.Error("proc mount error", zap.Error(err))
 			return
 		}
-		defer func() {
-			_ = syscall.Unmount("proc", 0)
-		}() */
+		if err := syscall.Mount("sys", "/sys", "sysfs", 0, ""); err != nil {
+			fmt.Println("sys", err)
+			zapLogger.Error("sys mount error", zap.Error(err))
+			return
+		}
+		if err := syscall.Mount("devpts", "/dev/pts", "devpts", 0, ""); err != nil {
+			fmt.Println("devpts", err)
+			zapLogger.Error("devpts mount error", zap.Error(err))
+			return
+		}
 		if err := syscall.Setgid(userID); err != nil {
 			zapLogger.Error("setgid error", zap.Error(err))
 			return
@@ -78,15 +87,16 @@ func main() {
 		/* 		if err := syscall.Exec(args[0], args[0:], os.Environ()); err != nil {
 			fmt.Println("exec error: ", err)
 		} */
-
-		cmd := exec.Command(args[0], args[0:]...)
-		cmd.Stdout = os.Stdout
-		cmd.Stderr = os.Stderr
-		cmd.Stdin = os.Stdin
-		if err := cmd.Run(); err != nil {
+		fmt.Println("EXECUTING Command")
+		cmd := exec.Command(args[0], args[1:]...)
+		// cmd.Run() with stdout and stderr attached does somehow not work
+		output, err := cmd.Output()
+		if err != nil {
+			fmt.Printf("EXECUTING STUFF NOW 7.0: %v | %s\n", err, string(output))
 			zapLogger.Error("exec error", zap.Error(err))
 			return
 		}
+		fmt.Println(output)
 		return
 	}
 	run(dialer, bindIP, bindPort, zapLoggerCore)

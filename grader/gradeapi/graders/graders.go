@@ -6,8 +6,6 @@ package graders
 
 import (
 	"context"
-	"crypto/sha256"
-	"encoding/base64"
 	"fmt"
 	"os"
 	"os/exec"
@@ -25,14 +23,16 @@ import (
 // of the graders. Currently we do not need any state.
 type Graders struct {
 	logger            *zap.Logger
+	studentID         string
 	singleExecTimeout time.Duration
 	totalExecTimeout  time.Duration
 }
 
 // NewGraders creates and initializes a new Graders object.
-func NewGraders(zapLogger *zap.Logger) (*Graders, error) {
+func NewGraders(zapLogger *zap.Logger, studentID string) (*Graders, error) {
 	c := &Graders{
 		logger:            zapLogger,
+		studentID:         studentID,
 		singleExecTimeout: time.Second,
 		totalExecTimeout:  15 * time.Second,
 	}
@@ -67,9 +67,10 @@ func (g *Graders) executeCommand(ctx context.Context, fileName string, arg ...st
 }
 
 func (g *Graders) writeFileToDisk(_ context.Context, solution []byte) (*os.File, error) {
-	sha256sum := sha256.Sum256(solution)
-	sha256sumString := base64.StdEncoding.EncodeToString(sha256sum[:])
-	f, err := os.CreateTemp(filepath.Join(config.SandboxPath, "tmp"), fmt.Sprintf("solution-%s-", sha256sumString))
+	f, err := os.CreateTemp(
+		filepath.Join(config.SandboxPath, "tmp"),
+		fmt.Sprintf("solution-%s-%v", g.studentID, "now" /*time.Now().Format(time.RFC822)*/),
+	)
 	if err != nil {
 		g.logger.Error("failed to create content file", zap.Error(err))
 		return nil, status.Error(codes.Internal, "failed to create content file")

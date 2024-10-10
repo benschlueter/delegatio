@@ -18,10 +18,11 @@ RUN pacman -Syy
 RUN pacman -S --noconfirm python rsync
 RUN mkdir -p /sandbox/tmp
 RUN rsync -av / /sandbox --exclude sandbox --exclude sys --exclude proc --exclude dev --exclude run --exclude tmp
+RUN mkdir -p /sandbox/dev
+RUN mkdir -p /sandbox/proc
+RUN mkdir -p /sandbox/sys
 
 COPY --from=0 /exercises /sandbox/exercises
 COPY --from=0 /delegatio/grader/server/grader /delegatio/grader/server/grader
 
 CMD /delegatio/grader/server/grader
-
-
