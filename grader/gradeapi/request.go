@@ -8,6 +8,7 @@ import (
 	"context"
 
 	"github.com/benschlueter/delegatio/grader/gradeapi/gradeproto"
+	"github.com/benschlueter/delegatio/grader/gradeapi/graders"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -39,11 +40,17 @@ func (a *API) RequestGrading(ctx context.Context, in *gradeproto.RequestGradingR
 			return nil, status.Error(codes.Unauthenticated, "nonce check failed")
 		}
 	}
+	toImplementName := "bschlueter"
+
+	grader, err := graders.NewGraders(a.logger.Named(toImplementName), toImplementName)
+	if err != nil {
+		a.logger.Error("failed to create graders", zap.Error(err))
+	}
 
 	switch id := in.GetId(); id {
 	case 1:
 		a.logger.Info("received grading request for id 1")
-		points, log, err = a.grader.GradeExerciseType1(ctx, in.GetSolution(), 1)
+		points, log, err = grader.GradeExerciseType1(ctx, in.GetSolution(), 1)
 		if err != nil {
 			return nil, status.Error(codes.InvalidArgument, "failed to grade exercise one")
 		}
@@ -51,7 +58,7 @@ func (a *API) RequestGrading(ctx context.Context, in *gradeproto.RequestGradingR
 		a.logger.Info("received grading request for id 2")
 	}
 
-	if err := a.updatePointsUser(ctx, points, "bschlueter"); err != nil {
+	if err := a.updatePointsUser(ctx, points, toImplementName); err != nil {
 		return nil, status.Error(codes.Internal, "failed to update points")
 	}
 
