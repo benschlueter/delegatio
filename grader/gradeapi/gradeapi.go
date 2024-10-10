@@ -22,16 +22,14 @@ import (
 type API struct {
 	logger *zap.Logger
 	dialer Dialer
-	grader Graders
 	gradeproto.UnimplementedAPIServer
 }
 
 // New creates a new API.
-func New(logger *zap.Logger, dialer Dialer, grader Graders) (*API, error) {
+func New(logger *zap.Logger, dialer Dialer) (*API, error) {
 	return &API{
 		logger: logger,
 		dialer: dialer,
-		grader: grader,
 	}, nil
 }
 

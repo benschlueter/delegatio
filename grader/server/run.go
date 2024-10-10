@@ -7,17 +7,19 @@
 package main
 
 import (
+	"fmt"
 	"net"
 	"sync"
+	"syscall"
 
 	"github.com/benschlueter/delegatio/grader/gradeapi"
 	"github.com/benschlueter/delegatio/grader/gradeapi/gradeproto"
-	"github.com/benschlueter/delegatio/grader/gradeapi/graders"
 	"github.com/benschlueter/delegatio/internal/config"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"go.uber.org/zap"
+	"golang.org/x/sys/unix"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 )
@@ -27,11 +29,7 @@ var version = "0.0.0"
 func run(dialer gradeapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger) {
 	defer func() { _ = zapLoggerCore.Sync() }()
 	zapLoggerCore.Info("starting delegatio grader", zap.String("version", version), zap.String("commit", config.Commit))
-	grader, err := graders.NewGraders(zapLoggerCore.Named("graders"))
-	if err != nil {
-		zapLoggerCore.Fatal("failed to create graders", zap.Error(err))
-	}
-	gapi, err := gradeapi.New(zapLoggerCore.Named("gradeapi"), dialer, grader)
+	gapi, err := gradeapi.New(zapLoggerCore.Named("gradeapi"), dialer)
 	if err != nil {
 		zapLoggerCore.Fatal("failed to create gradeapi", zap.Error(err))
 	}
@@ -57,6 +55,10 @@ func run(dialer gradeapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Log
 	}
 	zapLoggergRPC.Info("server listener created", zap.String("address", lis.Addr().String()))
 
+	if err := setupDevMount(zapLoggerCore); err != nil {
+		zapLoggerCore.Fatal("failed to setup dev mount", zap.Error(err))
+	}
+
 	var wg sync.WaitGroup
 	defer wg.Wait()
 	wg.Add(1)
@@ -66,4 +68,14 @@ func run(dialer gradeapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Log
 			zapLoggergRPC.Fatal("failed to serve gRPC", zap.Error(err))
 		}
 	}()
+}
+
+func setupDevMount(zapLogger *zap.Logger) error {
+	// Mount the /tmp directory
+	flags := uintptr(unix.MS_BIND | unix.MS_REC)
+	if err := syscall.Mount("/dev", fmt.Sprintf("%s/dev", config.SandboxPath), "devtmpfs", flags, ""); err != nil {
+		zapLogger.Error("dev mount error", zap.Error(err))
+		return err
+	}
+	return nil
 }

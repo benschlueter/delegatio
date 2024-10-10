@@ -24,10 +24,12 @@ func (a *API) WriteFile(_ context.Context, in *vmproto.WriteFileRequest) (*vmpro
 			return nil, status.Errorf(codes.Internal, "directory creation failed exited with error code: %v", err)
 		}
 	}
+	a.logger.Debug("about to write file to disk", zap.String("path", in.Filepath), zap.String("name", in.Filename))
 	if err := os.WriteFile(filepath.Join(in.Filepath, in.Filename), in.Content, os.ModeAppend); err != nil {
 		a.logger.Error("failed to write file", zap.String("path", in.Filepath), zap.String("name", in.Filename), zap.Error(err))
 		return nil, status.Errorf(codes.Internal, "file write failed exited with error code: %v", err)
 	}
+	a.logger.Debug("wrote content to disk", zap.String("path", in.Filepath), zap.String("name", in.Filename))
 	return &vmproto.WriteFileResponse{}, nil
 }
 
