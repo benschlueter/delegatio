@@ -44,9 +44,9 @@ func (g *Graders) GradeExerciseType1(ctx context.Context, solution []byte, id in
 	for _, f := range files {
 		if !f.IsDir() {
 			inputFilePath := filepath.Join(fmt.Sprintf("/exercises/exercise%d", id), f.Name())
-			output, err := g.executeCommand(ctx, "/usr/bin/python3", []string{filepath.Join("/tmp", file.Name()), inputFilePath}...)
+			output, err := g.executeCommand(ctx, "/usr/bin/python3", []string{filepath.Join("/tmp", filepath.Base(file.Name())), inputFilePath}...)
 			if err != nil {
-				g.logger.Error("failed to execute command", zap.String("command", file.Name()), zap.String("arg", inputFilePath), zap.Error(err), zap.Error(ctx.Err()))
+				g.logger.Error("failed to execute command", zap.String("command", filepath.Base(file.Name())), zap.String("arg", inputFilePath), zap.Error(err), zap.Error(ctx.Err()))
 				return 0, nil, err
 			}
 			if !strings.Contains(string(output), f.Name()[:len(f.Name())-4]) {

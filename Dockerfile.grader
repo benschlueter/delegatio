@@ -21,6 +21,7 @@ RUN rsync -av / /sandbox --exclude sandbox --exclude sys --exclude proc --exclud
 RUN mkdir -p /sandbox/dev
 RUN mkdir -p /sandbox/proc
 RUN mkdir -p /sandbox/sys
+RUN mkdir -p /sandbox/tmp
 
 COPY --from=0 /exercises /sandbox/exercises
 COPY --from=0 /delegatio/grader/server/grader /delegatio/grader/server/grader

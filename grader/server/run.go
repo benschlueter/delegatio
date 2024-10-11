@@ -8,7 +8,11 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"net"
+	"os"
+	"os/exec"
+	"os/signal"
 	"sync"
 	"syscall"
 
@@ -31,7 +35,7 @@ func run(dialer gradeapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Log
 	zapLoggerCore.Info("starting delegatio grader", zap.String("version", version), zap.String("commit", config.Commit))
 	gapi, err := gradeapi.New(zapLoggerCore.Named("gradeapi"), dialer)
 	if err != nil {
-		zapLoggerCore.Fatal("failed to create gradeapi", zap.Error(err))
+		zapLoggerCore.Fatal("create gradeapi", zap.Error(err))
 	}
 
 	zapLoggergRPC := zapLoggerCore.Named("gRPC")
@@ -51,13 +55,15 @@ func run(dialer gradeapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Log
 
 	lis, err := net.Listen("tcp", net.JoinHostPort(bindIP, bindPort))
 	if err != nil {
-		zapLoggergRPC.Fatal("failed to create listener", zap.Error(err))
+		zapLoggergRPC.Fatal("create listener", zap.Error(err))
 	}
 	zapLoggergRPC.Info("server listener created", zap.String("address", lis.Addr().String()))
 
 	if err := setupDevMount(zapLoggerCore); err != nil {
-		zapLoggerCore.Fatal("failed to setup dev mount", zap.Error(err))
+		zapLoggerCore.Fatal("setup dev mount", zap.Error(err))
 	}
+	done := make(chan struct{})
+	go registerSignalHandler(done, zapLoggerCore)
 
 	var wg sync.WaitGroup
 	defer wg.Wait()
@@ -65,9 +71,63 @@ func run(dialer gradeapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Log
 	go func() {
 		defer wg.Done()
 		if err := grpcServer.Serve(lis); err != nil {
-			zapLoggergRPC.Fatal("failed to serve gRPC", zap.Error(err))
+			zapLoggergRPC.Fatal("serve gRPC", zap.Error(err))
 		}
 	}()
+	<-done
+	if err := setupDevUmount(zapLoggerCore); err != nil {
+		zapLoggerCore.Fatal("umount dev", zap.Error(err))
+	}
+}
+
+func runSelfExec(args []string, userID int) {
+	// zaplogger prints are not visible in the final output but fmt.XXX are
+	// maybe because zaplogger had to deal with different stdout?
+	if err := syscall.Chroot(config.SandboxPath); err != nil {
+		log.Fatalf("chroot: %v", zap.Error(err))
+		return
+	}
+	if err := syscall.Mount("proc", "/proc", "proc", 0, ""); err != nil {
+		log.Fatalf("proc mount: %v", zap.Error(err))
+		return
+	}
+	defer func() {
+		_ = syscall.Unmount("/proc", 0)
+	}()
+	if err := syscall.Mount("sys", "/sys", "sysfs", 0, ""); err != nil {
+		log.Fatalf("sys mount: %v", zap.Error(err))
+		return
+	}
+	defer func() {
+		_ = syscall.Unmount("/sys", 0)
+	}()
+	if err := syscall.Mount("devpts", "/dev/pts", "devpts", 0, ""); err != nil {
+		log.Fatalf("devpts mount: %v", zap.Error(err))
+		return
+	}
+	defer func() {
+		_ = syscall.Unmount("/dev/pts", 0)
+	}()
+	if err := syscall.Setgid(userID); err != nil {
+		log.Fatalf("setgid: %v", zap.Error(err))
+		return
+	}
+	if err := syscall.Setgroups([]int{userID}); err != nil {
+		log.Fatalf("setgroups: %v", zap.Error(err))
+		return
+	}
+	if err := syscall.Setuid(userID); err != nil {
+		log.Fatalf("setuid: %v", zap.Error(err))
+		return
+	}
+	cmd := exec.Command(args[0], args[1:]...)
+	output, err := cmd.Output()
+	if err != nil {
+		log.Fatalf("exec: %v", zap.Error(err))
+		return
+	}
+	fmt.Println(string(output))
+	return
 }
 
 func setupDevMount(zapLogger *zap.Logger) error {
@@ -77,5 +137,34 @@ func setupDevMount(zapLogger *zap.Logger) error {
 		zapLogger.Error("dev mount error", zap.Error(err))
 		return err
 	}
+	if err := syscall.Mount("/tmp", fmt.Sprintf("%s/tmp", config.SandboxPath), "tmpfs", flags, ""); err != nil {
+		zapLogger.Error("tmp mount error", zap.Error(err))
+		return err
+	}
 	return nil
+}
+
+func setupDevUmount(zapLogger *zap.Logger) error {
+	// Mount the /tmp directory
+	if err := syscall.Unmount(fmt.Sprintf("%s/dev", config.SandboxPath), 0); err != nil {
+		zapLogger.Error("dev mount error", zap.Error(err))
+		return err
+	}
+	if err := syscall.Unmount(fmt.Sprintf("%s/tmp", config.SandboxPath), 0); err != nil {
+		zapLogger.Error("tmp mount error", zap.Error(err))
+		return err
+	}
+	return nil
+}
+
+func registerSignalHandler(done chan<- struct{}, log *zap.Logger) {
+	sigs := make(chan os.Signal, 1)
+	signal.Notify(sigs, syscall.SIGINT, syscall.SIGTERM)
+
+	<-sigs
+
+	log.Info("cancellation signal received")
+	signal.Stop(sigs)
+	close(sigs)
+	done <- struct{}{}
 }
