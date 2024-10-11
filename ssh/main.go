@@ -59,6 +59,7 @@ func main() {
 	done := make(chan struct{})
 	go registerSignalHandler(cancel, done, logger)
 	server.Start(ctx)
+	<-done
 }
 
 func registerSignalHandler(cancelContext context.CancelFunc, done chan<- struct{}, log *zap.Logger) {
