@@ -10,10 +10,11 @@ service API {
 }
 
 message RequestGradingRequest {
-    int32 id = 1;
-    string nonce = 2;
+    int32 exerciseId = 1;
+    string studentId = 2;
     bytes solution = 3;
-    bool submit = 4;
+    bytes signature = 4;
+    bool submit = 5;
 }
 
 message RequestGradingResponse {

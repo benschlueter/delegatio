@@ -6,11 +6,8 @@ package kubernetes
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
-	"os"
-	"strings"
 	"time"
 
 	"github.com/benschlueter/delegatio/agent/core"
@@ -124,55 +121,5 @@ func (k *K8sAPIWrapper) CreatePodPortForward(ctx context.Context, conf *config.K
 
 // GetStore returns a store backed by kube etcd. Its only supposed to used within a kubernetes pod.
 func (k *K8sAPIWrapper) GetStore() (store.Store, error) {
-	var err error
-	var ns string
-	if _, err := os.Stat(config.NameSpaceFilePath); errors.Is(err, os.ErrNotExist) {
-		// ns is not ready when container spawns
-		ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
-		defer cancel()
-		ns, err = waitForNamespaceMount(ctx)
-		if err != nil {
-			k.logger.Error("failed to get namespace after timeout", zap.Error(err))
-			return nil, err
-		}
-	} else {
-		// out of cluster mode currently assumes 'ssh' namespace
-		if content, err := os.ReadFile(config.NameSpaceFilePath); err == nil {
-			ns = strings.TrimSpace(string(content))
-		} else {
-			return nil, err
-		}
-	}
-	k.logger.Info("namespace", zap.String("namespace", ns))
-	configData, err := k.Client.GetConfigMapData(context.Background(), ns, "etcd-credentials")
-	if err != nil {
-		return nil, err
-	}
-	// logger.Info("config", zap.Any("configData", configData))
-	etcdStore, err := store.NewEtcdStore([]string{net.JoinHostPort(configData["advertiseAddr"], "2379")}, k.logger, []byte(configData["caCert"]), []byte(configData["cert"]), []byte(configData["key"]))
-	if err != nil {
-		return nil, err
-	}
-	return etcdStore, nil
-}
-
-// waitForNamespaceMount waits for the namespace file to be mounted and filled.
-func waitForNamespaceMount(ctx context.Context) (string, error) {
-	t := time.NewTicker(100 * time.Millisecond)
-	defer t.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return "", ctx.Err()
-		case <-t.C:
-			data, err := os.ReadFile("/var/run/secrets/kubernetes.io/serviceaccount/namespace")
-			if err != nil && !errors.Is(err, os.ErrNotExist) {
-				return "", err
-			}
-			ns := strings.TrimSpace(string(data))
-			if len(ns) != 0 {
-				return ns, nil
-			}
-		}
-	}
+	return k.Client.GetStore()
 }
