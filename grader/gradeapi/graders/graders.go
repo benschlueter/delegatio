@@ -23,7 +23,7 @@ import (
 // of the graders. Currently we do not need any state.
 type Graders struct {
 	logger            *zap.Logger
-	studentID         string
+	UUID              string
 	singleExecTimeout time.Duration
 	totalExecTimeout  time.Duration
 }
@@ -32,7 +32,7 @@ type Graders struct {
 func NewGraders(zapLogger *zap.Logger, studentID string) (*Graders, error) {
 	c := &Graders{
 		logger:            zapLogger,
-		studentID:         studentID,
+		UUID:              studentID,
 		singleExecTimeout: time.Second,
 		totalExecTimeout:  15 * time.Second,
 	}
@@ -69,7 +69,7 @@ func (g *Graders) executeCommand(ctx context.Context, fileName string, arg ...st
 func (g *Graders) writeFileToDisk(_ context.Context, solution []byte) (*os.File, error) {
 	f, err := os.CreateTemp(
 		filepath.Join(config.SandboxPath, "tmp"),
-		fmt.Sprintf("solution-%s-%v", g.studentID, "now" /*time.Now().Format(time.RFC822)*/),
+		fmt.Sprintf("solution-%s-%v", g.UUID, "now" /*time.Now().Format(time.RFC822)*/),
 	)
 	if err != nil {
 		g.logger.Error("failed to create content file", zap.Error(err))

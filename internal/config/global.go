@@ -72,6 +72,8 @@ const (
 	NameSpaceFilePath = "/var/run/secrets/kubernetes.io/serviceaccount/namespace"
 	// SandboxPath is the path to the sandbox directory.
 	SandboxPath = "/sandbox"
+	// UUIDEnvVariable is the environment variable name of the uuid of the user.
+	UUIDEnvVariable = "GraderUUID"
 )
 
 // GetExampleConfig writes an example config to config.json.

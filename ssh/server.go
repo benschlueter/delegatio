@@ -62,7 +62,7 @@ func (s *Server) Start(ctx context.Context) {
 			encodeKey := base64.StdEncoding.EncodeToString(key.Marshal())
 			s.log.Debug("publickeycallback called", zap.String("user", conn.User()), zap.Binary("session", conn.SessionID()), zap.String("key", encodeKey))
 
-			err := s.data().GetPublicKeyData(string(ssh.MarshalAuthorizedKey(key)), &userData)
+			err := s.data().GetPublicKeyData(string(key.Marshal()), &userData)
 			if err != nil {
 				s.log.Error("failed to obtain user data", zap.Error(err))
 				return nil, fmt.Errorf("failed to obtain user data: %w", err)
@@ -102,6 +102,9 @@ func (s *Server) Start(ctx context.Context) {
 					return nil, fmt.Errorf("failed to put data into store: %w", err)
 				}
 				s.log.Debug("public key created and stored", zap.String("key", string(userData.PubKey)))
+			}
+			if err := s.data().GetUUIDData(userData.UUID, userData); err != nil {
+				return nil, fmt.Errorf("getting user data: %w", err)
 			}
 			s.log.Debug("private key", zap.String("key", string(userData.PrivKey)))
 			return &ssh.Permissions{

@@ -25,5 +25,5 @@ func CreateSSHKeypair() ([]byte, []byte, error) {
 	if err != nil {
 		return nil, nil, err
 	}
-	return privKeyMem, ssh.MarshalAuthorizedKey(pub), nil
+	return privKeyMem, pub.Marshal(), nil
 }

@@ -27,6 +27,10 @@ func Pod(identifier *config.KubeRessourceIdentifier) *coreAPI.PodSpec {
 							},
 						},
 					},
+					{
+						Name:  config.UUIDEnvVariable,
+						Value: identifier.UserIdentifier,
+					},
 				},
 				/* 				Resources: coreAPI.ResourceRequirements{
 					Limits: coreAPI.ResourceList{

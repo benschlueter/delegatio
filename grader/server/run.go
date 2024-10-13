@@ -33,7 +33,7 @@ var version = "0.0.0"
 func run(dialer gradeapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger) {
 	defer func() { _ = zapLoggerCore.Sync() }()
 	zapLoggerCore.Info("starting delegatio grader", zap.String("version", version), zap.String("commit", config.Commit))
-	gapi, err := gradeapi.New(zapLoggerCore.Named("gradeapi"), dialer)
+	gapi, err := gradeapi.New(zapLoggerCore.Named("gradeapi"), dialer, true)
 	if err != nil {
 		zapLoggerCore.Fatal("create gradeapi", zap.Error(err))
 	}
