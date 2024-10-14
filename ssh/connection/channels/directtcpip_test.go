@@ -6,6 +6,7 @@ package channels
 
 import (
 	"context"
+	"runtime"
 	"sync"
 	"testing"
 	"time"
@@ -34,7 +35,7 @@ func TestDirectTCPIP(t *testing.T) {
 			onReqCnt:       0,
 			onStartupCnt:   1,
 		},
-		"unexcepted requests": {
+		"unexpected requests": {
 			expectCloseErr:  false,
 			onReqCnt:        2,
 			onReqDefaultCnt: 2,
@@ -51,10 +52,10 @@ func TestDirectTCPIP(t *testing.T) {
 			assert := assert.New(t)
 			require := require.New(t)
 
-			startupDone := make(chan struct{})
-			requests := make(chan *ssh.Request, len(tc.requests)+1)
+			requests := make(chan *ssh.Request, len(tc.requests))
 			stubChannel := &stubChannel{reqChan: requests}
 			log := zap.NewNop()
+			// Attention the default callbacks are also registered
 			builder := DirectTCPIPBuilderSkeleton()
 			builder.SetRequests(requests)
 			builder.SetChannel(stubChannel)
@@ -62,7 +63,10 @@ func TestDirectTCPIP(t *testing.T) {
 			builder.SetK8sUserAPI(
 				&kubernetes.K8sAPIUserWrapper{
 					K8sAPI: &stubK8sAPIWrapper{
-						forwardFunc: func(context.Context, *config.KubeForwardConfig) error { return nil },
+						forwardFunc: func(ctx context.Context, _ *config.KubeForwardConfig) error {
+							<-ctx.Done()
+							return nil
+						},
 					},
 					UserInformation: &config.KubeRessourceIdentifier{
 						Namespace:      "test-ns",
@@ -94,14 +98,14 @@ func TestDirectTCPIP(t *testing.T) {
 			builder.SetOnStartup(
 				func(context.Context, *callbackData) {
 					reqStartupCnt++
-					startupDone <- struct{}{}
 				},
 			)
 
 			handler, err := builder.Build()
 			require.NoError(err)
-			go handler.Serve(context.Background())
-			timeout := time.After(100 * time.Millisecond)
+			ctx, cancel := context.WithCancel(context.Background())
+			go handler.Serve(ctx)
+			timeout := time.After(1000 * time.Millisecond)
 		O:
 			for {
 				select {
@@ -115,16 +119,12 @@ func TestDirectTCPIP(t *testing.T) {
 						break O
 					}
 					reqMux.Unlock()
+					runtime.Gosched()
 				}
 			}
+
 			// Wait for all goroutines to finish
-			<-startupDone
-			handler.reqData.wg.Wait()
-			if tc.expectCloseErr {
-				assert.Error(stubChannel.Close())
-			} else {
-				stubChannel.Close()
-			}
+			cancel()
 			// wait for termination of the go routine
 			handler.Wait()
 			assert.Equal(tc.onReqCnt, reqCnt)

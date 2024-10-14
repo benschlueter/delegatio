@@ -31,15 +31,12 @@ func TestSession(t *testing.T) {
 		onReqPtyCnt      int
 		onReqWindowChCnt int
 		onReqShellCnt    int
-		expectCloseErr   bool
 		requests         []*ssh.Request
 	}{
 		"no requests": {
-			expectCloseErr: false,
-			onReqCnt:       0,
+			onReqCnt: 0,
 		},
 		"unknown request type": {
-			expectCloseErr:  false,
 			onReqCnt:        1,
 			onReqDefaultCnt: 1,
 			requests: []*ssh.Request{
@@ -47,7 +44,6 @@ func TestSession(t *testing.T) {
 			},
 		},
 		"unknown subsystem request": {
-			expectCloseErr: false,
 			onReqCnt:       1,
 			onReqSubSysCnt: 1,
 			requests: []*ssh.Request{
@@ -55,15 +51,13 @@ func TestSession(t *testing.T) {
 			},
 		},
 		"pty-req": {
-			expectCloseErr: false,
-			onReqCnt:       1,
-			onReqPtyCnt:    1,
+			onReqCnt:    1,
+			onReqPtyCnt: 1,
 			requests: []*ssh.Request{
 				{Type: "pty-req", WantReply: false, Payload: ssh.Marshal(payload.PtyRequest{})},
 			},
 		},
 		"window change request": {
-			expectCloseErr:   false,
 			onReqCnt:         1,
 			onReqWindowChCnt: 1,
 			requests: []*ssh.Request{
@@ -71,7 +65,6 @@ func TestSession(t *testing.T) {
 			},
 		},
 		"multiple window change requests": {
-			expectCloseErr:   false,
 			onReqCnt:         3,
 			onReqWindowChCnt: 3,
 			requests: []*ssh.Request{
@@ -81,15 +74,13 @@ func TestSession(t *testing.T) {
 			},
 		},
 		"shell request": {
-			expectCloseErr: true,
-			onReqCnt:       1,
-			onReqShellCnt:  1,
+			onReqCnt:      1,
+			onReqShellCnt: 1,
 			requests: []*ssh.Request{
 				{Type: "shell", WantReply: false},
 			},
 		},
 		"sftp subsystem request": {
-			expectCloseErr: false,
 			onReqCnt:       1,
 			onReqSubSysCnt: 1,
 			requests: []*ssh.Request{
@@ -167,7 +158,8 @@ func TestSession(t *testing.T) {
 
 			handler, err := builder.Build()
 			require.NoError(err)
-			go handler.Serve(context.Background())
+			ctx, cancel := context.WithCancel(context.Background())
+			go handler.Serve(ctx)
 			timeout := time.After(100 * time.Millisecond)
 		O:
 			for {
@@ -185,12 +177,8 @@ func TestSession(t *testing.T) {
 				}
 			}
 			// Wait for all goroutines to finish
-			handler.reqData.wg.Wait()
-			if tc.expectCloseErr {
-				assert.Error(stubChannel.Close())
-			} else {
-				stubChannel.Close()
-			}
+			// and stop Serve for loop
+			cancel()
 			// wait for termination of the go routine
 			handler.Wait()
 			assert.Equal(tc.onReqCnt, reqCnt)

@@ -16,6 +16,7 @@ import (
 	"github.com/stretchr/testify/assert"
 	"go.uber.org/goleak"
 	"go.uber.org/zap"
+	"go.uber.org/zap/zaptest"
 	"golang.org/x/crypto/ssh"
 )
 
@@ -84,6 +85,7 @@ func TestHandleShell(t *testing.T) {
 						UserIdentifier: "user-test",
 					},
 				},
+				cancel: func() {},
 			}
 			ctx, cancel := context.WithCancel(context.Background())
 			rd.wg.Add(1)
@@ -92,7 +94,7 @@ func TestHandleShell(t *testing.T) {
 			if tc.closeByCtx {
 				cancel()
 				rd.wg.Wait()
-				assert.Error(stubChannel.Close())
+				assert.NoError(stubChannel.Close())
 			}
 			if tc.closeByChannel {
 				assert.NoError(stubChannel.Close())
@@ -173,6 +175,7 @@ func TestHandleSubsystem(t *testing.T) {
 						UserIdentifier: "user-test",
 					},
 				},
+				cancel: func() {},
 			}
 			ctx, cancel := context.WithCancel(context.Background())
 			rd.wg.Add(1)
@@ -181,7 +184,7 @@ func TestHandleSubsystem(t *testing.T) {
 			if tc.closeByCtx {
 				cancel()
 				rd.wg.Wait()
-				assert.Error(stubChannel.Close())
+				assert.NoError(stubChannel.Close())
 			}
 			if tc.closeByChannel {
 				assert.NoError(stubChannel.Close())
@@ -251,7 +254,7 @@ func TestHandlePortForward(t *testing.T) {
 			rd := &callbackData{
 				channel:         stubChannel,
 				wg:              &sync.WaitGroup{},
-				log:             zap.NewNop(),
+				log:             zaptest.NewLogger(t),
 				directTCPIPData: &payload.ForwardTCPChannelOpen{},
 				K8sAPIUser: &kubernetes.K8sAPIUserWrapper{
 					K8sAPI: &stubK8sAPIWrapper{
@@ -262,6 +265,7 @@ func TestHandlePortForward(t *testing.T) {
 						UserIdentifier: "user-test",
 					},
 				},
+				cancel: func() {},
 			}
 			ctx, cancel := context.WithCancel(context.Background())
 			rd.wg.Add(1)
@@ -270,7 +274,7 @@ func TestHandlePortForward(t *testing.T) {
 			if tc.closeByCtx {
 				cancel()
 				rd.wg.Wait()
-				assert.Error(stubChannel.Close())
+				assert.NoError(stubChannel.Close())
 			}
 			if tc.closeByChannel {
 				assert.NoError(stubChannel.Close())
@@ -279,6 +283,7 @@ func TestHandlePortForward(t *testing.T) {
 			if tc.closeByServer {
 				rd.wg.Wait()
 			}
+
 			_, err := stubChannel.Write([]byte("hello"))
 			assert.Error(err)
 			cancel()

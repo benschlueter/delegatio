@@ -21,7 +21,7 @@ type Channel interface {
 func (h *Handler) Serve(ctx context.Context) {
 	ctx, cancel := context.WithCancel(ctx)
 	// if one of the callbacks cancels the context, we want to stop the server
-	// this will cancel all callbacks and wait for each of them to finish
+	// this will cancel all callbacks and wait for potential go routines to finish.
 	h.reqData.cancel = cancel
 	defer func() {
 		cancel()
@@ -55,7 +55,7 @@ func (h *Handler) Serve(ctx context.Context) {
 					funct(ctx, req, h.reqData)
 				}
 			}
-			for _, funct := range h.onEveryReqCallback {
+			for _, funct := range h.onRequestCallback {
 				funct(ctx, req, h.reqData)
 			}
 		}
@@ -69,13 +69,12 @@ func (h *Handler) Wait() {
 
 // Handler handles incoming requests on a Handler.
 type Handler struct {
-	requests       <-chan *ssh.Request
-	log            *zap.Logger
-	serveCloseDone chan struct{}
-	reqData        *callbackData
-
-	funcMap            map[string][]func(context.Context, *ssh.Request, *callbackData)
-	onEveryReqCallback []func(context.Context, *ssh.Request, *callbackData)
-	onDefaultCallback  []func(context.Context, *ssh.Request, *callbackData)
-	onStartupCallback  []func(context.Context, *callbackData)
+	requests          <-chan *ssh.Request
+	log               *zap.Logger
+	serveCloseDone    chan struct{}
+	reqData           *callbackData
+	funcMap           map[string][]func(context.Context, *ssh.Request, *callbackData)
+	onRequestCallback []func(context.Context, *ssh.Request, *callbackData)
+	onDefaultCallback []func(context.Context, *ssh.Request, *callbackData)
+	onStartupCallback []func(context.Context, *callbackData)
 }
