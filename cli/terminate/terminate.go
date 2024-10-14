@@ -43,7 +43,7 @@ func NewTerminate(logger *zap.Logger, creds *config.EtcdCredentials) (Terminate,
 	if err != nil {
 		return nil, err
 	}
-	if err := client.ConnectToStore(creds, []string{net.JoinHostPort(host, "2379")}); err != nil {
+	if err := client.ConnectToStoreExternal(creds, []string{net.JoinHostPort(host, "2379")}); err != nil {
 		return nil, err
 	}
 	return &terminate{kubeClient: client, logger: logger}, nil
