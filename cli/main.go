@@ -44,7 +44,7 @@ func registerSignalHandler(ctx context.Context, log *zap.Logger) (context.Contex
 
 func main() {
 	var imageLocation string
-	flag.StringVar(&imageLocation, "path", "", "path to the image to measure (required)")
+	flag.StringVar(&imageLocation, "path", "", "path to the image to load (required)")
 	flag.Parse()
 	zapconf := zap.NewDevelopmentConfig()
 	log, err := zapconf.Build()

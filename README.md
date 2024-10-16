@@ -1,10 +1,14 @@
 # Delegatio
 
-Delegatio is a framework that can be used to manage homework of classes (i.e. system security). The aim is to provide a infrastructure to let students work on problems independent of their hardware. 
+<p>
+    <a href="https://goreportcard.com/report/github.com/benschlueter/delegatio"><img src="https://goreportcard.com/badge/github.com/benschlueter/delegatio" alt="Go Report"></a>
+</p>
+
+Delegatio is a framework that can be used to manage homework of classes (i.e. system security). The aim is to provide a infrastructure to let students work on problems independent of their hardware.
 
 # Installation
 ```bash
-pacman -S libvirt qemu-full go mkosi make cmake 
+pacman -S libvirt qemu-full go mkosi make cmake
 ```
 `systemd 253` or newer is required to build the images, otherwise a local systemd tree is needed [mkosi issue](https://github.com/systemd/mkosi/issues/1290)
 
@@ -17,7 +21,7 @@ make
 ```
 
 # Run
-Before we start the program we have create a kubernetes persistent storage. The easiest way to do that is through NFS. 
+Before we start the program we have create a kubernetes persistent storage. The easiest way to do that is through NFS.
 First create a shared dir and make is user accessible.
 ```bash
 sudo mkdir /mnt/myshareddir
@@ -39,7 +43,7 @@ Connecting is possible by sshing into the daemon, either on the kubernetes nodes
 ```bash
 ssh testchallenge2@localhost -p 2200 -i ~/.ssh/id_rsa
 ```
-You must provide your public keys in `./internal/config/global.go` (will be changed to read a config file soon) 
+You must provide your public keys in `./internal/config/global.go` (will be changed to read a config file soon)
 
 ## Limitations
 Currently we only support one ControlPlane, thus we only have one KubeAPIServer. It might be possible that under high load (many port forward requests) the container is not capable of handing everything. However, we need to test it with some 100 users.

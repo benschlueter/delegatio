@@ -19,8 +19,8 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-func (a *API) updatePointsUser(_ context.Context, points int, user string) error {
-	a.logger.Info("updating points for user", zap.String("user", user), zap.Int("points", points))
+func (a *API) updatePointsUser(_ context.Context, points int, uuid string, exerciseID int) error {
+	a.logger.Info("updating points", zap.String("uuid", uuid), zap.Int("points", points), zap.Int("exercise", exerciseID))
 	// ToDO: Update points for user and add database connection / container
 	return nil
 }
@@ -47,8 +47,8 @@ func (a *API) RequestGrading(ctx context.Context, in *gradeproto.RequestGradingR
 	if err != nil {
 		a.logger.Error("failed to create graders", zap.Error(err))
 	}
-
-	switch id := in.GetExerciseId(); id {
+	exerciseID := in.GetExerciseId()
+	switch exerciseID {
 	case 1:
 		a.logger.Info("received grading request for id 1")
 		points, log, err = grader.GradeExerciseType1(ctx, in.GetSolution(), 1)
@@ -59,16 +59,16 @@ func (a *API) RequestGrading(ctx context.Context, in *gradeproto.RequestGradingR
 		a.logger.Info("received grading request for id 2")
 	}
 
-	if err := a.updatePointsUser(ctx, points, uuid); err != nil {
+	if err := a.updatePointsUser(ctx, points, uuid, int(exerciseID)); err != nil {
 		return nil, status.Error(codes.Internal, "failed to update points")
 	}
 
 	return &gradeproto.RequestGradingResponse{Points: int32(points), Log: log}, nil
 }
 
-func (a *API) checkSignature(_ context.Context, UUID string, signature, solution []byte) error {
-	a.logger.Info("checking signature", zap.String("studentID", UUID))
-	exists, err := a.data().UUIDExists(UUID)
+func (a *API) checkSignature(_ context.Context, uuid string, signature, solution []byte) error {
+	a.logger.Info("checking signature", zap.String("studentID", uuid))
+	exists, err := a.data().UUIDExists(uuid)
 	if err != nil {
 		return err
 	}
@@ -76,7 +76,7 @@ func (a *API) checkSignature(_ context.Context, UUID string, signature, solution
 		return status.Error(codes.NotFound, "user not found")
 	}
 	var userData config.UserInformation
-	if err := a.data().GetUUIDData(UUID, &userData); err != nil {
+	if err := a.data().GetUUIDData(uuid, &userData); err != nil {
 		return status.Error(codes.FailedPrecondition, "failed to get user data")
 	}
 	a.logger.Info("got user data", zap.String("publicKey", string(userData.PubKey)))
