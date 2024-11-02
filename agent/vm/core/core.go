@@ -17,8 +17,8 @@ import (
 	"sync"
 	"time"
 
-	"github.com/benschlueter/delegatio/agent/core/state"
-	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/agent/vm/core/state"
+	"github.com/benschlueter/delegatio/agent/vm/vmapi/vmproto"
 	"github.com/benschlueter/delegatio/internal/config"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"

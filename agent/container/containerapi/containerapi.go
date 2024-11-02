@@ -2,7 +2,7 @@
  * Copyright (c) Benedict Schlueter
  */
 
-package vmapi
+package containerapi
 
 import (
 	"context"
@@ -13,7 +13,7 @@ import (
 	"strconv"
 	"syscall"
 
-	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/agent/manageapi/manageproto"
 	"github.com/benschlueter/delegatio/internal/config"
 	"go.uber.org/zap"
 	"golang.org/x/sync/errgroup"
@@ -22,8 +22,8 @@ import (
 	"k8s.io/client-go/tools/remotecommand"
 )
 
-// VMAPI interface contains functions to access the agent.
-type VMAPI interface {
+// ContainerAPI interface contains functions to access the container agent.
+type ContainerAPI interface {
 	CreateExecInPodgRPC(context.Context, string, *config.KubeExecConfig) error
 	WriteFileInPodgRPC(context.Context, string, *config.KubeFileWriteConfig) error
 }
@@ -33,7 +33,7 @@ type API struct {
 	logger *zap.Logger
 	core   Core
 	dialer Dialer
-	vmproto.UnimplementedAPIServer
+	manageproto.UnimplementedAPIServer
 }
 
 // New creates a new API.
@@ -74,9 +74,9 @@ func (a *API) WriteFileInPodgRPC(ctx context.Context, endpoint string, conf *con
 		return err
 	}
 	defer conn.Close()
-	client := vmproto.NewAPIClient(conn)
+	client := manageproto.NewAPIClient(conn)
 	_, err = client.WriteFile(ctx,
-		&vmproto.WriteFileRequest{
+		&manageproto.WriteFileRequest{
 			Filepath: conf.FilePath,
 			Filename: conf.FileName,
 			Content:  conf.FileData,
@@ -98,14 +98,14 @@ func (a *API) CreateExecInPodgRPC(ctx context.Context, endpoint string, conf *co
 		return err
 	}
 	defer conn.Close()
-	client := vmproto.NewAPIClient(conn)
+	client := manageproto.NewAPIClient(conn)
 	resp, err := client.ExecCommandStream(ctx)
 	if err != nil {
 		return err
 	}
-	err = resp.Send(&vmproto.ExecCommandStreamRequest{
-		Content: &vmproto.ExecCommandStreamRequest_Command{
-			Command: &vmproto.ExecCommandRequest{
+	err = resp.Send(&manageproto.ExecCommandStreamRequest{
+		Content: &manageproto.ExecCommandStreamRequest_Command{
+			Command: &manageproto.ExecCommandRequest{
 				Command: conf.Command,
 				Tty:     conf.Tty,
 			},
@@ -132,7 +132,7 @@ func (a *API) CreateExecInPodgRPC(ctx context.Context, endpoint string, conf *co
 	return err
 }
 
-func (a *API) termSizeHandler(ctx context.Context, resp vmproto.API_ExecCommandStreamClient, resizeData remotecommand.TerminalSizeQueue) error {
+func (a *API) termSizeHandler(ctx context.Context, resp manageproto.API_ExecCommandStreamClient, resizeData remotecommand.TerminalSizeQueue) error {
 	queue := make(chan *remotecommand.TerminalSize, 1)
 	go func() {
 		for {
@@ -155,9 +155,9 @@ func (a *API) termSizeHandler(ctx context.Context, resp vmproto.API_ExecCommandS
 				a.logger.Debug("terminalSizeHandler queue closed")
 				return errors.New("window size queue closed")
 			}
-			err := resp.Send(&vmproto.ExecCommandStreamRequest{
-				Content: &vmproto.ExecCommandStreamRequest_Termsize{
-					Termsize: &vmproto.TerminalSizeRequest{
+			err := resp.Send(&manageproto.ExecCommandStreamRequest{
+				Content: &manageproto.ExecCommandStreamRequest_Termsize{
+					Termsize: &manageproto.TerminalSizeRequest{
 						Width:  int32(item.Width),
 						Height: int32(item.Height),
 					},
@@ -173,7 +173,7 @@ func (a *API) termSizeHandler(ctx context.Context, resp vmproto.API_ExecCommandS
 
 // receiver is called from the agent.
 // It receives data from the agent and writes it to the SSH Client (end-user).
-func (a *API) receiver(ctx context.Context, cancel context.CancelFunc, resp vmproto.API_ExecCommandStreamClient, stdout io.Writer, stderr io.Writer) error {
+func (a *API) receiver(ctx context.Context, cancel context.CancelFunc, resp manageproto.API_ExecCommandStreamClient, stdout io.Writer, stderr io.Writer) error {
 	for {
 		select {
 		case <-ctx.Done():
@@ -207,7 +207,7 @@ func (a *API) receiver(ctx context.Context, cancel context.CancelFunc, resp vmpr
 
 // we don't need to cancel the context. If we fail to send something receiving will either return EOF or an error.
 // Thus the receiver will stop and cancel the context.
-func (a *API) sender(ctx context.Context, resp vmproto.API_ExecCommandStreamClient, stdin io.Reader) error {
+func (a *API) sender(ctx context.Context, resp manageproto.API_ExecCommandStreamClient, stdin io.Reader) error {
 	// g, _ := errgroup.WithContext(ctx)
 	errChan := make(chan error, 1)
 
@@ -227,8 +227,8 @@ func (a *API) sender(ctx context.Context, resp vmproto.API_ExecCommandStreamClie
 				errChan <- err
 				return
 			}
-			err = resp.Send(&vmproto.ExecCommandStreamRequest{
-				Content: &vmproto.ExecCommandStreamRequest_Stdin{
+			err = resp.Send(&manageproto.ExecCommandStreamRequest{
+				Content: &manageproto.ExecCommandStreamRequest_Stdin{
 					Stdin: copier[:n],
 				},
 			})

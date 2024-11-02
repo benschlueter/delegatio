@@ -2,7 +2,7 @@
  * Copyright (c) Benedict Schlueter
  */
 
-package vmapi
+package manageapi
 
 import (
 	"bytes"
@@ -12,7 +12,7 @@ import (
 	"io"
 	"os/exec"
 
-	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/agent/manageapi/manageproto"
 	"github.com/creack/pty"
 	"go.uber.org/zap"
 	"golang.org/x/sys/unix"
@@ -25,7 +25,7 @@ func setSize(fd uintptr, size *TerminalSize) error {
 	return unix.IoctlSetWinsize(int(fd), unix.TIOCSWINSZ, winsize)
 }
 
-func (a *API) ttyCmd(execCmd *exec.Cmd, stdin io.Reader, stdout io.WriteCloser, handler *TerminalSizeHandler) error {
+func (a *ManageAPI) ttyCmd(execCmd *exec.Cmd, stdin io.Reader, stdout io.WriteCloser, handler *TerminalSizeHandler) error {
 	p, err := pty.Start(execCmd)
 	if err != nil {
 		return err
@@ -67,7 +67,7 @@ func (a *API) ttyCmd(execCmd *exec.Cmd, stdin io.Reader, stdout io.WriteCloser, 
 
 // ExecCommandStream executes a command in the VM and streams the output to the caller.
 // This is useful if the command needs much time to run and we want to log the current state, i.e. kubeadm.
-func (a *API) ExecCommandStream(srv vmproto.API_ExecCommandStreamServer) error {
+func (a *ManageAPI) ExecCommandStream(srv manageproto.API_ExecCommandStreamServer) error {
 	a.logger.Info("ExecCommandStream")
 	in, err := srv.Recv()
 	if err != nil {
@@ -84,8 +84,8 @@ func (a *API) ExecCommandStream(srv vmproto.API_ExecCommandStreamServer) error {
 
 	errorStreamWriter := &streamWriterWrapper{
 		forwardFunc: func(b []byte) error {
-			return srv.Send(&vmproto.ExecCommandStreamResponse{
-				Content: &vmproto.ExecCommandStreamResponse_Stderr{
+			return srv.Send(&manageproto.ExecCommandStreamResponse{
+				Content: &manageproto.ExecCommandStreamResponse_Stderr{
 					Stderr: b,
 				},
 			})
@@ -93,8 +93,8 @@ func (a *API) ExecCommandStream(srv vmproto.API_ExecCommandStreamServer) error {
 	}
 	stdoutStreamWrtier := &streamWriterWrapper{
 		forwardFunc: func(b []byte) error {
-			return srv.Send(&vmproto.ExecCommandStreamResponse{
-				Content: &vmproto.ExecCommandStreamResponse_Stdout{
+			return srv.Send(&manageproto.ExecCommandStreamResponse{
+				Content: &manageproto.ExecCommandStreamResponse_Stdout{
 					Stdout: b,
 				},
 			})
@@ -161,8 +161,8 @@ func (a *API) ExecCommandStream(srv vmproto.API_ExecCommandStreamServer) error {
 		exitCode = -1
 	}
 	// Instead of done we should return the exit code of the command.
-	if err := srv.Send(&vmproto.ExecCommandStreamResponse{
-		Content: &vmproto.ExecCommandStreamResponse_Err{
+	if err := srv.Send(&manageproto.ExecCommandStreamResponse{
+		Content: &manageproto.ExecCommandStreamResponse_Err{
 			Err: fmt.Sprint(exitCode),
 		},
 	}); err != nil {
@@ -174,13 +174,13 @@ func (a *API) ExecCommandStream(srv vmproto.API_ExecCommandStreamServer) error {
 
 // ExecCommandReturnStream executes a command in the VM and streams the output to the caller.
 // This is useful if the command needs much time to run and we want to log the current state, i.e. kubeadm.
-func (a *API) ExecCommandReturnStream(in *vmproto.ExecCommandRequest, srv vmproto.API_ExecCommandReturnStreamServer) error {
+func (a *ManageAPI) ExecCommandReturnStream(in *manageproto.ExecCommandRequest, srv manageproto.API_ExecCommandReturnStreamServer) error {
 	a.logger.Info("request to execute command", zap.String("command", in.Command), zap.Strings("args", in.Args))
 	command := exec.Command(in.Command, in.Args...)
 	streamer := &streamWriterWrapper{forwardFunc: func(b []byte) error {
-		return srv.Send(&vmproto.ExecCommandReturnStreamResponse{
-			Content: &vmproto.ExecCommandReturnStreamResponse_Log{
-				Log: &vmproto.Log{
+		return srv.Send(&manageproto.ExecCommandReturnStreamResponse{
+			Content: &manageproto.ExecCommandReturnStreamResponse_Log{
+				Log: &manageproto.Log{
 					Message: string(b),
 				},
 			},
@@ -198,18 +198,18 @@ func (a *API) ExecCommandReturnStream(in *vmproto.ExecCommandRequest, srv vmprot
 	if err := command.Wait(); err != nil {
 		return status.Errorf(codes.Internal, "command exited with error code: %v and output: %s", err, stdoutBuf.Bytes())
 	}
-	return srv.Send(&vmproto.ExecCommandReturnStreamResponse{Content: &vmproto.ExecCommandReturnStreamResponse_Output{Output: stdoutBuf.Bytes()}})
+	return srv.Send(&manageproto.ExecCommandReturnStreamResponse{Content: &manageproto.ExecCommandReturnStreamResponse_Output{Output: stdoutBuf.Bytes()}})
 }
 
 // ExecCommand executes a command in the VM.
-func (a *API) ExecCommand(_ context.Context, in *vmproto.ExecCommandRequest) (*vmproto.ExecCommandResponse, error) {
+func (a *ManageAPI) ExecCommand(_ context.Context, in *manageproto.ExecCommandRequest) (*manageproto.ExecCommandResponse, error) {
 	a.logger.Info("request to execute command", zap.String("command", in.Command), zap.Strings("args", in.Args))
 	command := exec.Command(in.Command, in.Args...)
 	output, err := command.Output()
 	if err != nil {
 		return nil, status.Errorf(codes.Internal, "command exited with error code: %v and output: %s", err, string(output))
 	}
-	return &vmproto.ExecCommandResponse{Output: output}, nil
+	return &manageproto.ExecCommandResponse{Output: output}, nil
 }
 
 type streamWriterWrapper struct {

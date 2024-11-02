@@ -10,7 +10,7 @@ import (
 	"net"
 	"time"
 
-	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/agent/manageapi/manageproto"
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/config/definitions"
 	"go.uber.org/zap"
@@ -105,14 +105,14 @@ func (l *LibvirtInstance) blockUntilDelegatioAgentIsReady(ctx context.Context, i
 		return err
 	}
 	defer conn.Close()
-	client := vmproto.NewAPIClient(conn)
+	client := manageproto.NewAPIClient(conn)
 	for {
 		select {
 		case <-ctx.Done():
 			l.Log.Info("context cancel during waiting for vm init")
 			return ctx.Err()
 		default:
-			_, err := client.ExecCommand(ctx, &vmproto.ExecCommandRequest{
+			_, err := client.ExecCommand(ctx, &manageproto.ExecCommandRequest{
 				Command: "hostnamectl",
 				Args:    []string{"set-hostname", id},
 			})

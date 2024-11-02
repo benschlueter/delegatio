@@ -11,10 +11,12 @@ import (
 	"net"
 	"sync"
 
-	"github.com/benschlueter/delegatio/agent/core"
-	"github.com/benschlueter/delegatio/agent/core/state"
-	"github.com/benschlueter/delegatio/agent/vmapi"
-	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/agent/manageapi"
+	"github.com/benschlueter/delegatio/agent/manageapi/manageproto"
+	"github.com/benschlueter/delegatio/agent/vm/core"
+	"github.com/benschlueter/delegatio/agent/vm/core/state"
+	"github.com/benschlueter/delegatio/agent/vm/vmapi"
+	"github.com/benschlueter/delegatio/agent/vm/vmapi/vmproto"
 	"github.com/benschlueter/delegatio/internal/config"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -47,6 +49,7 @@ func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger
 	}
 
 	vapi := vmapi.New(zapLoggerCore.Named("vmapi"), core, dialer)
+	mapi := manageapi.New(zapLoggerCore.Named("manageapi"), core, dialer)
 	zapLoggergRPC := zapLoggerCore.Named("gRPC")
 
 	grpcServer := grpc.NewServer(
@@ -61,6 +64,7 @@ func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger
 		)),
 	)
 	vmproto.RegisterAPIServer(grpcServer, vapi)
+	manageproto.RegisterAPIServer(grpcServer, mapi)
 
 	lis, err := net.Listen("tcp", net.JoinHostPort(bindIP, bindPort))
 	if err != nil {
