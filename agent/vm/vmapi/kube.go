@@ -11,7 +11,7 @@ import (
 	"os/exec"
 	"time"
 
-	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/agent/vm/vmapi/vmproto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
@@ -82,4 +82,19 @@ func (a *API) InitFirstMaster(in *vmproto.InitFirstMasterRequest, srv vmproto.AP
 	}
 	a.core.SetInitialized()
 	return srv.Send(&vmproto.InitFirstMasterResponse{Content: &vmproto.InitFirstMasterResponse_Output{Output: stdoutBuf.Bytes()}})
+}
+
+type streamWriterWrapper struct {
+	forwardFunc func([]byte) error
+}
+
+func (sw *streamWriterWrapper) Write(p []byte) (int, error) {
+	if err := sw.forwardFunc(p); err != nil {
+		return 0, err
+	}
+	return len(p), nil
+}
+
+func (sw *streamWriterWrapper) Close() error {
+	return nil
 }

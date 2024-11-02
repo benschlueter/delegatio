@@ -10,8 +10,8 @@ import (
 	"net"
 	"time"
 
-	"github.com/benschlueter/delegatio/agent/core"
-	"github.com/benschlueter/delegatio/agent/vmapi"
+	"github.com/benschlueter/delegatio/agent/container/containerapi"
+	"github.com/benschlueter/delegatio/agent/container/core"
 	"github.com/benschlueter/delegatio/internal/config"
 	"github.com/benschlueter/delegatio/internal/k8sapi"
 	"github.com/benschlueter/delegatio/internal/store"
@@ -29,7 +29,7 @@ type K8sAPI interface {
 // K8sAPIWrapper is the struct used to access kubernetes helpers.
 type K8sAPIWrapper struct {
 	Client *k8sapi.Client
-	API    *vmapi.API
+	API    containerapi.ContainerAPI
 	logger *zap.Logger
 }
 
@@ -42,11 +42,11 @@ func NewK8sAPIWrapper(logger *zap.Logger) (*K8sAPIWrapper, error) {
 		return nil, err
 	}
 	// TODO: split core and vmapi into multiple packages / services
-	core, err := core.NewCore(logger, "")
+	core, err := core.NewCore(logger)
 	if err != nil {
 		return nil, err
 	}
-	api := vmapi.New(logger, core, &net.Dialer{})
+	api := containerapi.New(logger, core, &net.Dialer{})
 
 	return &K8sAPIWrapper{
 		Client: client,

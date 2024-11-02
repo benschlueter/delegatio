@@ -1,0 +1,48 @@
+syntax = "proto3";
+
+package vmapi;
+
+option go_package = "github.com/benschlueter/delegatio/agent/vm/vmapi/vmproto";
+
+
+service API {
+  rpc GetJoinDataKube(GetJoinDataKubeRequest) returns (GetJoinDataKubeResponse);
+  rpc InitFirstMaster(InitFirstMasterRequest) returns (stream InitFirstMasterResponse);
+}
+
+message Log {
+  string message = 1;
+}
+
+message GetJoinDataKubeRequest {
+}
+
+message JoinToken {
+  string token = 1;
+  string caCertHash = 2;
+  string apiServerEndpoint = 3;
+}
+
+message File {
+  string name = 1;
+  bytes content = 2;
+}
+
+message GetJoinDataKubeResponse {
+  JoinToken joinToken = 1;
+  repeated File files = 2;
+}
+
+message InitFirstMasterRequest {
+  string command = 1;
+  repeated string args = 2;
+  bool tty = 3;
+}
+
+
+message InitFirstMasterResponse {
+  oneof content {
+    bytes output = 1;
+    Log log = 2;
+  }
+}

@@ -2,7 +2,7 @@
  * Copyright (c) Benedict Schlueter
  */
 
-package vmapi
+package manageapi
 
 import (
 	"errors"

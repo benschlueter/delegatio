@@ -2,21 +2,21 @@
  * Copyright (c) Benedict Schlueter
  */
 
-package vmapi
+package manageapi
 
 import (
 	"context"
 	"os"
 	"path/filepath"
 
-	"github.com/benschlueter/delegatio/agent/vmapi/vmproto"
+	"github.com/benschlueter/delegatio/agent/manageapi/manageproto"
 	"go.uber.org/zap"
 	"google.golang.org/grpc/codes"
 	"google.golang.org/grpc/status"
 )
 
 // WriteFile creates a file and writes output to it.
-func (a *API) WriteFile(_ context.Context, in *vmproto.WriteFileRequest) (*vmproto.WriteFileResponse, error) {
+func (a *ManageAPI) WriteFile(_ context.Context, in *manageproto.WriteFileRequest) (*manageproto.WriteFileResponse, error) {
 	a.logger.Info("request to write file", zap.String("path", in.Filepath), zap.String("name", in.Filename))
 	if _, err := os.Stat(in.Filepath); os.IsNotExist(err) {
 		if err := os.MkdirAll(in.Filepath, 0o700); err != nil {
@@ -30,16 +30,16 @@ func (a *API) WriteFile(_ context.Context, in *vmproto.WriteFileRequest) (*vmpro
 		return nil, status.Errorf(codes.Internal, "file write failed exited with error code: %v", err)
 	}
 	a.logger.Debug("wrote content to disk", zap.String("path", in.Filepath), zap.String("name", in.Filename))
-	return &vmproto.WriteFileResponse{}, nil
+	return &manageproto.WriteFileResponse{}, nil
 }
 
 // ReadFile reads a file and returns its content.
-func (a *API) ReadFile(_ context.Context, in *vmproto.ReadFileRequest) (*vmproto.ReadFileResponse, error) {
+func (a *ManageAPI) ReadFile(_ context.Context, in *manageproto.ReadFileRequest) (*manageproto.ReadFileResponse, error) {
 	a.logger.Info("request to read file", zap.String("path", in.Filepath), zap.String("name", in.Filename))
 	content, err := os.ReadFile(filepath.Join(in.Filepath, in.Filename))
 	if err != nil {
 		a.logger.Error("failed to read file", zap.String("path", in.Filepath), zap.String("name", in.Filename), zap.Error(err))
 		return nil, status.Errorf(codes.Internal, "file read failed exited with error code: %v", err)
 	}
-	return &vmproto.ReadFileResponse{Content: content}, nil
+	return &manageproto.ReadFileResponse{Content: content}, nil
 }

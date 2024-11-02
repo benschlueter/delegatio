@@ -1,8 +1,8 @@
 syntax = "proto3";
 
-package vmapi;
+package manageapi;
 
-option go_package = "github.com/benschlueter/delegatio/core/vmapi/vmproto";
+option go_package = "github.com/benschlueter/delegatio/agent/manageapi/manageproto";
 
 
 service API {
@@ -11,8 +11,6 @@ service API {
   rpc ExecCommand(ExecCommandRequest) returns (ExecCommandResponse);
   rpc WriteFile(WriteFileRequest) returns (WriteFileResponse);
   rpc ReadFile(ReadFileRequest) returns (ReadFileResponse);
-  rpc GetJoinDataKube(GetJoinDataKubeRequest) returns (GetJoinDataKubeResponse);
-  rpc InitFirstMaster(InitFirstMasterRequest) returns (stream InitFirstMasterResponse);
 }
 
 message ExecCommandStreamRequest {
@@ -74,37 +72,4 @@ message ReadFileResponse {
 
 message Log {
   string message = 1;
-}
-
-message GetJoinDataKubeRequest {
-}
-
-message JoinToken {
-  string token = 1;
-  string caCertHash = 2;
-  string apiServerEndpoint = 3;
-}
-
-message File {
-  string name = 1;
-  bytes content = 2;
-}
-
-message GetJoinDataKubeResponse {
-  JoinToken joinToken = 1;
-  repeated File files = 2;
-}
-
-message InitFirstMasterRequest {
-  string command = 1;
-  repeated string args = 2;
-  bool tty = 3;
-}
-
-
-message InitFirstMasterResponse {
-  oneof content {
-    bytes output = 1;
-    Log log = 2;
-  }
 }
