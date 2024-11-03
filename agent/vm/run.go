@@ -23,7 +23,7 @@ import (
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"go.uber.org/zap"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 )
 
 var version = "0.0.0"
@@ -42,18 +42,27 @@ func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger
 	} else {
 		zapLoggerCore.Info("running in qemu mode")
 	}
-
-	core, err := core.NewCore(zapLoggerCore, loadbalancerIPAddr)
+	vmapiExternal, err := vmapi.NewExternal(zapLoggerCore.Named("vmapi"), &net.Dialer{})
 	if err != nil {
-		zapLoggerCore.Fatal("failed to create core", zap.Error(err))
+		zapLoggerCore.Fatal("create vmapi external", zap.Error(err))
+	}
+	core, err := core.NewCore(zapLoggerCore, loadbalancerIPAddr, vmapiExternal)
+	if err != nil {
+		zapLoggerCore.Fatal("create core", zap.Error(err))
 	}
 
-	vapi := vmapi.New(zapLoggerCore.Named("vmapi"), core, dialer)
+	vapi := vmapi.NewInternal(zapLoggerCore.Named("vmapi"), core, dialer)
 	mapi := manageapi.New(zapLoggerCore.Named("manageapi"), core, dialer)
 	zapLoggergRPC := zapLoggerCore.Named("gRPC")
 
+	tlsConfig, err := config.GenerateTLSConfigServer()
+	if err != nil {
+		zapLoggerCore.Fatal("generate TLS config", zap.Error(err))
+	}
+	zapLoggerCore.Info("TLS config generated")
+
 	grpcServer := grpc.NewServer(
-		grpc.Creds(insecure.NewCredentials()),
+		grpc.Creds(credentials.NewTLS(tlsConfig)),
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
 			grpc_ctxtags.StreamServerInterceptor(),
 			grpc_zap.StreamServerInterceptor(zapLoggergRPC),

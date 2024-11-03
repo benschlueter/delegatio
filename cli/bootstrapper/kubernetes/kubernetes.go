@@ -7,8 +7,10 @@ package kubernetes
 import (
 	"context"
 	"errors"
+	"net"
 	"os"
 
+	"github.com/benschlueter/delegatio/agent/vm/vmapi"
 	"github.com/benschlueter/delegatio/internal/config"
 	"go.uber.org/zap"
 	"k8s.io/client-go/kubernetes"
@@ -17,32 +19,32 @@ import (
 
 // Bootstrapper communicates with the agent inside the control-plane VM after Kubernetes was initialized.
 type Bootstrapper struct {
-	log            *zap.Logger
-	client         kubernetes.Interface
-	adminConf      []byte
-	controlPlaneIP string
-	workerIPs      map[string]string
-	k8sConfig      []byte
+	log                  *zap.Logger
+	client               kubernetes.Interface
+	adminConf            []byte
+	controlPlaneEndpoint string
+	k8sConfig            []byte
+	vmAPI                vmapi.VMAPI
 }
 
 // NewBootstrapper creates a new agent object.
-func NewBootstrapper(log *zap.Logger, nodes *config.NodeInformation, k8sConfig []byte) (*Bootstrapper, error) {
+func NewBootstrapper(log *zap.Logger, controlPlaneEndpoint string, k8sConfig []byte) (*Bootstrapper, error) {
 	agentLog := log.Named("bootstrapper")
-	var controlPlaneIP string
-	for _, ip := range nodes.Masters {
-		controlPlaneIP = ip
+	vmapi, err := vmapi.NewExternal(log.Named("vmapi"), &net.Dialer{})
+	if err != nil {
+		return nil, err
 	}
 	return &Bootstrapper{
-		log:            agentLog,
-		controlPlaneIP: controlPlaneIP,
-		workerIPs:      nodes.Workers,
-		k8sConfig:      k8sConfig,
+		log:                  agentLog,
+		controlPlaneEndpoint: controlPlaneEndpoint,
+		k8sConfig:            k8sConfig,
+		vmAPI:                vmapi,
 	}, nil
 }
 
 // BootstrapKubernetes initializes the kubernetes cluster.
 func (a *Bootstrapper) BootstrapKubernetes(ctx context.Context) (*config.EtcdCredentials, error) {
-	if err := a.InstallKubernetes(ctx, a.k8sConfig); err != nil {
+	if err := a.vmAPI.InstallKubernetes(ctx, a.controlPlaneEndpoint, a.k8sConfig); err != nil {
 		return nil, err
 	}
 	a.log.Info("kubernetes init successful")
@@ -50,7 +52,12 @@ func (a *Bootstrapper) BootstrapKubernetes(ctx context.Context) (*config.EtcdCre
 	if err := a.configureKubernetes(ctx); err != nil {
 		return nil, err
 	}
-	return a.getEtcdCredentials(ctx)
+	a.log.Info("kubernetes configured")
+	caCert, caKey, err := a.vmAPI.GetEtcdCredentials(ctx, a.controlPlaneEndpoint)
+	if err != nil {
+		return nil, err
+	}
+	return a.generateEtcdCertificate(caCert, caKey)
 }
 
 // configureKubernetes configures the kubernetes cluster.

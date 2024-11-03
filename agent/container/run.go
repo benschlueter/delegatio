@@ -7,14 +7,12 @@
 package main
 
 import (
-	"context"
 	"net"
 	"sync"
 
+	"github.com/benschlueter/delegatio/agent/container/core"
 	"github.com/benschlueter/delegatio/agent/manageapi"
 	"github.com/benschlueter/delegatio/agent/manageapi/manageproto"
-	"github.com/benschlueter/delegatio/agent/vm/core"
-	"github.com/benschlueter/delegatio/agent/vm/core/state"
 	"github.com/benschlueter/delegatio/internal/config"
 	grpc_middleware "github.com/grpc-ecosystem/go-grpc-middleware"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -31,17 +29,13 @@ var version = "0.0.0"
  * via the loadbalancerIPAddr to give us the join token. At the same time
  * we are waiting for the init-request from a user *only* if we are a control plane.
  */
-func run(dialer manageapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger, containerMode *bool, loadbalancerIPAddr string) {
+func run(dialer manageapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger) {
 	defer func() { _ = zapLoggerCore.Sync() }()
 	zapLoggerCore.Info("starting delegatio agent", zap.String("version", version), zap.String("commit", config.Commit))
 
-	if *containerMode {
-		zapLoggerCore.Info("running in container mode")
-	} else {
-		zapLoggerCore.Info("running in qemu mode")
-	}
+	zapLoggerCore.Info("running in qemu mode")
 
-	core, err := core.NewCore(zapLoggerCore, loadbalancerIPAddr)
+	core, err := core.NewCore(zapLoggerCore)
 	if err != nil {
 		zapLoggerCore.Fatal("failed to create core", zap.Error(err))
 	}
@@ -67,8 +61,6 @@ func run(dialer manageapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Lo
 		zapLoggergRPC.Fatal("failed to create listener", zap.Error(err))
 	}
 	zapLoggergRPC.Info("server listener created", zap.String("address", lis.Addr().String()))
-	core.State.Advance(state.AcceptingInit)
-	go core.TryJoinCluster(context.Background())
 
 	var wg sync.WaitGroup
 	defer wg.Wait()

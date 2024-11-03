@@ -6,7 +6,7 @@ package main
 
 import (
 	"context"
-	"fmt"
+	"net"
 
 	"github.com/benschlueter/delegatio/cli/bootstrapper"
 	"github.com/benschlueter/delegatio/cli/infrastructure"
@@ -39,15 +39,13 @@ func run(ctx context.Context, log *zap.Logger, imageLocation string) error {
 		}
 	}(log, lInstance)
 	// --- infrastructure ---
-	nodes, err := createInfrastructure(ctx, log, lInstance)
+	_, err = createInfrastructure(ctx, log, lInstance)
 	if err != nil {
 		log.With(zap.Error(err)).DPanic("create infrastructure")
 	}
 	log.Info("finished infrastructure initialization")
-	fmt.Println(nodes)
-	nodes.Workers = nil
 	/// --- kubernetes ---
-	creds, err := bootstrapKubernetes(ctx, log, nodes)
+	creds, err := bootstrapKubernetes(ctx, log)
 	if err != nil {
 		log.With(zap.Error(err)).DPanic("bootstrap kubernetes")
 	}
@@ -62,16 +60,18 @@ func run(ctx context.Context, log *zap.Logger, imageLocation string) error {
 	return handleTermination(log, creds)
 }
 
-func bootstrapKubernetes(ctx context.Context, log *zap.Logger, nodes *config.NodeInformation) (*config.EtcdCredentials, error) {
-	kubeConf, err := utils.GetKubeInitConfig(definitions.NetworkXMLConfig.IPs[0].Address)
+func bootstrapKubernetes(ctx context.Context, log *zap.Logger) (*config.EtcdCredentials, error) {
+	controlPlaneIP := definitions.NetworkXMLConfig.IPs[0].Address
+	kubeConf, err := utils.GetKubeInitConfig(controlPlaneIP)
 	if err != nil {
 		log.With(zap.Error(err)).DPanic("failed to get kubeConfig")
 	}
-	agent, err := bootstrapper.NewKubernetes(log, nodes, kubeConf)
+	agent, err := bootstrapper.NewKubernetes(log, net.JoinHostPort(controlPlaneIP, config.PublicAPIport), kubeConf)
 	if err != nil {
 		log.Error("failed to initialize bootstrapper", zap.Error(err))
 		return nil, err
 	}
+	log.Info("bootstrapper initialized")
 	creds, err := agent.BootstrapKubernetes(ctx)
 	if err != nil {
 		log.Error("failed to initialize Kubernetes", zap.Error(err))
