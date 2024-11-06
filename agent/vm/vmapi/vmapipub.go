@@ -21,9 +21,9 @@ import (
 
 // VMAPI is the interface for the VM API.
 type VMAPI interface {
-	InstallKubernetes(context.Context, string, []byte) error
-	GetKubernetesConfig(context.Context, string) ([]byte, error)
-	GetEtcdCredentials(context.Context, string) ([]byte, []byte, error)
+	InstallKubernetes(context.Context, []byte) error
+	GetKubernetesConfig(context.Context) ([]byte, error)
+	GetEtcdCredentials(context.Context) ([]byte, []byte, error)
 	GetJoinData(ctx context.Context) (*vmproto.GetJoinDataKubeResponse, error)
 }
 
@@ -116,7 +116,7 @@ type Dialer interface {
 }
 
 // InstallKubernetes initializes a kubernetes cluster using the gRPC API.
-func (a *APIExternal) InstallKubernetes(ctx context.Context, _ string, kubernetesInitConfiguration []byte) (err error) {
+func (a *APIExternal) InstallKubernetes(ctx context.Context, kubernetesInitConfiguration []byte) (err error) {
 	conn, err := a.dialFirstMaster()
 	if err != nil {
 		a.logger.Error("dial", zap.Error(err))
@@ -168,7 +168,7 @@ func (a *APIExternal) executeKubeadm(ctx context.Context, client vmproto.APIClie
 }
 
 // GetKubernetesConfig returns the kubernetes config for the instance.
-func (a *APIExternal) GetKubernetesConfig(ctx context.Context, _ string) (output []byte, err error) {
+func (a *APIExternal) GetKubernetesConfig(ctx context.Context) (output []byte, err error) {
 	conn, err := a.dialFirstMaster()
 	if err != nil {
 		return nil, err
@@ -187,7 +187,7 @@ func (a *APIExternal) GetKubernetesConfig(ctx context.Context, _ string) (output
 }
 
 // GetEtcdCredentials returns the etcd credentials for the instance.
-func (a *APIExternal) GetEtcdCredentials(ctx context.Context, _ string) ([]byte, []byte, error) {
+func (a *APIExternal) GetEtcdCredentials(ctx context.Context) ([]byte, []byte, error) {
 	conn, err := a.dialFirstMaster()
 	if err != nil {
 		return nil, nil, err

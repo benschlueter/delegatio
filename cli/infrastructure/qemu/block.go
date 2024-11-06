@@ -9,6 +9,7 @@ import (
 	_ "embed"
 	"fmt"
 	"net"
+	"strconv"
 	"time"
 
 	"github.com/benschlueter/delegatio/agent/manageapi/manageproto"
@@ -111,7 +112,8 @@ func (l *LibvirtInstance) blockUntilDelegatioAgentIsReady(ctx context.Context, i
 	if err != nil {
 		return err
 	}
-	conn, err := grpc.DialContext(ctx, net.JoinHostPort(ip, config.PublicAPIport), grpc.WithTransportCredentials(credentials.NewTLS(tlsconfig)))
+	// No DNS available, so we have to use the IP
+	conn, err := grpc.DialContext(ctx, net.JoinHostPort(ip, strconv.Itoa(config.AgentPort)), grpc.WithTransportCredentials(credentials.NewTLS(tlsconfig)))
 	if err != nil {
 		return err
 	}

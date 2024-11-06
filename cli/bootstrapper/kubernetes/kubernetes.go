@@ -19,32 +19,30 @@ import (
 
 // Bootstrapper communicates with the agent inside the control-plane VM after Kubernetes was initialized.
 type Bootstrapper struct {
-	log                  *zap.Logger
-	client               kubernetes.Interface
-	adminConf            []byte
-	controlPlaneEndpoint string
-	k8sConfig            []byte
-	vmAPI                vmapi.VMAPI
+	log       *zap.Logger
+	client    kubernetes.Interface
+	adminConf []byte
+	k8sConfig []byte
+	vmAPI     vmapi.VMAPI
 }
 
 // NewBootstrapper creates a new agent object.
-func NewBootstrapper(log *zap.Logger, controlPlaneEndpoint string, k8sConfig []byte) (*Bootstrapper, error) {
+func NewBootstrapper(log *zap.Logger, k8sConfig []byte) (*Bootstrapper, error) {
 	agentLog := log.Named("bootstrapper")
 	vmapi, err := vmapi.NewExternal(log.Named("vmapi"), &net.Dialer{})
 	if err != nil {
 		return nil, err
 	}
 	return &Bootstrapper{
-		log:                  agentLog,
-		controlPlaneEndpoint: controlPlaneEndpoint,
-		k8sConfig:            k8sConfig,
-		vmAPI:                vmapi,
+		log:       agentLog,
+		k8sConfig: k8sConfig,
+		vmAPI:     vmapi,
 	}, nil
 }
 
 // BootstrapKubernetes initializes the kubernetes cluster.
 func (a *Bootstrapper) BootstrapKubernetes(ctx context.Context) (*config.EtcdCredentials, error) {
-	if err := a.vmAPI.InstallKubernetes(ctx, a.controlPlaneEndpoint, a.k8sConfig); err != nil {
+	if err := a.vmAPI.InstallKubernetes(ctx, a.k8sConfig); err != nil {
 		return nil, err
 	}
 	a.log.Info("kubernetes init successful")
@@ -53,7 +51,7 @@ func (a *Bootstrapper) BootstrapKubernetes(ctx context.Context) (*config.EtcdCre
 		return nil, err
 	}
 	a.log.Info("kubernetes configured")
-	caCert, caKey, err := a.vmAPI.GetEtcdCredentials(ctx, a.controlPlaneEndpoint)
+	caCert, caKey, err := a.vmAPI.GetEtcdCredentials(ctx)
 	if err != nil {
 		return nil, err
 	}

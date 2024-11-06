@@ -8,6 +8,7 @@ import (
 	"flag"
 	"log"
 	"net"
+	"strconv"
 
 	"github.com/benschlueter/delegatio/internal/config"
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
@@ -42,7 +43,7 @@ func main() {
 	zapLoggerCore := zapLogger.Named("core")
 
 	bindIP = config.DefaultIP
-	bindPort = config.PublicAPIport
+	bindPort = strconv.Itoa(config.AgentPort)
 	dialer := &net.Dialer{}
 
 	run(dialer, bindIP, bindPort, zapLoggerCore)

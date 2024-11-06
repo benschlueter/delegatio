@@ -193,20 +193,20 @@ func (c *Core) executeKubeadm(ctx context.Context, endpoint, token, caCert strin
 }
 
 // TryJoinCluster tries to join the cluster every 5 seconds until it succeeds.
-func (c *Core) TryJoinCluster(ctx context.Context) {
+func (c *Core) TryJoinCluster(ctx context.Context) error {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
 			if c.State.Get() >= state.JoiningCluster {
-				return
+				return nil
 			}
 			if err := c.JoinCluster(ctx); err != nil {
 				c.zaplogger.Info("Failed to join cluster, retrying in 5 seconds", zap.Error(err))
 			}
 		case <-ctx.Done():
-			return
+			return nil
 		}
 	}
 }

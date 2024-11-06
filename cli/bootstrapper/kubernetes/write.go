@@ -13,7 +13,7 @@ import (
 
 // writeKubeconfigToDisk writes the kubeconfig to disk.
 func (a *Bootstrapper) writeKubeconfigToDisk(ctx context.Context) (err error) {
-	file, err := a.vmAPI.GetKubernetesConfig(ctx, a.controlPlaneEndpoint)
+	file, err := a.vmAPI.GetKubernetesConfig(ctx)
 	if err != nil {
 		return err
 	}

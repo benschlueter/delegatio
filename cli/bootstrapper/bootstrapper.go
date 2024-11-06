@@ -19,8 +19,8 @@ type Bootstrapper interface {
 }
 
 // NewKubernetes creates a new Kubernetes bootstrapper.
-func NewKubernetes(log *zap.Logger, controlPlaneEndpoint string, k8sConfig []byte) (Bootstrapper, error) {
-	instance, err := kubernetes.NewBootstrapper(log, controlPlaneEndpoint, k8sConfig)
+func NewKubernetes(log *zap.Logger, k8sConfig []byte) (Bootstrapper, error) {
+	instance, err := kubernetes.NewBootstrapper(log, k8sConfig)
 	if err != nil {
 		return nil, err
 	}
