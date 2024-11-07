@@ -5,17 +5,21 @@
 package config
 
 import (
+	"embed"
 	"encoding/json"
 	"os"
 	"time"
 )
+
+//go:embed *.pem
+var rootKeyFile embed.FS
 
 // ClusterConfiguration is the configuration for the cluster.
 // Infrastructure and Kubernetes configdata is stored here.
 var (
 	ClusterConfiguration = ClusterConfig{
 		NumberOfWorkers: 3,
-		NumberOfMasters: 3,
+		NumberOfMasters: 1,
 	}
 	// CleanUpTimeout is the timeout after which the save-state function is canceled when ctrl+c is pressed in the cli.
 	CleanUpTimeout = 10 * time.Second
@@ -34,8 +38,6 @@ const (
 	Version = "0.0.1"
 	// DefaultIP is the default IP address to bind to.
 	DefaultIP = "0.0.0.0"
-	// PublicAPIport is the port where we can access the public API.
-	PublicAPIport = "9000"
 	// GradeAPIport is the port where a client can request grading of the exercises.
 	GradeAPIport = 9027
 	// DefaultTimeout for the API.
@@ -56,8 +58,10 @@ const (
 	UserNamespace = "users"
 	// NodeNameEnvVariable is the environment variable name of the node a user-pod is running on.
 	NodeNameEnvVariable = "NODE_NAME"
-	// AgentPort is the port where the agent is listening.
+	// AgentPort is the port where the default agent gRPCs are listening (for VM and Container).
 	AgentPort = 9000
+	// VMAgentPort is the port where the VM-specific agent is listening.
+	VMAgentPort = 9010
 	// SSHServiceAccountName is the name of the Kubernetes ssh service account with cluster access.
 	SSHServiceAccountName = "development-ssh"
 	// SSHPort is the port where the ssh server is listening.

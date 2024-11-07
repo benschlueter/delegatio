@@ -18,7 +18,7 @@ import (
 )
 
 // GetJoinDataKube returns the join data for the kubernetes cluster. This function will be used by all master nodes except the first one and all worker nodes.
-func (a *API) GetJoinDataKube(_ context.Context, _ *vmproto.GetJoinDataKubeRequest) (*vmproto.GetJoinDataKubeResponse, error) {
+func (a *APIInternal) GetJoinDataKube(_ context.Context, _ *vmproto.GetJoinDataKubeRequest) (*vmproto.GetJoinDataKubeResponse, error) {
 	if !a.core.IsInReadyState() {
 		return nil, status.Errorf(codes.FailedPrecondition, "cluster is not ready")
 	}
@@ -50,7 +50,7 @@ func (a *API) GetJoinDataKube(_ context.Context, _ *vmproto.GetJoinDataKubeReque
 }
 
 // InitFirstMaster executes the kubeadm init command on the first master node. The subsequent master nodes will join the cluster automatically.
-func (a *API) InitFirstMaster(in *vmproto.InitFirstMasterRequest, srv vmproto.API_InitFirstMasterServer) error {
+func (a *APIInternal) InitFirstMaster(in *vmproto.InitFirstMasterRequest, srv vmproto.API_InitFirstMasterServer) error {
 	a.logger.Info("request to execute command", zap.String("command", in.Command), zap.Strings("args", in.Args))
 	a.core.SetJoiningCluster()
 	command := exec.Command(in.Command, in.Args...)

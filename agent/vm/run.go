@@ -9,7 +9,8 @@ package main
 import (
 	"context"
 	"net"
-	"sync"
+	"os/signal"
+	"syscall"
 
 	"github.com/benschlueter/delegatio/agent/manageapi"
 	"github.com/benschlueter/delegatio/agent/manageapi/manageproto"
@@ -22,8 +23,9 @@ import (
 	grpc_zap "github.com/grpc-ecosystem/go-grpc-middleware/logging/zap"
 	grpc_ctxtags "github.com/grpc-ecosystem/go-grpc-middleware/tags"
 	"go.uber.org/zap"
+	"golang.org/x/sync/errgroup"
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
+	"google.golang.org/grpc/credentials"
 )
 
 var version = "0.0.0"
@@ -33,7 +35,7 @@ var version = "0.0.0"
  * via the loadbalancerIPAddr to give us the join token. At the same time
  * we are waiting for the init-request from a user *only* if we are a control plane.
  */
-func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger, containerMode *bool, loadbalancerIPAddr string) {
+func run(dialer vmapi.Dialer, bindIP, agentPort, vmPort string, zapLoggerCore *zap.Logger, containerMode *bool, loadbalancerIPAddr string) {
 	defer func() { _ = zapLoggerCore.Sync() }()
 	zapLoggerCore.Info("starting delegatio agent", zap.String("version", version), zap.String("commit", config.Commit))
 
@@ -42,18 +44,27 @@ func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger
 	} else {
 		zapLoggerCore.Info("running in qemu mode")
 	}
-
-	core, err := core.NewCore(zapLoggerCore, loadbalancerIPAddr)
+	vmapiExternal, err := vmapi.NewExternal(zapLoggerCore.Named("vmapi"), &net.Dialer{})
 	if err != nil {
-		zapLoggerCore.Fatal("failed to create core", zap.Error(err))
+		zapLoggerCore.Fatal("create vmapi external", zap.Error(err))
+	}
+	core, err := core.NewCore(zapLoggerCore, loadbalancerIPAddr, vmapiExternal)
+	if err != nil {
+		zapLoggerCore.Fatal("create core", zap.Error(err))
 	}
 
-	vapi := vmapi.New(zapLoggerCore.Named("vmapi"), core, dialer)
+	vapi := vmapi.NewInternal(zapLoggerCore.Named("vmapi"), core, dialer)
 	mapi := manageapi.New(zapLoggerCore.Named("manageapi"), core, dialer)
 	zapLoggergRPC := zapLoggerCore.Named("gRPC")
 
-	grpcServer := grpc.NewServer(
-		grpc.Creds(insecure.NewCredentials()),
+	tlsConfig, err := config.GenerateTLSConfigServer()
+	if err != nil {
+		zapLoggerCore.Fatal("generate TLS config", zap.Error(err))
+	}
+	zapLoggerCore.Info("TLS config generated")
+
+	grpcServerAgent := grpc.NewServer(
+		grpc.Creds(credentials.NewTLS(tlsConfig)),
 		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
 			grpc_ctxtags.StreamServerInterceptor(),
 			grpc_zap.StreamServerInterceptor(zapLoggergRPC),
@@ -63,24 +74,74 @@ func run(dialer vmapi.Dialer, bindIP, bindPort string, zapLoggerCore *zap.Logger
 			grpc_zap.UnaryServerInterceptor(zapLoggergRPC),
 		)),
 	)
-	vmproto.RegisterAPIServer(grpcServer, vapi)
-	manageproto.RegisterAPIServer(grpcServer, mapi)
 
-	lis, err := net.Listen("tcp", net.JoinHostPort(bindIP, bindPort))
+	grpcServerVM := grpc.NewServer(
+		grpc.Creds(credentials.NewTLS(tlsConfig)),
+		grpc.StreamInterceptor(grpc_middleware.ChainStreamServer(
+			grpc_ctxtags.StreamServerInterceptor(),
+			grpc_zap.StreamServerInterceptor(zapLoggergRPC),
+		)),
+		grpc.UnaryInterceptor(grpc_middleware.ChainUnaryServer(
+			grpc_ctxtags.UnaryServerInterceptor(),
+			grpc_zap.UnaryServerInterceptor(zapLoggergRPC),
+		)),
+	)
+
+	vmproto.RegisterAPIServer(grpcServerVM, vapi)
+
+	manageproto.RegisterAPIServer(grpcServerAgent, mapi)
+
+	lisAgent, err := net.Listen("tcp", net.JoinHostPort(bindIP, agentPort))
 	if err != nil {
 		zapLoggergRPC.Fatal("failed to create listener", zap.Error(err))
 	}
-	zapLoggergRPC.Info("server listener created", zap.String("address", lis.Addr().String()))
-	core.State.Advance(state.AcceptingInit)
-	go core.TryJoinCluster(context.Background())
+	zapLoggergRPC.Info("server listener created", zap.String("address", lisAgent.Addr().String()))
+	lisVM, err := net.Listen("tcp", net.JoinHostPort(bindIP, vmPort))
+	if err != nil {
+		zapLoggergRPC.Fatal("failed to create listener", zap.Error(err))
+	}
+	zapLoggergRPC.Info("server listener created", zap.String("address", lisAgent.Addr().String()))
 
-	var wg sync.WaitGroup
-	defer wg.Wait()
-	wg.Add(1)
+	core.State.Advance(state.AcceptingInit)
+
+	ctx, cancel := registerSignalHandler(context.Background(), zapLoggerCore)
+	defer cancel()
+	g, _ := errgroup.WithContext(ctx)
+	g.Go(func() error {
+		return grpcServerAgent.Serve(lisAgent)
+	})
+	g.Go(func() error {
+		return grpcServerVM.Serve(lisVM)
+	})
+	g.Go(func() error {
+		return core.TryJoinCluster(context.Background())
+	})
+
+	if err := g.Wait(); err != nil {
+		zapLoggergRPC.Fatal("server error", zap.Error(err))
+	}
+}
+
+func registerSignalHandler(ctx context.Context, log *zap.Logger) (context.Context, context.CancelFunc) {
+	ctx, cancelFunc := signal.NotifyContext(ctx, syscall.SIGINT, syscall.SIGTERM)
+	stopped := make(chan struct{}, 1)
+	done := make(chan struct{}, 1)
+
 	go func() {
-		defer wg.Done()
-		if err := grpcServer.Serve(lis); err != nil {
-			zapLoggergRPC.Fatal("failed to serve gRPC", zap.Error(err))
+		defer func() {
+			cancelFunc()
+			stopped <- struct{}{}
+		}()
+		select {
+		case <-ctx.Done():
+			log.Info("ctrl+c caught, stopping gracefully")
+		case <-done:
+			log.Info("done signal received, stopping gracefully")
 		}
 	}()
+
+	return ctx, func() {
+		done <- struct{}{}
+		<-stopped
+	}
 }

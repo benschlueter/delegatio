@@ -53,7 +53,7 @@ func NewEtcdStore(endpoints []string, logger *zap.Logger, caCert, cert, key []by
 		DialTimeout: dialTimeout,
 		Endpoints:   endpoints,
 		TLS:         tlsConfig,
-		DialOptions: []grpc.DialOption{grpc.WithBlock()},
+		DialOptions: []grpc.DialOption{},
 		Logger:      logger.Named("etcd"),
 	})
 	if err != nil {

@@ -21,27 +21,29 @@ add_custom_target(cpy ALL
 )
 
 #
+# key generation 
+#
+add_custom_target(key ALL
+  openssl genrsa -out rootkey.pem 4096
+  WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+)
+
+#
 # images
 #
 add_custom_target(images ALL
-  sudo mkosi --force
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/images
+sudo ./build.sh
+WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/images
 )
 
 #
 # delegatio-agent
 #
 add_custom_target(delegatio-agent ALL
-  go build -o ${CMAKE_BINARY_DIR}/delegatio-agent
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/agent/vm
-  BYPRODUCTS delegatio-agent
+go build -o ${CMAKE_BINARY_DIR}/delegatio-agent
+WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/agent/vm
+BYPRODUCTS delegatio-agent
 )
 
 add_dependencies(cpy delegatio-agent)
-
-
-add_custom_target(ssh ALL
-  go build -o ${CMAKE_BINARY_DIR}/ssh
-  WORKING_DIRECTORY ${CMAKE_SOURCE_DIR}/ssh
-  BYPRODUCTS ssh
-)
+add_dependencies(images cpy)

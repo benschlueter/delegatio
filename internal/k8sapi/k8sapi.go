@@ -110,13 +110,13 @@ func (k *Client) UploadSSHServerPrivKey(privKey []byte) (err error) {
 }
 
 // DownloadSSHServerPrivKey downloads the ssh server private key from the store.
-func (k *Client) DownloadSSHServerPrivKey(privKey []byte) (err error) {
+func (k *Client) DownloadSSHServerPrivKey() ([]byte, error) {
 	if k.SharedStore == nil {
 		k.logger.Info("client is not connected to etcd")
-		return ErrNotConnected
+		return nil, ErrNotConnected
 	}
 	stWrapper := storewrapper.StoreWrapper{Store: k.SharedStore}
-	return stWrapper.PutPrivKey(privKey)
+	return stWrapper.GetPrivKey()
 }
 
 // GetKubeConfigPath returns the path to the kubeconfig file.
@@ -134,6 +134,7 @@ func GetKubeConfigPath() (string, error) {
 	return val, nil
 }
 
+// GetStore returns a store backed by kube etcd. Its only supposed to used within a kubernetes pod.
 func (k *Client) GetStore() (store.Store, error) {
 	if k.SharedStore == nil {
 		if err := k.ConnectToStoreInternal(); err != nil {
@@ -144,7 +145,6 @@ func (k *Client) GetStore() (store.Store, error) {
 	return k.SharedStore, nil
 }
 
-// GetStore returns a store backed by kube etcd. Its only supposed to used within a kubernetes pod.
 // Before calling this the installer needs to populate a config map with the respective credentials.
 // Furthermore a serviceaccount must be set up for the namespace and it needs to be attached to the
 // running pod.

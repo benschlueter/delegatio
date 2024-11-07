@@ -18,11 +18,8 @@ import (
 	"time"
 
 	"github.com/benschlueter/delegatio/agent/vm/core/state"
-	"github.com/benschlueter/delegatio/agent/vm/vmapi/vmproto"
-	"github.com/benschlueter/delegatio/internal/config"
+	"github.com/benschlueter/delegatio/agent/vm/vmapi"
 	"go.uber.org/zap"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
 	metav1 "k8s.io/apimachinery/pkg/apis/meta/v1"
 	clientset "k8s.io/client-go/kubernetes"
 	"k8s.io/client-go/tools/clientcmd"
@@ -44,15 +41,17 @@ type Core struct {
 	mux                  sync.Mutex
 	client               clientset.Interface
 	masterLoadbalancerIP string
+	api                  vmapi.VMAPI
 }
 
 // NewCore creates and initializes a new Core object.
-func NewCore(zapLogger *zap.Logger, loadbalancerIP string) (*Core, error) {
+func NewCore(zapLogger *zap.Logger, loadbalancerIP string, api vmapi.VMAPI) (*Core, error) {
 	c := &Core{
 		zaplogger:            zapLogger,
 		masterLoadbalancerIP: loadbalancerIP,
 		mux:                  sync.Mutex{},
 		client:               nil,
+		api:                  api,
 	}
 	return c, nil
 }
@@ -138,15 +137,7 @@ func (c *Core) JoinCluster(ctx context.Context) error {
 	if err := c.State.Require(state.AcceptingInit); err != nil {
 		return err
 	}
-	c.zaplogger.Info("dial master")
-	conn, err := grpc.DialContext(ctx, net.JoinHostPort(c.masterLoadbalancerIP, config.PublicAPIport), grpc.WithTransportCredentials(insecure.NewCredentials()), grpc.WithBlock())
-	if err != nil {
-		return err
-	}
-	defer conn.Close()
-	client := vmproto.NewAPIClient(conn)
-	c.zaplogger.Info("grpc call to master")
-	joinData, err := client.GetJoinDataKube(ctx, &vmproto.GetJoinDataKubeRequest{})
+	joinData, err := c.api.GetJoinData(ctx)
 	if err != nil {
 		return err
 	}
@@ -202,20 +193,20 @@ func (c *Core) executeKubeadm(ctx context.Context, endpoint, token, caCert strin
 }
 
 // TryJoinCluster tries to join the cluster every 5 seconds until it succeeds.
-func (c *Core) TryJoinCluster(ctx context.Context) {
+func (c *Core) TryJoinCluster(ctx context.Context) error {
 	ticker := time.NewTicker(5 * time.Second)
 	defer ticker.Stop()
 	for {
 		select {
 		case <-ticker.C:
 			if c.State.Get() >= state.JoiningCluster {
-				return
+				return nil
 			}
 			if err := c.JoinCluster(ctx); err != nil {
 				c.zaplogger.Info("Failed to join cluster, retrying in 5 seconds", zap.Error(err))
 			}
 		case <-ctx.Done():
-			return
+			return nil
 		}
 	}
 }

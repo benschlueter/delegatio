@@ -8,6 +8,7 @@ import (
 	"flag"
 	"log"
 	"net"
+	"strconv"
 
 	"cloud.google.com/go/compute/metadata"
 	"github.com/benschlueter/delegatio/internal/config"
@@ -25,7 +26,7 @@ import (
  * CLI rpc calls.
  */
 func main() {
-	var bindIP, bindPort string
+	var bindIP, agentPort, vmPort string
 	cfg := zap.NewDevelopmentConfig()
 
 	logLevelUser := flag.Bool("debug", false, "enables gRPC debug output")
@@ -45,7 +46,8 @@ func main() {
 	zapLoggerCore := zapLogger.Named("core")
 
 	bindIP = config.DefaultIP
-	bindPort = config.PublicAPIport
+	agentPort = strconv.Itoa(config.AgentPort)
+	vmPort = strconv.Itoa(config.VMAgentPort)
 	dialer := &net.Dialer{}
 
 	var ipAddr string
@@ -76,5 +78,5 @@ func main() {
 		ipAddr = definitions.NetworkXMLConfig.IPs[0].Address
 	}
 
-	run(dialer, bindIP, bindPort, zapLoggerCore, containerMode, ipAddr)
+	run(dialer, bindIP, agentPort, vmPort, zapLoggerCore, containerMode, ipAddr)
 }

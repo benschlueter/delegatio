@@ -46,6 +46,7 @@ func Pod(identifier *config.KubeRessourceIdentifier) *coreAPI.PodSpec {
 						Exec: &coreAPI.ExecAction{
 							Command: []string{"whoami"},
 						},
+						GRPC: &v1.GRPCAction{},
 					},
 				},
 				VolumeMounts: []coreAPI.VolumeMount{
