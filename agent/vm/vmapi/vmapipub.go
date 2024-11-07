@@ -9,6 +9,7 @@ import (
 	"crypto/tls"
 	"fmt"
 	"net"
+	"strconv"
 
 	"github.com/benschlueter/delegatio/agent/manageapi/manageproto"
 	"github.com/benschlueter/delegatio/agent/vm/vmapi/vmproto"
@@ -58,9 +59,17 @@ func (a *APIExternal) dialWithLoadBalancer() (*grpc.ClientConn, error) {
 }
 
 // can only be used once the node has its initial name, i.e. after the first call to the API.
-func (a *APIExternal) dialFirstMaster() (*grpc.ClientConn, error) {
+func (a *APIExternal) dialFirstMasterAgent() (*grpc.ClientConn, error) {
 	// Use the round_robin load balancing policy
-	return grpc.NewClient("delegatio-master-0:9000",
+	return grpc.NewClient(fmt.Sprintf("delegatio-master-0:%d", config.AgentPort),
+		grpc.WithTransportCredentials(credentials.NewTLS(a.tlsConfig)),
+	)
+}
+
+// can only be used once the node has its initial name, i.e. after the first call to the API.
+func (a *APIExternal) dialFirstMasterVM() (*grpc.ClientConn, error) {
+	// Use the round_robin load balancing policy
+	return grpc.NewClient(fmt.Sprintf("delegatio-master-0:%d", config.VMAgentPort),
 		grpc.WithTransportCredentials(credentials.NewTLS(a.tlsConfig)),
 	)
 }
@@ -82,7 +91,7 @@ func (r *staticResolver) Build(_ resolver.Target, cc resolver.ClientConn, _ reso
 	addrs := make([]resolver.Address, len(r.targets))
 	for i, t := range r.targets {
 		addrs[i] = resolver.Address{
-			Addr:       net.JoinHostPort(t, "9000"),
+			Addr:       net.JoinHostPort(t, strconv.Itoa(config.VMAgentPort)),
 			ServerName: t,
 		}
 	}
@@ -115,9 +124,8 @@ type Dialer interface {
 	DialContext(ctx context.Context, network, address string) (net.Conn, error)
 }
 
-// InstallKubernetes initializes a kubernetes cluster using the gRPC API.
-func (a *APIExternal) InstallKubernetes(ctx context.Context, kubernetesInitConfiguration []byte) (err error) {
-	conn, err := a.dialFirstMaster()
+func (a *APIExternal) writeKubeconfigToDisk(ctx context.Context, kubernetesInitConfiguration []byte) (err error) {
+	conn, err := a.dialFirstMasterAgent()
 	if err != nil {
 		a.logger.Error("dial", zap.Error(err))
 		return err
@@ -128,12 +136,29 @@ func (a *APIExternal) InstallKubernetes(ctx context.Context, kubernetesInitConfi
 		a.logger.Error("write initconfig", zap.Error(err))
 		return err
 	}
-	vmClient := vmproto.NewAPIClient(conn)
-	_, err = a.executeKubeadm(ctx, vmClient)
-	return err
+	return nil
 }
 
-func (a *APIExternal) executeKubeadm(ctx context.Context, client vmproto.APIClient) (output []byte, err error) {
+// InstallKubernetes initializes a kubernetes cluster using the gRPC API.
+func (a *APIExternal) InstallKubernetes(ctx context.Context, kubernetesInitConfiguration []byte) (err error) {
+	if err := a.writeKubeconfigToDisk(ctx, kubernetesInitConfiguration); err != nil {
+		a.logger.Error("write kubeconfig", zap.Error(err))
+		return err
+	}
+	if _, err := a.executeKubeadm(ctx); err != nil {
+		a.logger.Error("execute kubeadm", zap.Error(err))
+	}
+	return nil
+}
+
+func (a *APIExternal) executeKubeadm(ctx context.Context) (output []byte, err error) {
+	conn, err := a.dialFirstMasterVM()
+	if err != nil {
+		a.logger.Error("dial", zap.Error(err))
+		return nil, err
+	}
+	defer conn.Close()
+	client := vmproto.NewAPIClient(conn)
 	a.logger.Info("execute executeKubeadm")
 	resp, err := client.InitFirstMaster(ctx, &vmproto.InitFirstMasterRequest{
 		Command: "/usr/bin/kubeadm",
@@ -169,7 +194,7 @@ func (a *APIExternal) executeKubeadm(ctx context.Context, client vmproto.APIClie
 
 // GetKubernetesConfig returns the kubernetes config for the instance.
 func (a *APIExternal) GetKubernetesConfig(ctx context.Context) (output []byte, err error) {
-	conn, err := a.dialFirstMaster()
+	conn, err := a.dialFirstMasterAgent()
 	if err != nil {
 		return nil, err
 	}
@@ -188,7 +213,7 @@ func (a *APIExternal) GetKubernetesConfig(ctx context.Context) (output []byte, e
 
 // GetEtcdCredentials returns the etcd credentials for the instance.
 func (a *APIExternal) GetEtcdCredentials(ctx context.Context) ([]byte, []byte, error) {
-	conn, err := a.dialFirstMaster()
+	conn, err := a.dialFirstMasterAgent()
 	if err != nil {
 		return nil, nil, err
 	}
