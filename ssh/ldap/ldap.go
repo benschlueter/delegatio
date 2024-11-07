@@ -64,6 +64,8 @@ func (l *Ldap) dial(username, password string) (*goLdap.Conn, error) {
 // Search searches for a user in the LDAP server and parses the data.
 func (l *Ldap) Search(username, password string) (*config.UserInformation, error) {
 	l.log.Info("searching for user", zap.String("username", username))
+	// prevent LDAP injection
+	username = goLdap.EscapeFilter(username)
 	connection, err := l.dial(username, password)
 	if err != nil {
 		return nil, err
